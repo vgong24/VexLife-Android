@@ -355,8 +355,8 @@ private class VexMapsPlaceSearchExecution(
     }
 
     fun shutdown() {
-        root.forceStopAll(
-            "VexMaps place-search session shut down",
+        forceStopOwned(
+            "VexMaps place-search execution shut down",
         )
     }
 }

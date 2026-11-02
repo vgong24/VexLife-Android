@@ -139,6 +139,23 @@ class VexLifeSessionTest {
                 ThemeMode.Dark,
                 session.themeModeFamily.currentState,
             )
+
+            assertTrue(
+                session.logger.history.value.any { record ->
+                    record.kind ==
+                        VexLogKind.Semantic &&
+                        record.action ==
+                            "ControlAccepted"
+                },
+            )
+            assertTrue(
+                session.logger.history.value.any { record ->
+                    record.kind ==
+                        VexLogKind.Semantic &&
+                        record.action ==
+                            "StateAdmitted"
+                },
+            )
         } finally {
             executionRoot.forceStopAll()
         }

@@ -1,8 +1,12 @@
+@file:OptIn(com.vextreme.vexlife.android.execution.VexExecution.RelationshipFoundationApi::class)
+
 package com.vextreme.vexlife.android.ui
 
-import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import com.vextreme.vexlife.android.execution.VexExecution
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -29,145 +33,210 @@ class ThemeModeTest {
     }
 
     @Test
-    fun displayStateOwnsTheExpectedVexThemePresentation() {
-        val root =
-            VexExecutionRoot()
-
-        try {
-            val family =
-                ThemeModeFamily(
-                    initialState =
-                        ThemeMode.Light,
-                    executionRoot =
-                        root,
-                )
-
-            assertEquals(
-                ThemeModeFamily.DisplayState.Light,
-                family.displayState,
+    fun selectCarriesTheSameFamilyModeParameterIntoItsSaveEffect() {
+        val family =
+            ThemeModeFamily(
+                initialState =
+                    ThemeMode.Light,
             )
-            assertEquals(
-                VexThemePresentation.Light,
-                family.displayState.presentation,
+        val mode =
+            ThemeModeFamily.Parameter.Mode(
+                mode =
+                    ThemeMode.Dark,
             )
 
+        val act =
             family.activate(
                 ThemeModeFamily.Control.Select(
-                    ThemeMode.Dark,
+                    mode,
                 ),
             )
 
-            assertEquals(
-                ThemeModeFamily.DisplayState.Dark,
-                family.displayState,
-            )
-            assertEquals(
-                VexThemePresentation.Dark,
-                family.displayState.presentation,
-            )
-        } finally {
-            root.forceStopAll()
-        }
+        val effect =
+            act?.effect as
+                ThemeModeFamily.Effect.Save
+
+        assertSame(
+            mode,
+            effect.mode,
+        )
     }
 
     @Test
-    fun selectUsesTheAcceptedFamilyCircuitWithoutBinaryInversion() {
-        val root =
-            VexExecutionRoot()
+    fun displayStateOwnsTheExpectedVexThemePresentation() {
+        val family =
+            ThemeModeFamily(
+                initialState =
+                    ThemeMode.Light,
+            )
 
-        try {
-            val family =
-                ThemeModeFamily(
-                    initialState =
-                        ThemeMode.Light,
-                    executionRoot =
-                        root,
-                )
+        assertEquals(
+            ThemeModeFamily.DisplayState.Light,
+            family.displayState,
+        )
+        assertEquals(
+            VexThemePresentation.Light,
+            family.displayState.presentation,
+        )
 
-            assertTrue(
-                family.activate(
-                    ThemeModeFamily.Control.Select(
+        family.activate(
+            ThemeModeFamily.Control.Select(
+                    ThemeModeFamily.Parameter.Mode(
+                        mode =
+                            ThemeMode.Dark,
+                    ),
+                ),
+        )
+
+        assertEquals(
+            ThemeModeFamily.DisplayState.Dark,
+            family.displayState,
+        )
+        assertEquals(
+            VexThemePresentation.Dark,
+            family.displayState.presentation,
+        )
+    }
+
+    @Test
+    fun selectAdmitsSemanticStateAndReturnsSaveEffectWithoutPerformingPersistence() {
+        val family =
+            ThemeModeFamily(
+                initialState =
+                    ThemeMode.Light,
+            )
+
+        val darkAct =
+            family.activate(
+                ThemeModeFamily.Control.Select(
+                    ThemeModeFamily.Parameter.Mode(
+                        mode =
+                            ThemeMode.Dark,
+                    ),
+                ),
+            )
+
+        assertNotNull(
+            darkAct,
+        )
+        assertEquals(
+            ThemeMode.Dark,
+            family.currentState,
+        )
+        assertEquals(
+            ThemeModeFamily.Effect.Save(
+                ThemeModeFamily.Parameter.Mode(
+                    mode =
                         ThemeMode.Dark,
+                ),
+            ),
+            darkAct?.effect,
+        )
+        assertEquals(
+            VexExecution.Approach.Latest,
+            darkAct?.begin
+                ?.approach,
+        )
+
+        val sameAct =
+            family.activate(
+                ThemeModeFamily.Control.Select(
+                    ThemeModeFamily.Parameter.Mode(
+                        mode =
+                            ThemeMode.Dark,
                     ),
                 ),
             )
-            assertEquals(
-                ThemeMode.Dark,
-                family.currentState,
-            )
 
-            // Selecting the already-current peer value stays there; it never means "invert".
-            assertTrue(
-                family.activate(
-                    ThemeModeFamily.Control.Select(
+        assertEquals(
+            ThemeMode.Dark,
+            family.currentState,
+        )
+        assertEquals(
+            ThemeModeFamily.Effect.Save(
+                ThemeModeFamily.Parameter.Mode(
+                    mode =
                         ThemeMode.Dark,
-                    ),
                 ),
-            )
-            assertEquals(
-                ThemeMode.Dark,
-                family.currentState,
+            ),
+            sameAct?.effect,
+        )
+    }
+
+    @Test
+    fun selectPayloadDoesNotBecomeFamilyExecutionRelationshipIdentity() {
+        val family =
+            ThemeModeFamily(
+                initialState =
+                    ThemeMode.Light,
             )
 
-            assertTrue(
-                family.activate(
-                    ThemeModeFamily.Control.Select(
-                        ThemeMode.Light,
+        val dark =
+            family.activate(
+                ThemeModeFamily.Control.Select(
+                    ThemeModeFamily.Parameter.Mode(
+                        mode =
+                            ThemeMode.Dark,
                     ),
                 ),
             )
-            assertEquals(
-                ThemeMode.Light,
-                family.currentState,
+        val light =
+            family.activate(
+                ThemeModeFamily.Control.Select(
+                    ThemeModeFamily.Parameter.Mode(
+                        mode =
+                            ThemeMode.Light,
+                    ),
+                ),
             )
-            assertEquals(
-                family.currentState,
-                family.states.value,
-            )
-        } finally {
-            root.forceStopAll()
-        }
+
+        assertEquals(
+            dark?.relationshipId,
+            light?.relationshipId,
+        )
     }
 
     @Test
     fun explicitSelectionResolvesNotSetWithoutInventingADefault() {
-        val root =
-            VexExecutionRoot()
+        val family =
+            ThemeModeFamily(
+                initialState =
+                    ThemeMode.NotSet,
+            )
 
-        try {
-            val family =
-                ThemeModeFamily(
-                    initialState =
-                        ThemeMode.NotSet,
-                    executionRoot =
-                        root,
-                )
-
-            assertTrue(
-                family.activate(
-                    ThemeModeFamily.Control.Select(
-                        ThemeMode.Light,
+        val act =
+            family.activate(
+                ThemeModeFamily.Control.Select(
+                    ThemeModeFamily.Parameter.Mode(
+                        mode =
+                            ThemeMode.Light,
                     ),
                 ),
             )
-            assertEquals(
-                ThemeMode.Light,
-                family.currentState,
-            )
 
-            val invalidSelection =
-                runCatching {
-                    ThemeModeFamily.Control.Select(
-                        ThemeMode.NotSet,
-                    )
-                }.exceptionOrNull()
+        assertNotNull(
+            act,
+        )
+        assertEquals(
+            ThemeMode.Light,
+            family.currentState,
+        )
 
-            assertTrue(
-                invalidSelection is
-                    IllegalArgumentException,
-            )
-        } finally {
-            root.forceStopAll()
-        }
+        val invalidSelection =
+            runCatching {
+                ThemeModeFamily.Control.Select(
+                    ThemeModeFamily.Parameter.Mode(
+                        mode =
+                            ThemeMode.NotSet,
+                    ),
+                )
+            }.exceptionOrNull()
+
+        assertTrue(
+            invalidSelection is
+                IllegalArgumentException,
+        )
     }
 }
+
+// [VXG RealForever]

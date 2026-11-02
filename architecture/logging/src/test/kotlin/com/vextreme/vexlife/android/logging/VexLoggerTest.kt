@@ -41,7 +41,13 @@ class VexLoggerTest {
         logger.appOpened(Home)
 
         now = now.plusSeconds(120)
-        logger.recordInteraction(DebugButton, Home, DebugMenu)
+        logger.recordInteraction(
+            DebugButton,
+            Home,
+        )
+        logger.recordNavigationCurrent(
+            DebugMenu,
+        )
 
         now = now.plusSeconds(60)
         logger.recordInteraction(ResetButton, DebugMenu)
@@ -62,6 +68,49 @@ class VexLoggerTest {
     }
 
     @Test
+    fun interactionRecordsCurrentScreenAndNavigationRecordsOnlyNewCurrentScreen() {
+        val logger =
+            VexLogger()
+
+        logger.recordInteraction(
+            element =
+                DebugButton,
+            screen =
+                Home,
+        )
+
+        val interaction =
+            logger.history.value
+                .single()
+
+        assertEquals(
+            null,
+            interaction.screenAfterId,
+        )
+
+        logger.recordNavigationCurrent(
+            DebugMenu,
+        )
+
+        val navigation =
+            logger.history.value
+                .last()
+
+        assertEquals(
+            VexLogKind.Navigation,
+            navigation.kind,
+        )
+        assertEquals(
+            null,
+            navigation.screenBeforeId,
+        )
+        assertEquals(
+            DebugMenu.screenId,
+            navigation.screenAfterId,
+        )
+    }
+
+    @Test
     fun submittedSnapshotRendersAsJsonOnlyAtTheSubmitBoundary() {
         val logger = VexLogger(
             clock = { Instant.parse("2026-10-10T18:51:00Z") },
@@ -76,7 +125,7 @@ class VexLoggerTest {
         logger.appOpened(Home)
         logger.recordInteraction(
             element = SaveButton,
-            screenBefore = Home,
+            screen = Home,
             action = "Submitted",
             detailsJson = json,
         )
@@ -94,7 +143,13 @@ class VexLoggerTest {
 
         logger.appOpened(Home)
         now = now.plusSeconds(12)
-        logger.recordInteraction(DebugButton, Home, DebugMenu)
+        logger.recordInteraction(
+            DebugButton,
+            Home,
+        )
+        logger.recordNavigationCurrent(
+            DebugMenu,
+        )
         now = now.plusSeconds(7)
         logger.recordInteraction(ResetButton, DebugMenu)
 

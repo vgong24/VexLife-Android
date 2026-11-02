@@ -45,7 +45,7 @@ import com.vextreme.vexlife.android.preview.VexPreviewRepositories
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.AppScreenBlueprint
-import com.vextreme.vexlife.android.ui.VexLifeRelays
+import com.vextreme.vexlife.android.ui.VexLifeRelayGraph
 
 object EventsScreen : AppScreenBlueprint(
     screenKey = "events",
@@ -64,11 +64,11 @@ object EventsScreen : AppScreenBlueprint(
     internal override fun renderContent(
         runtime: VexRuntime,
         repositories: AppRepositories,
-        relays: VexLifeRelays,
+        relayGraph: VexLifeRelayGraph,
     ) {
         EventsScreenContent(
             runtime = runtime,
-            relay = relays.events,
+            relay = relayGraph.events,
         )
     }
 }
@@ -663,7 +663,7 @@ private fun EventsScreenPreview() {
     ) { context ->
         EventsScreenContent(
             runtime = context.runtime,
-            relay = context.relays.events,
+            relay = context.relayGraph.events,
         )
     }
 }
@@ -686,7 +686,7 @@ private fun EventsAttentionPreview() {
     ) { context ->
         EventsScreenContent(
             runtime = context.runtime,
-            relay = context.relays.events,
+            relay = context.relayGraph.events,
         )
     }
 }

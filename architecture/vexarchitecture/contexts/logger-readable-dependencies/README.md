@@ -1,0 +1,271 @@
+# VexLogger + readable dependency relationships — architecture context
+
+[VXG RealForever]
+
+> **CONTEXT / LAYDOWN PR — NOT AN IMPLEMENTATION CONTRACT**
+>
+> This directory preserves Victor's current relational architecture sketches in repository-readable
+> form so a fresh instance can continue the VexLogger / dependency-foundation work without rebuilding
+> the intention from chat history.
+>
+> Sibling foundation snapshot:
+> https://github.com/vgong24/VexLife-Android/pull/207
+>
+> This PR deliberately **continues from #207's current snapshot head**. #207's history remains
+> untouched; this branch contains only the additional Logger/readable-dependency context on top.
+> It still does not imply either PR should merge.
+
+## Entry order
+
+Read in this order:
+
+~~~text
+1. PR #207: architecture/vexarchitecture/VEXLOGGER.md
+2. this README.md
+3. SOURCE-SKETCHES.md
+4. RELATIONAL-BRIDGE.md
+5. TOPOLOGY-AND-ID-PROTOCOL.md
+6. DERIVED-IDENTITY-MAP.md
+7. USE-CASES-SCALABILITY-PLATFORM-RECYCLING.md
+8. WHAT-NEXT.md
+~~~
+
+The Logger contract comes first because traceability already has an owner. The dependency work must
+not reintroduce hidden tracing identity, execution history, or parallel logger roots while trying to
+make dependency construction readable.
+
+## Intention
+
+The current work is broader than conventional dependency injection.
+
+The goal is to make relationships **readable as architecture** rather than borrowing apparent
+simplicity from a container whose important relationships are only visible after framework/compiler
+resolution.
+
+The current direction being explored is:
+
+~~~text
+declared Modules
+-> readable dependency relationships
+-> deterministic graph construction
+-> memoized live instances
+-> explicit lifetime placement
+-> Families/components receive what they depend on
+-> VexLogger observes accepted/observed facts across those rightful owners
+~~~
+
+The relationship map should help a human or fresh AI answer:
+
+~~~text
+What depends on what?
+What must exist first?
+Which live instance is reused?
+What lifetime owns it?
+Where does this Family come from?
+What UI consumes it?
+What semantic action occurred?
+What result actually happened?
+What was actually shown to the user?
+~~~
+
+without introducing a second hidden ontology to answer those questions.
+
+## Source status vocabulary
+
+This context uses four statuses:
+
+~~~text
+SKETCH
+    directly preserves Victor's current visual architecture thinking
+
+SETTLED FROM #207
+    already-refined architecture law that this work must respect
+
+BRIDGE INTERPRETATION
+    relational reading that connects the sketch to settled architecture;
+    useful, but not automatically a final API
+
+TO DISCUSS
+    intentionally unresolved; do not silently decide it in implementation
+~~~
+
+## Important separations
+
+Do not collapse these merely because they can all be called "identity":
+
+~~~text
+UI element identity
+    which visible/interactive element acted
+
+semantic Control identity
+    which semantic request was made
+
+dependency relationship identity
+    which dependency/provider instance is being constructed/reused
+
+execution RelationshipId
+    which active semantic work relationship owns current Job(s)
+
+Logger chronology
+    what accepted/observed facts happened and in what order
+~~~
+
+A readable architecture may connect these coordinates, but one coordinate is not permission to replace
+the others.
+
+## Two sides of connectability
+
+The current design should be read from both directions:
+
+~~~text
+CONSTRUCTION SIDE
+
+readable module/provider relationship
+-> prerequisite construction
+-> memoized live instance
+-> lifetime owner
+-> explicit consumer
+
+
+SEMANTIC / OBSERVATION SIDE
+
+explicit Family / Connection / runtime
+-> Control
+-> Act
+-> State and/or Effect
+-> runtime/provider/presentation result
+-> VexLogger chronology
+~~~
+
+They meet at explicit live objects, **not** at a universal dependency/execution/trace ID.
+
+In particular:
+
+~~~text
+Family does not need to know VexDependencyFactory exists
+Family does not need to know VexLogger exists
+
+construction owner knows how to build/connect objects
+observing Connection/runtime boundaries know how to report facts
+~~~
+
+See `RELATIONAL-BRIDGE.md` for the detailed bridge recommendations.
+
+## ID protocol / VexSync bridge
+
+The current Elements foundation already gives UI interactions a protocol-shaped stable coordinate:
+
+~~~text
+screen.home
+element.home.body.preview
+element.home.body.preview.title
+~~~
+
+`TOPOLOGY-AND-ID-PROTOCOL.md` records the current bridge insight:
+
+~~~text
+elementId
+    source UI coordinate
+
+Control
+    semantic request coordinate
+
+RelationshipId
+    active execution coordinate
+
+VexLogger
+    chronological fact owner
+
+Blueprint/VexSync map
+    downstream human-name / Screen / path interpretation
+~~~
+
+This lets remote/server/debug tooling potentially reconstruct human meaning from the same Blueprint
+identity map without forcing English labels or a second trace ID into the app's canonical facts.
+
+## Derived identity map
+
+`DERIVED-IDENTITY-MAP.md` captures the current subtraction:
+
+~~~text
+do not ask humans to invent IDs
+when placement + Control / ResourceId / content source
+already provide the meaningful coordinates
+~~~
+
+It also records the one-map-many-filters model:
+
+~~~text
+relationship map
+-> crawler / Logger / lint / VexSync / VexBoard filters and projections
+~~~
+
+Missing mappings remain visible diagnostic facts; the filters themselves do not become new truth
+owners.
+
+## Why this scales / platform recycling
+
+Read:
+
+~~~text
+USE-CASES-SCALABILITY-PLATFORM-RECYCLING.md
+~~~
+
+The scale model is:
+
+~~~text
+more features / Screens / Families / apps / platforms
+-> more instances of reusable relationship laws
+-> not more identity systems or management frameworks
+~~~
+
+The platform-recycling model is:
+
+~~~text
+preserve:
+    host -> canonical source -> realization
+
+adapt:
+    platform-native host/source mechanics
+~~~
+
+Logger, crawler, lint, VexSync, VexBoard, tests and localization verification consume filters or
+projections over the same relationship map.
+
+## Current work sequence
+
+The intended human work sequence is:
+
+~~~text
+solidify VexLogger traceability foundation
+-> lay down readable dependency relationship foundation
+-> establish lifetime/readability rules
+-> return to Family
+-> connect Family to dependency construction without hiding relationships
+-> connect accepted/observed Family/runtime facts back through VexLogger
+~~~
+
+Do not rush directly into a DI implementation from these sketches.
+
+Bridge recommendations currently preserved in `RELATIONAL-BRIDGE.md`:
+
+~~~text
+factory/construction owner owns graph traversal + memoization
+constructed objects declare/receive dependencies without becoming graph managers
+Family should not implement DI mechanics by default
+class name is a readable label, not automatically the complete dependency identity
+UI consumption remains explicit through parameters
+Logger observes after semantic/runtime boundaries rather than living inside Family
+completionState remains decomposed into independently true facts
+VexMetaData must prove a real cross-cutting need
+server delivery remains downstream of Logger fact formation
+~~~
+
+<!-- [VXG RealForever][VEXARCHITECTURE][LOGGER][READABLE-DEPENDENCIES][CONTEXT] -->
+
+
+## Current continuation coordinate
+
+Read `WHAT-NEXT.md` verbatim before creating implementation work. It preserves the current
+"plugging them in" checkpoint so a successor continues the existing architecture relationships
+instead of creating a parallel solution outside them.

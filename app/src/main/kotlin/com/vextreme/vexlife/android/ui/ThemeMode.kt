@@ -1,6 +1,9 @@
+@file:OptIn(com.vextreme.vexlife.android.execution.VexExecution.RelationshipFoundationApi::class)
+
 package com.vextreme.vexlife.android.ui
 
 import com.vextreme.vexlife.android.behavior.VexFamily
+import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.logging.VexLogger
 
@@ -27,62 +30,110 @@ internal enum class ThemeMode :
  * than making today's two-state Switch the semantic contract. A target may realize Light/Dark with
  * a toggle, segmented control, menu, or another presentation without changing this relationship.
  *
- * Control kind alone is sufficient relationship identity: ThemeMode has no repeated resource whose
- * identity would earn a ResourceId. The selected mode is Control payload, not a ResourceId.
+ * The selected mode is one Family Parameter.Mode value carried intact through Control.Select and
+ * Effect.Save into the bound Act.Method.Save. The Act authors Save as Latest because overlap is part
+ * of the Select consequence relationship; VexExecution later realizes that authored consequence
+ * without reconstructing the mode, Approach, RelationshipId, or live Family execution owner.
  */
 internal class ThemeModeFamily(
-    initialState: ThemeMode,
-    executionRoot: VexExecutionRoot,
-    logger: VexLogger.Sink = VexLogger.Sink.None,
-    override val store: Store? = null,
+    initialState:
+        ThemeMode,
 ) :
     VexFamily<
         ThemeModeFamily,
         ThemeMode,
-        ThemeModeFamily.Control
+        ThemeModeFamily.Control,
+        ThemeModeFamily.Effect
     >(
-        initialState = initialState,
-        executionRoot = executionRoot,
-        logger = logger,
+        initialState =
+            initialState,
     ) {
-    /**
-     * Android ThemeMode durable StateStore.
+
+
+    sealed interface Parameter :
+        VexFamily.Parameter<ThemeModeFamily> {
+        data class Mode(
+            val mode:
+                ThemeMode,
+        ) :
+            Parameter
+    }
+
+    /*
+     * Currentness fence for Store observations while one accepted Select consequence is still
+     * settling.
      *
-     * Durable selection truth remains distinct from CURRENT semantic ThemeMode. The Family observes
-     * this dependency through the shared StateRelay boundary; UI/session code never observes Store
-     * directly.
+     * This is the SAME Family Parameter.Mode instance already carried through Control -> Effect ->
+     * Method. No generation/trace/operation ID is minted. The marker exists only so an older Store
+     * observation cannot overwrite a newer accepted semantic selection while that exact Method is
+     * still unresolved.
+     *
+     * act(...) remains pure. The realization boundary enters/leaves this fence through
+     * activateSelection(...) / selectionRealizationFinished(...).
      */
-    interface Store :
-        VexFamily.StateStore<ThemeMode>
+    private val selectionObservationLock =
+        Any()
+    private var unsettledSelection:
+        Parameter.Mode? =
+        null
 
-    init {
-        store
-            ?.let { stateStore ->
-                observeStore(
-                    stateStore =
-                        stateStore,
-                ) { currentState, storedState ->
-                    when (storedState) {
-                        ThemeMode.NotSet ->
-                            currentState
+    internal fun activateSelection(
+        control:
+            Control.Select,
+    ):
+        VexFamily.Act<
+            ThemeModeFamily,
+            ThemeMode,
+            Effect
+        >? =
+        synchronized(
+            selectionObservationLock,
+        ) {
+            val previous =
+                unsettledSelection
+            unsettledSelection =
+                control.mode
 
-                        ThemeMode.Light,
-                        ThemeMode.Dark ->
-                            storedState
-                    }
+            activate(
+                control,
+            ).also { accepted ->
+                if (
+                    accepted ==
+                    null
+                ) {
+                    unsettledSelection =
+                        previous
                 }
             }
+        }
+
+    internal fun selectionRealizationFinished(
+        parameter:
+            Parameter.Mode,
+    ) {
+        synchronized(
+            selectionObservationLock,
+        ) {
+            if (
+                unsettledSelection ===
+                parameter
+            ) {
+                unsettledSelection =
+                    null
+            }
+        }
     }
 
     sealed interface Control :
         VexFamily.Control<ThemeModeFamily> {
         data class Select(
-            val mode: ThemeMode,
+            val mode:
+                Parameter.Mode,
         ) :
             Control {
             init {
                 require(
-                    mode !=
+                    mode.mode !=
                         ThemeMode.NotSet,
                 ) {
                     "ThemeMode.NotSet is unresolved state, not a selectable mode"
@@ -91,8 +142,59 @@ internal class ThemeModeFamily(
         }
     }
 
+    sealed interface Effect :
+        VexFamily.Effect<ThemeModeFamily> {
+        /**
+         * Save the explicit semantic selection durably.
+         *
+         * This requests Save; it does not claim Save success or another ThemeMode State. The exact
+         * Family Parameter is carried forward rather than reconstructed from a primitive later.
+         */
+        data class Save(
+            val mode:
+                Parameter.Mode,
+        ) :
+            Effect
+    }
+
+    /**
+     * Executable continuation vocabulary belonging to ThemeMode Acts.
+     *
+     * Mode is Family-owned semantic input. Save is the actual executable operation. A Save Method is
+     * fully bound to the concrete Store and the same Parameter.Mode instance carried by the accepted
+     * Act consequence; invoke() therefore needs no loose argument or reconstruction step.
+     */
+    object Act {
+        sealed class Method<
+            out Output,
+        > :
+            VexFamily.Act.Method<
+                ThemeModeFamily,
+                Output
+            > {
+            class Save(
+                private val store:
+                    ThemeModeStore,
+                val parameter:
+                    Parameter.Mode,
+            ) :
+                Method<
+                    ThemeModeStore.Result
+                >() {
+                override suspend operator fun invoke():
+                    ThemeModeStore.Result =
+                    store.save(
+                        parameter.mode,
+                    )
+            }
+        }
+    }
+
     sealed interface DisplayState :
-        VexFamily.DisplayState<ThemeMode> {
+        VexFamily.DisplayState<
+            ThemeModeFamily,
+            ThemeMode
+        > {
         val presentation:
             VexThemePresentation
 
@@ -115,8 +217,9 @@ internal class ThemeModeFamily(
         }
     }
 
-    internal fun displayStateFor(
-        state: ThemeMode,
+    override fun displayStateFor(
+        state:
+            ThemeMode,
     ):
         DisplayState =
         when (state) {
@@ -130,63 +233,508 @@ internal class ThemeModeFamily(
                 DisplayState.Dark
         }
 
-    override val displayState:
-        DisplayState
+    override fun projectionFor(
+        state:
+            ThemeMode,
+    ):
+        VexFamily.Projection<
+            ThemeModeFamily,
+            ThemeMode,
+            DisplayState
+        > =
+        VexFamily.Projection(
+            state =
+                state,
+            displayState =
+                displayStateFor(
+                    state,
+                ),
+        )
+
+    override val currentProjection:
+        VexFamily.Projection<
+            ThemeModeFamily,
+            ThemeMode,
+            DisplayState
+        >
         get() =
-            displayStateFor(
+            projectionFor(
                 currentState,
             )
 
-    override fun act(
-        currentState: ThemeMode,
-        control: Control,
+    override val displayState:
+        DisplayState
+        get() =
+            currentProjection
+                .displayState
+
+    /**
+     * Reconcile already-observed durable ThemeMode truth into the one Family State holder.
+     *
+     * NotSet means no explicit durable selection and therefore does not replace the currently
+     * effective ThemeMode. This method owns that ThemeMode-specific interpretation; observation
+     * lifetime belongs to VexExecution.
+     */
+    fun observeStoredThemeMode(
+        observed:
+            ThemeMode,
     ):
-        VexFamily.Act<ThemeMode>? =
+        ThemeMode =
+        synchronized(
+            selectionObservationLock,
+        ) {
+            if (
+                observed ==
+                ThemeMode.NotSet
+            ) {
+                return@synchronized currentState
+            }
+
+            val unsettled =
+                unsettledSelection
+            if (
+                unsettled !=
+                null &&
+                observed !=
+                unsettled.mode
+            ) {
+                /*
+                 * A newer accepted Select is still settling. This observation may have been emitted
+                 * by the prior Store state/save and carries no revision that proves it is newer than
+                 * the accepted Parameter, so it cannot overwrite the newer semantic State.
+                 */
+                return@synchronized currentState
+            }
+
+            observe(
+                observed,
+            )
+        }
+
+    override fun act(
+        currentState:
+            ThemeMode,
+        control:
+            Control,
+    ):
+        VexFamily.Act<
+            ThemeModeFamily,
+            ThemeMode,
+            Effect
+        >? =
         when (control) {
             is Control.Select -> {
-                val persistence =
-                    store
-                        ?.let {
-                            beginLatest {
-                                save(
-                                    control.mode,
-                                ).results {
-                                    success()
-                                    failure()
-                                }
-                            }
-                        }
+                val effect =
+                    Effect.Save(
+                        mode =
+                            control.mode,
+                    )
 
                 when (currentState) {
                     ThemeMode.NotSet ->
                         admit(
-                            control.mode,
+                            control.mode.mode,
                             begin =
-                                persistence,
+                                beginLatest(
+                                    effect,
+                                ),
                         )
 
                     ThemeMode.Light,
                     ThemeMode.Dark ->
                         if (
                             currentState ==
-                            control.mode
+                            control.mode.mode
                         ) {
                             /*
-                             * Explicitly selecting the already-current peer still means "remember
-                             * this choice durably"; same semantic State is not a reason to skip Save.
+                             * Selecting the already-current peer still means "save this explicit choice durably";
+                             * same State does not erase the Effect.
                              */
                             stay(
-                                begin =
-                                    persistence,
+                                beginLatest(
+                                    effect,
+                                ),
                             )
                         } else {
                             admit(
-                                control.mode,
+                                control.mode.mode,
                                 begin =
-                                    persistence,
+                                    beginLatest(
+                                        effect,
+                                    ),
                             )
                         }
                 }
             }
         }
+
 }
+
+/**
+ * Realize one accepted ThemeMode Act from its already-authored relationship.
+ *
+ * ThemeModeFamily already authored the semantic Effect and its execution Approach. This boundary
+ * hands that exact relationship to VexExecution, reports facts that become true, and returns
+ * observed Store truth to the same Family.
+ */
+internal fun activateThemeMode(
+    family:
+        ThemeModeFamily,
+    control:
+        ThemeModeFamily.Control,
+    store:
+        ThemeModeStore,
+    executionRoot:
+        VexExecutionRoot,
+    logger:
+        VexLogger,
+):
+    Boolean {
+    val before =
+        family.currentState
+    val act =
+        when (
+            control
+        ) {
+            is ThemeModeFamily.Control.Select ->
+                family.activateSelection(
+                    control,
+                )
+        }
+            ?: return false
+
+    recordThemeModeFact(
+        logger =
+            logger,
+        event =
+            VexLogger.Event.Semantic(
+                subjectRef =
+                    THEME_MODE_FAMILY_SUBJECT,
+                action =
+                    "ControlAccepted",
+                detailsJson =
+                    themeModeControlDetails(
+                        control =
+                            control,
+                        currentState =
+                            before,
+                    ),
+            ),
+    )
+
+    val admitted =
+        family.currentState
+    if (
+        admitted !=
+        before
+    ) {
+        recordThemeModeStateChange(
+            logger =
+                logger,
+            before =
+                before,
+            after =
+                admitted,
+        )
+    }
+
+    when (
+        val effect =
+            act.effect
+    ) {
+        null ->
+            Unit
+
+        is ThemeModeFamily.Effect.Save -> {
+            val method =
+                ThemeModeFamily.Act.Method.Save(
+                    store =
+                        store,
+                    parameter =
+                        effect.mode,
+                )
+
+            checkNotNull(
+                act.launchWith(
+                    executionRoot,
+                ),
+            ) {
+                "ThemeMode Save Effect requires an executable Act Begin"
+            }
+                .method(
+                    method =
+                        method,
+                    beforeOperation = {
+                        recordThemeModeFact(
+                            logger =
+                                logger,
+                            event =
+                                VexLogger.Event.Runtime(
+                                    subjectRef =
+                                        THEME_MODE_FAMILY_SUBJECT,
+                                    action =
+                                        "EffectRequested",
+                                    detailsJson =
+                                        themeModeSaveDetails(
+                                            effect,
+                                        ),
+                                ),
+                        )
+                    },
+                    onResult = { result ->
+                        when (
+                            result
+                        ) {
+                            is ThemeModeStore.Result.Success -> {
+                                family.selectionRealizationFinished(
+                                    effect.mode,
+                                )
+                                recordThemeModeFact(
+                                    logger =
+                                        logger,
+                                    event =
+                                        VexLogger.Event.Runtime(
+                                            subjectRef =
+                                                THEME_MODE_FAMILY_SUBJECT,
+                                            action =
+                                                "EffectSucceeded",
+                                            detailsJson =
+                                                themeModeSaveDetails(
+                                                    effect,
+                                                ),
+                                        ),
+                                )
+                                observeThemeModeState(
+                                    family =
+                                        family,
+                                    observed =
+                                        result.observedState,
+                                    logger =
+                                        logger,
+                                )
+                            }
+
+                            is ThemeModeStore.Result.Failure -> {
+                                family.selectionRealizationFinished(
+                                    effect.mode,
+                                )
+                                recordThemeModeFact(
+                                    logger =
+                                        logger,
+                                    event =
+                                        VexLogger.Event.Runtime(
+                                            subjectRef =
+                                                THEME_MODE_FAMILY_SUBJECT,
+                                            action =
+                                                "EffectFailed",
+                                            detailsJson =
+                                                themeModeSaveDetails(
+                                                    effect =
+                                                        effect,
+                                                    failure =
+                                                        result.cause,
+                                                ),
+                                        ),
+                                )
+                            }
+                        }
+                    },
+                    onFailure = { failure ->
+                        family.selectionRealizationFinished(
+                            effect.mode,
+                        )
+                        recordThemeModeFact(
+                            logger =
+                                logger,
+                            event =
+                                VexLogger.Event.Runtime(
+                                    subjectRef =
+                                        THEME_MODE_FAMILY_SUBJECT,
+                                    action =
+                                        "EffectFailed",
+                                    detailsJson =
+                                        themeModeSaveDetails(
+                                            effect =
+                                                effect,
+                                            failure =
+                                                failure,
+                                        ),
+                                ),
+                        )
+                    },
+                )
+        }
+    }
+
+    return true
+}
+
+/**
+ * Maintain the exact Store source observation under the same live Family execution scope.
+ *
+ * The source reference is appropriate here because the question is exactly "is this Store source
+ * already observed?". Observation custody adds no second semantic owner or feature execution
+ * vocabulary.
+ */
+internal fun observeThemeModeStore(
+    family:
+        ThemeModeFamily,
+    store:
+        ThemeModeStore,
+    executionRoot:
+        VexExecutionRoot,
+    logger:
+        VexLogger,
+) {
+    VexExecution.observe(
+        executionRoot =
+            executionRoot,
+        owner =
+            family,
+        source =
+            store::states,
+    ) { observed ->
+        observeThemeModeState(
+            family =
+                family,
+            observed =
+                observed,
+            logger =
+                logger,
+        )
+    }
+
+}
+
+private fun observeThemeModeState(
+    family:
+        ThemeModeFamily,
+    observed:
+        ThemeMode,
+    logger:
+        VexLogger,
+) {
+    val before =
+        family.currentState
+    val after =
+        family.observeStoredThemeMode(
+            observed,
+        )
+
+    if (
+        after !=
+        before
+    ) {
+        recordThemeModeStateChange(
+            logger =
+                logger,
+            before =
+                before,
+            after =
+                after,
+        )
+    }
+}
+
+private fun recordThemeModeStateChange(
+    logger:
+        VexLogger,
+    before:
+        ThemeMode,
+    after:
+        ThemeMode,
+) {
+    recordThemeModeFact(
+        logger =
+            logger,
+        event =
+            VexLogger.Event.Semantic(
+                subjectRef =
+                    THEME_MODE_FAMILY_SUBJECT,
+                action =
+                    "StateAdmitted",
+                detailsJson =
+                    "{\"fromState\":\"" +
+                        before.name +
+                        "\",\"toState\":\"" +
+                        after.name +
+                        "\"}",
+            ),
+    )
+}
+
+private fun themeModeControlDetails(
+    control:
+        ThemeModeFamily.Control,
+    currentState:
+        ThemeMode,
+):
+    String =
+    when (
+        control
+    ) {
+        is ThemeModeFamily.Control.Select ->
+            "{\"control\":\"Select\",\"mode\":\"" +
+                control.mode.mode.name +
+                "\",\"currentState\":\"" +
+                currentState.name +
+                "\"}"
+    }
+
+private fun themeModeSaveDetails(
+    effect:
+        ThemeModeFamily.Effect.Save,
+    failure:
+        Throwable? =
+        null,
+):
+    String =
+    buildString {
+        append(
+            "{\"effect\":\"Save\",\"mode\":\"",
+        )
+        append(
+            effect.mode.mode.name,
+        )
+        append(
+            "\"",
+        )
+        failure
+            ?.let { cause ->
+                append(
+                    ",\"failure\":\"",
+                )
+                append(
+                    cause::class.qualifiedName
+                        ?: cause::class.simpleName
+                        ?: "Throwable",
+                )
+                append(
+                    "\"",
+                )
+            }
+        append(
+            "}",
+        )
+    }
+
+private fun recordThemeModeFact(
+    logger:
+        VexLogger,
+    event:
+        VexLogger.Event,
+) {
+    try {
+        logger.sink.record(
+            event,
+        )
+    } catch (_: Throwable) {
+        // Observation failure never becomes ThemeMode semantic/runtime authority.
+    }
+}
+
+private const val THEME_MODE_FAMILY_SUBJECT =
+    "family.ThemeModeFamily"
+
+
+// [VXG RealForever]

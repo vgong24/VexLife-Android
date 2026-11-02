@@ -24,13 +24,13 @@ import com.vextreme.vexlife.android.elements.ScreenBlueprint
 import com.vextreme.vexlife.android.elements.SwappableContainerElement
 import com.vextreme.vexlife.android.elements.UIElement
 import com.vextreme.vexlife.android.elements.VexElementTree
-import com.vextreme.vexlife.android.logging.VexLogger
-import com.vextreme.vexlife.android.runtime.AppActionRegistrations
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.AppScreenBlueprint
 import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.shell.AppFrame
-import com.vextreme.vexlife.android.ui.VexLifeRelays
+import com.vextreme.vexlife.android.ui.VexLifeRelayGraph
+import com.vextreme.vexlife.android.ui.VexLifeSession
 import com.vextreme.vexlife.android.ui.VexLifeTheme
 import com.vextreme.vexlife.android.ui.VexThemePresentation
 
@@ -76,7 +76,7 @@ internal annotation class VexScreenPreviews
 internal data class VexPreviewContext(
     val runtime: VexRuntime,
     val repositories: AppRepositories,
-    val relays: VexLifeRelays,
+    val relayGraph: VexLifeRelayGraph,
 )
 
 /**
@@ -160,21 +160,19 @@ internal fun VexPreviewHost(
         }
     val scope = rememberCoroutineScope()
     val context = remember(id, scope) {
-        val repositories = repositoriesFactory()
-        val relays =
-            VexLifeRelays.create(
-                repositories = repositories,
-                scope = scope,
+        val repositories =
+            repositoriesFactory()
+        val session =
+            VexLifeSession(
+                repositories =
+                    repositories,
+                scope =
+                    scope,
+                executionRoot =
+                    VexExecutionRoot(),
             )
-        val runtime = VexRuntime(
-            registry = AppScreens.registry,
-            logger = VexLogger(),
-            initialScreen = AppScreens.primary.first(),
-            primaryScreens = AppScreens.primary,
-            currentAppActions = {
-                AppActionRegistrations.Empty
-            },
-        )
+        val runtime =
+            session.runtime
 
         runtime.navigation.push(startScreen)
 
@@ -182,14 +180,17 @@ internal fun VexPreviewHost(
             .apply(previewSetup)
 
         VexPreviewContext(
-            runtime = runtime,
-            repositories = repositories,
-            relays = relays,
+            runtime =
+                runtime,
+            repositories =
+                session.repositories,
+            relayGraph =
+                session.relayGraph,
         )
     }
 
     SideEffect {
-        context.relays.events.surfaceChanged(
+        context.relayGraph.events.surfaceChanged(
             screenId = context.runtime.currentScreen.screenId,
             transientBlocked = context.runtime.presentation.hasOpenPresentation,
         )
@@ -234,7 +235,7 @@ internal fun VexRenderedScreenPreview(
         screen.renderContent(
             runtime = context.runtime,
             repositories = context.repositories,
-            relays = context.relays,
+            relayGraph = context.relayGraph,
         )
     }
 }

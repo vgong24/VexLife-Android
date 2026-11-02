@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.screens.shared.maps.distribution.session
 
 import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionDraft
 import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionRepository
+import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapCoordinate
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsRegionPack
@@ -130,6 +131,11 @@ internal data class VexMapsDistributionLegWork(
  * Repository, Distribution Mode, Delivery Route, Optimizer and Navigation remain independent owners. This class owns their
  * active relationship: the admitted preparation snapshot, derived Plan, expected Navigation leg,
  * async attempt/failure state and the bounded Control feedback needed to advance the delivery route.
+ *
+ * This existing Session also owns the async work it authors, so VexExecution contributes custody
+ * mechanics directly here. Domain/session verbs such as addStop, prepare and leg advancement stay
+ * on the Session that owns their meaning; execution mechanics must not grow a peer feature API that
+ * restates those verbs.
  */
 internal class VexMapsDistributionSession(
     private val repository:
@@ -148,7 +154,10 @@ internal class VexMapsDistributionSession(
     private val deliveryRoute:
         VexMapsDeliveryRouteConnection =
         VexMapsDeliveryRouteConnection(),
-) {
+) :
+    VexExecution(
+        executionRoot,
+    ) {
     private val mutableExpectedLeg =
         MutableStateFlow<
             VexMapsDeliveryRouteExpectedLegState
@@ -210,14 +219,6 @@ internal class VexMapsDistributionSession(
                 mutableLegAttempt,
         )
 
-    private val execution =
-        VexMapsDistributionExecution(
-            root =
-                executionRoot,
-            session =
-                this,
-        )
-
     val navigationOutputs:
         Flow<VexMapsDeliveryRouteNavigationOutput> =
         navigationRelay.outputStates
@@ -239,12 +240,33 @@ internal class VexMapsDistributionSession(
             relayScope,
         )
 
-        execution.start()
-        execution.restoreDraft()
+        launchForCollect(
+            source =
+                ::modeDeliveryRouteOutputsForExecution,
+        ) { output ->
+            acceptModeDeliveryRouteOutput(
+                output,
+            )
+        }
+
+        launchForCollect(
+            source =
+                ::navigationOutputsForExecution,
+        ) { output ->
+            acceptNavigationOutput(
+                output,
+            )
+        }
+
+        launchOnce(
+            ::restoreDraftForExecution,
+        )
     }
 
     internal suspend fun shutdown() {
-        execution.shutdown()
+        joinStopOwned(
+            "VexMaps Distribution execution shut down",
+        )
         modeDeliveryRouteRelay.deactivate()
         navigationRelay.deactivate()
     }
@@ -267,7 +289,8 @@ internal class VexMapsDistributionSession(
             return
         }
 
-        execution.addStop(
+        launchOnce(
+            ::addStopForExecution,
             VexMapsDistributionAddStopWork(
                 placeRef =
                     placeRef,
@@ -283,7 +306,7 @@ internal class VexMapsDistributionSession(
         )
     }
 
-    internal suspend fun addStopForExecution(
+    private suspend fun addStopForExecution(
         work:
             VexMapsDistributionAddStopWork,
     ) {
@@ -320,12 +343,13 @@ internal class VexMapsDistributionSession(
             return
         }
 
-        execution.removeStop(
+        launchOnce(
+            ::removeStopForExecution,
             stopRef,
         )
     }
 
-    internal suspend fun removeStopForExecution(
+    private suspend fun removeStopForExecution(
         stopRef: String,
     ) {
         runCatching {
@@ -352,12 +376,13 @@ internal class VexMapsDistributionSession(
             return
         }
 
-        execution.setReturnToStart(
+        launchOnce(
+            ::setReturnToStartForExecution,
             enabled,
         )
     }
 
-    internal suspend fun setReturnToStartForExecution(
+    private suspend fun setReturnToStartForExecution(
         enabled: Boolean,
     ) {
         runCatching {
@@ -409,8 +434,8 @@ internal class VexMapsDistributionSession(
                 VexMapsDeliveryRouteState.Preparing
                 ?: return
 
-        execution.cancelPreparation()
-        execution.cancelLeg()
+        cancelPreparationWork()
+        cancelLegWork()
         clearExpectedLeg()
         setLegAttempt(
             VexMapsDeliveryRouteLegAttempt.Idle,
@@ -466,7 +491,8 @@ internal class VexMapsDistributionSession(
                 null,
         )
 
-        execution.startPreparation(
+        launchOnce(
+            ::prepareForExecution,
             VexMapsDistributionPreparationWork(
                 draft =
                     draft,
@@ -478,7 +504,7 @@ internal class VexMapsDistributionSession(
         )
     }
 
-    internal suspend fun prepareForExecution(
+    private suspend fun prepareForExecution(
         work:
             VexMapsDistributionPreparationWork,
     ) {
@@ -642,7 +668,7 @@ internal class VexMapsDistributionSession(
                     .state
         ) {
             is VexMapsDeliveryRouteState.Preparing -> {
-                execution.cancelPreparation()
+                cancelPreparationWork()
                 deliveryRoute.preparationFailed(
                     state.preparationRef,
                 )
@@ -820,8 +846,8 @@ internal class VexMapsDistributionSession(
             mutableState.value
                 .draft
 
-        execution.cancelPreparation()
-        execution.cancelLeg()
+        cancelPreparationWork()
+        cancelLegWork()
 
         val currentDeliveryRouteState =
             deliveryRoute.currentProjection
@@ -854,10 +880,12 @@ internal class VexMapsDistributionSession(
                         null,
                 )
 
-        execution.clearDraft()
+        launchOnce(
+            ::clearDraftForExecution,
+        )
     }
 
-    internal suspend fun clearDraftForExecution() {
+    private suspend fun clearDraftForExecution() {
         runCatching {
             repository.clearDraft()
         }.onSuccess {
@@ -873,7 +901,7 @@ internal class VexMapsDistributionSession(
         }
     }
 
-    internal suspend fun restoreDraftForExecution() {
+    private suspend fun restoreDraftForExecution() {
         runCatching {
             repository.loadDraft()
         }.onSuccess {
@@ -1057,9 +1085,29 @@ internal class VexMapsDistributionSession(
         )
     }
 
+    /**
+     * Preparation/leg replacement is source-addressed local control over this Session's own work.
+     *
+     * The meaningful operations remain [prepareForExecution] and [prepareLegForExecution] on this
+     * existing Session owner; VexExecution contributes only source-addressed custody/cancellation.
+     */
+    private fun cancelPreparationWork() {
+        forceStop(
+            ::prepareForExecution,
+            "Distribution preparation superseded",
+        )
+    }
+
+    private fun cancelLegWork() {
+        forceStop(
+            ::prepareLegForExecution,
+            "Distribution leg preparation superseded",
+        )
+    }
+
     private fun invalidatePreparedReality() {
-        execution.cancelPreparation()
-        execution.cancelLeg()
+        cancelPreparationWork()
+        cancelLegWork()
         runCatching {
             navigation.stop()
         }
@@ -1152,15 +1200,15 @@ internal class VexMapsDistributionSession(
                 null
         }
 
-    internal fun modeDeliveryRouteOutputsForExecution():
+    private fun modeDeliveryRouteOutputsForExecution():
         Flow<com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionModeDeliveryRouteOutput> =
         modeDeliveryRouteRelay.outputStates
 
-    internal fun navigationOutputsForExecution():
+    private fun navigationOutputsForExecution():
         Flow<VexMapsDeliveryRouteNavigationOutput> =
         navigationRelay.outputStates
 
-    internal fun acceptModeDeliveryRouteOutput(
+    private fun acceptModeDeliveryRouteOutput(
         output:
             com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionModeDeliveryRouteOutput,
     ) {
@@ -1172,7 +1220,7 @@ internal class VexMapsDistributionSession(
             }
     }
 
-    internal fun acceptNavigationOutput(
+    private fun acceptNavigationOutput(
         output:
             VexMapsDeliveryRouteNavigationOutput,
     ) {
@@ -1380,7 +1428,8 @@ internal class VexMapsDistributionSession(
         )
         clearExpectedLeg()
 
-        execution.startLeg(
+        launchOnce(
+            ::prepareLegForExecution,
             VexMapsDistributionLegWork(
                 target =
                     target,
@@ -1392,7 +1441,7 @@ internal class VexMapsDistributionSession(
         )
     }
 
-    internal suspend fun prepareLegForExecution(
+    private suspend fun prepareLegForExecution(
         work:
             VexMapsDistributionLegWork,
     ) {

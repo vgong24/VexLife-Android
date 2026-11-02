@@ -84,9 +84,10 @@ fun LogHistorySheet(
             ) {
                 SelectionContainer {
                     Text(
-                        text = VexLogger.formatHistory(
+                        text = VexLogger.formatStructuredHistory(
                             records = history,
                             zoneId = ZoneId.systemDefault(),
+                            registry = runtime.registry,
                         ),
                         fontFamily = FontFamily.Monospace,
                     )

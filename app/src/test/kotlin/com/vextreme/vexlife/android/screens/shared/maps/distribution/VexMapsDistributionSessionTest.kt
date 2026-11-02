@@ -4,7 +4,6 @@ import com.vextreme.vexlife.android.data.maps.distribution.InMemoryVexMapsDistri
 import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionDraft
 import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionRepository
 import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionStop
-import com.vextreme.vexlife.android.execution.VexCoroutineStatus
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapCoordinate
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsRegionPack
@@ -1112,23 +1111,15 @@ class VexMapsDistributionSessionTest {
 
                 session.shutdown()
 
+                /*
+                 * shutdown() owns the proof boundary now: it join-stops this Session's work before
+                 * returning. The observable behavior is that the suspended preparation never
+                 * reaches Navigation; a removed root execution-status registry is not another
+                 * source of truth for cancellation.
+                 */
                 assertEquals(
                     0,
                     navigation.prepareCalls,
-                )
-                assertTrue(
-                    executionRoot
-                        .executions
-                        .value
-                        .values
-                        .none {
-                            it.status ==
-                                VexCoroutineStatus.STARTING ||
-                                it.status ==
-                                VexCoroutineStatus.RUNNING ||
-                                it.status ==
-                                VexCoroutineStatus.RESTARTING
-                        },
                 )
             } finally {
                 session.shutdown()
@@ -1266,15 +1257,29 @@ class VexMapsDistributionSessionTest {
                 assertNull(
                     cleanupAttempt.target,
                 )
-                assertTrue(
-                    executionRoot
-                        .executions
-                        .value
-                        .values
-                        .none {
+
+                /*
+                 * Prove the relationship executor survived the handled cleanup failure by causing a
+                 * later semantic change and observing a new convergence output. This protects the
+                 * behavior the old root-level FAILED-status assertion was trying to infer without
+                 * recreating a parallel execution registry.
+                 */
+                session.cancelDeliveryRoutePreservingDraft()
+
+                withTimeout(
+                    1_000L,
+                ) {
+                    session.navigationOutputs
+                        .first {
                             it.status ==
-                                VexCoroutineStatus.FAILED
-                        },
+                                VexMapsDeliveryRouteNavigationRelationshipStatus
+                                    .Drafting
+                        }
+                }
+                assertTrue(
+                    session.currentDeliveryRoute
+                        .state is
+                        VexMapsDeliveryRouteState.Draft,
                 )
             } finally {
                 session.shutdown()

@@ -4,74 +4,97 @@ package com.vextreme.vexlife.android.behavior
 
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
-import com.vextreme.vexlife.android.logging.VexLogger
-import kotlinx.coroutines.flow.Flow
+import kotlin.reflect.KClass
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlin.reflect.KClass
 
 /**
- * Live Family runtime for one semantic State and Control vocabulary.
+ * Semantic owner for one exact State / Control / Effect vocabulary.
  *
- * [Family] is the concrete VexFamily root itself, not an arbitrary marker. The root bound closes
- * compile-time kinship so State and Control cannot agree on a fake coordinate that is not the
- * Family that actually owns them.
+ * WHAT THIS IS
+ * Family answers one question: what does this Control mean against exact CURRENT semantic State?
+ * It owns that meaning and the one current semantic State holder.
  *
- * Human-visible runtime call:
+ * WHAT IT RELATES TO
+ * A caller may call [activate], bind the returned accepted Act to one Family-owned executable
+ * [Act.Method] through [Act.launchWith], and let VexExecution provide Job custody while the Method
+ * touches the rightful Store/provider boundary. Already-reconciled semantic reality returns through
+ * [observe]. Dependency construction may create a Family, but Family does not know that a dependency
+ * system exists.
  *
- *     activate(control)
- *     -> act(currentState, control)
- *     -> when (currentState)
- *     -> when (control)
- *     -> stay() or admit(State)
- *     -> optional begin(...)
- *     -> StateRelay / execution
+ * WHAT IT ADDRESSES / WHY THIS SHAPE EXISTS
+ * Keeping State + Control -> Act in one synchronous semantic owner prevents provider mechanics,
+ * coroutine timing, persistence, logging, and UI presentation from becoming alternate places where
+ * product meaning is decided. Effect is returned rather than executed so requested transformation
+ * remains distinct from resulting truth.
  *
- * The concrete Family owns [act]. State and Control traversal use native Kotlin sealed-type when
- * expressions; there is no custom state/on branching language between activate(...) and feature
- * meaning.
+ * Core loop:
+ *
+ *     Control + CURRENT State
+ *     -> Act?
+ *     -> admitted State? + Begin?
+ *        -> Effect + execution Approach
+ *
+ * RESPONSIBILITY FENCE
+ * Family owns semantic RelationshipId composition because that identity is an invisible consequence
+ * of the already-authored live Family + Control (+ typed ResourceId when needed). It does NOT own
+ * VexExecution Job custody, Store/provider access, VexLogger, dependency resolution, lifecycle, or
+ * presentation mechanics. The consequence's feature/domain meaning remains on the semantic owner;
+ * VexExecution contributes custody/overlap mechanics without acquiring a peer feature vocabulary.
  */
 abstract class VexFamily<
     Family,
     FamilyState,
     FamilyControl,
+    FamilyEffect,
 >(
     initialState: FamilyState,
-    private val executionRoot:
-        VexExecutionRoot,
-    private val logger:
-        VexLogger.Sink,
 ) where
     Family : VexFamily<
         Family,
         FamilyState,
-        FamilyControl
+        FamilyControl,
+        FamilyEffect
     >,
     FamilyState : VexFamily.State<Family>,
-    FamilyControl : VexFamily.Control<Family> {
-    /**
-     * Compile-time kinship marker for semantic State belonging to one exact Family coordinate.
-     */
+    FamilyControl : VexFamily.Control<Family>,
+    FamilyEffect : VexFamily.Effect<Family> {
+    /** Current semantic truth belonging to one exact Family. */
     interface State<
         Family,
     > where
         Family : VexFamily<
             Family,
             *,
+            *,
             *
         >
 
     /**
-     * Typed resource identity contributed by a Control when Control kind alone is not enough to
-     * distinguish maintained execution relationships.
+     * Family-owned semantic value that may remain recognizable across State, Control, Act,
+     * executable Method, observation, or convergence without becoming an unscoped primitive.
      *
-     * ResourceId deliberately has no shared String/value payload. The concrete ID type owns its own
-     * representation and equality; Family preserves that typed object instead of flattening it.
+     * Parameter names what the value IS inside one Family's world. It does not mirror a Method name,
+     * imply current State, or require every ordinary Kotlin argument to become a Parameter.
+     */
+    interface Parameter<
+        Family,
+    > where
+        Family : VexFamily<
+            Family,
+            *,
+            *,
+            *
+        >
+
+    /**
+     * Typed resource identity contributed only when Control kind alone does not distinguish the
+     * maintained execution relationship.
      *
-     * Equality and hashCode must remain stable for as long as the ID participates in a live
-     * relationship. Prefer immutable value identity. A mutable ID whose equality/hash changes while
-     * active would corrupt relationship lookup/custody rather than represent a new semantic request.
+     * The concrete ID object/equality is retained; payload that does not identify the relationship
+     * stays ordinary Control payload.
      */
     interface ResourceId<
         Family,
@@ -79,20 +102,22 @@ abstract class VexFamily<
         Family : VexFamily<
             Family,
             *,
+            *,
             *
         >
 
     /**
-     * Compile-time kinship marker for incoming Control belonging to one exact Family coordinate.
+     * Semantic request / affordance input belonging to one exact Family.
      *
-     * Control kind is always part of the Family-owned relationship identity. A Control that needs
-     * narrower identity explicitly implements [Resource] with its exact ResourceId type.
+     * Control kind is the default relationship distinction. A Control implements [Resource] only
+     * when one exact typed child ID is genuinely part of that relationship.
      */
     interface Control<
         Family,
     > where
         Family : VexFamily<
             Family,
+            *,
             *,
             *
         > {
@@ -104,6 +129,7 @@ abstract class VexFamily<
             Family : VexFamily<
                 Family,
                 *,
+                *,
                 *
             >,
             Id : ResourceId<Family> {
@@ -113,41 +139,352 @@ abstract class VexFamily<
     }
 
     /**
-     * Exact Family-maintained execution identity.
+     * Runtime transformation requested by a lawful Act.
      *
-     * The live Family instance scopes identity. Control kind is always present. A typed ResourceId
-     * optionally narrows repeated instances of that same Control. The actual ResourceId object is
-     * retained so its concrete type/equality cannot collapse into a shared String convention.
+     * Effect is not resulting truth. [Act.Begin] may author how that Effect overlaps with other
+     * active work; the later realization boundary attempts it and observed reality comes back
+     * separately as State.
      */
-    internal class RelationshipId<
+    interface Effect<
         Family,
-    > internal constructor(
-        private val family:
-            VexFamily<
-                Family,
-                *,
-                *
-            >,
-        internal val controlType:
-            KClass<*>,
-        internal val controlName:
-            String,
-        internal val resourceId:
-            ResourceId<*>?,
-    ) :
-        VexExecution.RelationshipId where
+    > where
         Family : VexFamily<
             Family,
             *,
+            *,
             *
-        > {
+        >
+
+    /**
+     * Family-owned display classification.
+     *
+     * The exact Family + State coordinates remain in the reusable type so display interpretation
+     * cannot silently detach from its semantic owner.
+     *
+     * DisplayState is derived outward interpretation of State, never another truth owner.
+     */
+    interface DisplayState<
+        Family,
+        State,
+    > where
+        Family : VexFamily<
+            Family,
+            State,
+            *,
+            *
+        >,
+        State : VexFamily.State<Family> {
+        data class StateOnly<
+            Family,
+            State,
+        >(
+            val state:
+                State,
+        ) :
+            DisplayState<
+                Family,
+                State
+            > where
+            Family : VexFamily<
+                Family,
+                State,
+                *,
+                *
+            >,
+            State : VexFamily.State<Family>
+    }
+
+    /**
+     * Immutable outward snapshot of one exact Family State and the DisplayState derived from that
+     * same State value.
+     *
+     * Projection is not another truth owner. The Family coordinate prevents unrelated State /
+     * DisplayState pairs from being assembled into one apparently valid projection.
+     */
+    data class Projection<
+        Family,
+        State,
+        out Display,
+    >(
+        val state:
+            State,
+        val displayState:
+            Display,
+    ) where
+        Family : VexFamily<
+            Family,
+            State,
+            *,
+            *
+        >,
+        State : VexFamily.State<Family>,
+        Display : DisplayState<
+            Family,
+            State
+        >
+
+    /**
+     * One lawful outcome resolved from exact CURRENT State + Control.
+     *
+     * [admittedState] is immediate semantic State meaning.
+     * [begin] is an inert description of the optional runtime transformation and its overlap law.
+     *
+     * Begin is authored here because Independent / Earliest / Latest / Queued describe the
+     * relationship of THIS Act. It does not launch a coroutine, call a Store, or log anything while
+     * [act] is being resolved. The caller of [activate] later hands this already-authored consequence
+     * to VexExecution.
+     */
+    @ConsistentCopyVisibility
+    data class Act<
+        Family,
+        State,
+        Effect,
+    > internal constructor(
+        val admittedState:
+            State?,
+        val begin:
+            Begin<
+                Family,
+                Effect
+            >?,
+        /**
+         * Accepted maintained-work identity mechanically bound by [activate] from the triggering
+         * live Family + Control (+ typed ResourceId when required).
+         *
+         * null means this Act has no maintained execution relationship (no Begin or Independent).
+         * Realization consumes this coordinate; callers do not reconstruct it from Control.
+         */
+        val relationshipId:
+            VexExecution.RelationshipId? =
+            null,
+    ) where
+        Family : VexFamily<
+            Family,
+            *,
+            *,
+            *
+        >,
+        State : VexFamily.State<Family>,
+        Effect : VexFamily.Effect<Family> {
+        /*
+         * Acceptance binds the live Family execution owner after pure act(...) resolution without
+         * putting runtime-owner identity into Act equality/copy semantics.
+         */
+        private var executionOwner:
+            Any? =
+            null
+
+        /**
+         * Semantically-addressed executable function belonging to one Family's Act vocabulary.
+         *
+         * A concrete Method is a fully-bound callable value: it contains the exact provider/Store
+         * dependency and Family Parameter required by that operation, then returns the truthful
+         * physical result of the call. VexExecution still owns Job custody / overlap / cancellation.
+         */
+        interface Method<
+            Family,
+            out Output,
+        > where
+            Family : VexFamily<
+                Family,
+                *,
+                *,
+                *
+            > {
+            suspend operator fun invoke():
+                Output
+        }
+
+        /**
+         * Compiler-visible continuation from an accepted Act into its Method.
+         *
+         * This type owns no semantic meaning. It only prevents callers from re-supplying the
+         * already-authored Approach, RelationshipId, or execution owner while selecting the exact
+         * bound Method that will realize the consequence.
+         */
+        class MethodFollowUp<
+            Family,
+        > internal constructor(
+            private val executionRoot:
+                VexExecutionRoot,
+            private val owner:
+                Any,
+            private val approach:
+                VexExecution.Approach,
+            private val relationshipId:
+                VexExecution.RelationshipId?,
+        ) where
+            Family : VexFamily<
+                Family,
+                *,
+                *,
+                *
+            > {
+            fun <Output> method(
+                method:
+                    Method<
+                        Family,
+                        Output
+                    >,
+                beforeOperation:
+                    () -> Unit =
+                    {},
+                onResult:
+                    (Output) -> Unit =
+                    {},
+                onFailure:
+                    (Throwable) -> Unit =
+                    {},
+            ):
+                Job =
+                VexExecution.begin(
+                    executionRoot =
+                        executionRoot,
+                    owner =
+                        owner,
+                    approach =
+                        approach,
+                    relationshipId =
+                        relationshipId,
+                    operation =
+                        method::invoke,
+                    beforeOperation =
+                        beforeOperation,
+                    onResult =
+                        onResult,
+                    onFailure =
+                        onFailure,
+                )
+        }
+
+        /**
+         * Continue one accepted Act through the execution relationship it already authored.
+         *
+         * null means this Act has no runtime consequence. The caller supplies only the
+         * VexExecutionRoot and then one bound Family Method; Approach, RelationshipId, and the live
+         * Family owner are consumed from this accepted Act rather than reconstructed downstream.
+         */
+        fun launchWith(
+            executionRoot:
+                VexExecutionRoot,
+        ):
+            MethodFollowUp<Family>? {
+            val authoredBegin =
+                begin
+                    ?: return null
+            val owner =
+                checkNotNull(
+                    executionOwner,
+                ) {
+                    "Only an Act accepted by VexFamily.activate(...) may launch"
+                }
+
+            return MethodFollowUp(
+                executionRoot =
+                    executionRoot,
+                owner =
+                    owner,
+                approach =
+                    authoredBegin.approach,
+                relationshipId =
+                    relationshipId,
+            )
+        }
+
+        internal fun acceptedBy(
+            owner:
+                Any,
+            relationshipId:
+                VexExecution.RelationshipId?,
+        ):
+            Act<
+                Family,
+                State,
+                Effect
+            > =
+            Act(
+                admittedState =
+                    admittedState,
+                begin =
+                    begin,
+                relationshipId =
+                    relationshipId,
+            )
+                .also { accepted ->
+                    accepted.executionOwner =
+                        owner
+                }
+
+        val effect:
+            Effect?
+            get() =
+                begin
+                    ?.effect
+
+        /**
+         * Execution relationship authored by the Act, not an executor and not another Effect layer.
+         *
+         * Approach answers only the overlap meaning of this consequence:
+         *
+         * Independent
+         *     every accepted consequence remains independently meaningful
+         *
+         * Earliest
+         *     an unfinished consequence for this relationship is already sufficient
+         *
+         * Latest
+         *     the newest accepted consequence supersedes unfinished predecessors
+         *
+         * Queued
+         *     every accepted consequence remains meaningful and order must be preserved
+         *
+         * This choice is orthogonal to immediate State admission. stay(...) does not imply one
+         * Approach and admit(State) does not imply another. A same-State Act may be Latest; a
+         * State-changing Act may be Independent, Earliest, Latest, or Queued according to the
+         * relationship being authored.
+         *
+         * Earlier #207 source also let Begin author success/failure-specific later-State admission.
+         * The current Family deliberately does not carry that result grammar. Begin authors only
+         * Effect + overlap meaning; provider/runtime results are interpreted by their rightful
+         * boundary and already-semantic truth re-enters through [observe].
+         */
+        @ConsistentCopyVisibility
+        data class Begin<
+            Family,
+            Effect,
+        > internal constructor(
+            val approach:
+                VexExecution.Approach,
+            val effect:
+                Effect,
+        ) where
+            Family : VexFamily<
+                Family,
+                *,
+                *,
+                *
+            >,
+            Effect : VexFamily.Effect<Family>
+    }
+
+    private class FamilyRelationshipId(
+        private val family:
+            Any,
+        private val controlType:
+            KClass<*>,
+        private val controlName:
+            String,
+        private val resourceId:
+            ResourceId<*>?,
+    ) :
+        VexExecution.RelationshipId {
         override fun equals(
             other:
                 Any?,
         ):
             Boolean =
             other is
-                RelationshipId<*> &&
+                FamilyRelationshipId &&
                 family ===
                 other.family &&
                 controlType ==
@@ -183,351 +520,6 @@ abstract class VexFamily<
         }
     }
 
-    /**
-     * Family-owned display classification.
-     *
-     * DisplayState is not another semantic truth owner. It is the bounded outward interpretation of
-     * [currentState] when a consumer has earned a repeated display distinction.
-     *
-     * [StateOnly] is the complete default contract: current semantic State already carries all
-     * display meaning this Family has earned. It is not a placeholder and it is not an instruction
-     * to invent another ViewState / UiState / PresentationState owner.
-     */
-    interface DisplayState<
-        out State : VexFamily.State<*>,
-    > {
-        data class StateOnly<
-            State : VexFamily.State<*>,
-        >(
-            val state: State,
-        ) :
-            DisplayState<
-                State
-            >
-    }
-
-    /**
-     * Exact Store capability the current Family runtime consumes.
-     *
-     * Store is a Family child, not an independent Vex root. A concrete Family may extend this
-     * locally when it truly needs more storage behavior, but the shared Family contract requires
-     * only the operation Family itself currently executes: save(State).
-     *
-     * Durable Store truth is not another live Family State holder.
-     */
-    interface Store<
-        State : VexFamily.State<*>,
-    > {
-        suspend fun save(
-            state: State,
-        ):
-            WriteResult
-
-        sealed interface WriteResult {
-            data object Success :
-                WriteResult
-
-            data class Failure(
-                val cause:
-                    Throwable? =
-                    null,
-            ) :
-                WriteResult
-        }
-    }
-
-    /**
-     * Earned specialization when durable Store truth is exactly Family State.
-     *
-     * This restores the ThemeMode pressure already proved by the Origin Walk without claiming every
-     * Family Store is State-shaped. Observable durable State is a StateRelay dependency; it is not
-     * another live semantic-State holder.
-     */
-    interface StateStore<
-        State : VexFamily.State<*>,
-    > :
-        Store<State> {
-        val observableState:
-            Flow<State>
-
-        suspend fun get():
-            State
-
-        suspend fun forget():
-            Store.WriteResult
-    }
-
-    /**
-     * One lawful outcome authored by [act] for an exact current State + incoming Control pair.
-     *
-     * Act belongs to Family. It is intentionally not another Vex root.
-     */
-    class Act<
-        State : VexFamily.State<*>,
-    > internal constructor(
-        internal val admittedState:
-            State?,
-        internal val begin:
-            Begin<State>?,
-    ) {
-        /**
-         * Optional execution consequence opened by an Act.
-         *
-         * Begin is not a standalone package capability. Its constructors are closed; concrete
-         * Families receive the protected VexFamily.begin(...) opening only because they are
-         * authoring an Act.
-         */
-        class Begin<
-            State : VexFamily.State<*>,
-        > internal constructor(
-            internal val approach:
-                VexExecution.Approach,
-            internal val save:
-                Save<State>,
-        ) {
-
-            internal class Result<
-                State,
-            > internal constructor(
-                internal val admission:
-                    (
-                        (
-                            State,
-                        ) -> State
-                    )?,
-            )
-
-            internal data class Results<
-                State,
-            >(
-                val success:
-                    Result<State>,
-                val failure:
-                    Result<State>,
-            )
-
-            internal data class Save<
-                State : VexFamily.State<*>,
-            >(
-                val state:
-                    State,
-                val results:
-                    Results<State>,
-            )
-
-            class Scope<
-                State : VexFamily.State<*>,
-            > internal constructor(
-                private val approach:
-                    VexExecution.Approach,
-            ) {
-                private var save:
-                    Save<State>? =
-                    null
-
-                fun save(
-                    state: State,
-                ):
-                    SaveDestination<State> {
-                    require(
-                        save ==
-                            null,
-                    ) {
-                        "begin currently admits one Save"
-                    }
-
-                    return SaveDestination(
-                        state =
-                            state,
-                        complete = { completed ->
-                            require(
-                                save ==
-                                    null,
-                            ) {
-                                "begin Save was already completed"
-                            }
-
-                            save =
-                                completed
-                        },
-                    )
-                }
-
-                internal fun build():
-                    Begin<State> =
-                    Begin(
-                        approach =
-                            approach,
-                        save =
-                            requireNotNull(
-                                save,
-                            ) {
-                                "begin requires one Save"
-                            },
-                    )
-
-                class SaveDestination<
-                    State : VexFamily.State<*>,
-                > internal constructor(
-                    private val state:
-                        State,
-                    private val complete:
-                        (
-                            Save<State>,
-                        ) -> Unit,
-                ) {
-                    fun results(
-                        block:
-                            ResultsScope<State>.() -> Unit,
-                    ) {
-                        complete(
-                            Save(
-                                state =
-                                    state,
-                                results =
-                                    ResultsScope<State>()
-                                        .apply(
-                                            block,
-                                        )
-                                        .build(),
-                            ),
-                        )
-                    }
-                }
-
-                class ResultsScope<
-                    State : VexFamily.State<*>,
-                > internal constructor() {
-                    private var success:
-                        Result<State>? =
-                        null
-
-                    private var failure:
-                        Result<State>? =
-                        null
-
-                    fun success(
-                        block:
-                            ResultScope<State>.() -> Unit = {},
-                    ) {
-                        require(
-                            success ==
-                                null,
-                        ) {
-                            "Success result was declared more than once"
-                        }
-
-                        success =
-                            ResultScope<State>()
-                                .apply(
-                                    block,
-                                )
-                                .build()
-                    }
-
-                    fun failure(
-                        block:
-                            ResultScope<State>.() -> Unit = {},
-                    ) {
-                        require(
-                            failure ==
-                                null,
-                        ) {
-                            "Failure result was declared more than once"
-                        }
-
-                        failure =
-                            ResultScope<State>()
-                                .apply(
-                                    block,
-                                )
-                                .build()
-                    }
-
-                    internal fun build():
-                        Results<State> =
-                        Results(
-                            success =
-                                requireNotNull(
-                                    success,
-                                ) {
-                                    "results requires explicit Success"
-                                },
-                            failure =
-                                requireNotNull(
-                                    failure,
-                                ) {
-                                    "results requires explicit Failure"
-                                },
-                        )
-                }
-
-                class ResultScope<
-                    State : VexFamily.State<*>,
-                > internal constructor() {
-                    private var admission:
-                        (
-                            (
-                                State,
-                            ) -> State
-                        )? =
-                        null
-
-                    /**
-                     * Authored unconditional later State after this execution result.
-                     *
-                     * The State is still admitted through the Family StateRelay boundary when the
-                     * result actually arrives.
-                     */
-                    fun admit(
-                        state: State,
-                    ) {
-                        admit {
-                            state
-                        }
-                    }
-
-                    /**
-                     * Authored later-State decision against exact CURRENT Family State.
-                     *
-                     * Use this when a delayed result is only lawful while some feature-owned
-                     * currentness condition still holds. Family supplies CURRENT State and
-                     * serialization; the feature supplies the meaning of "still current".
-                     */
-                    fun admit(
-                        decide:
-                            (
-                                currentState: State,
-                            ) -> State,
-                    ) {
-                        require(
-                            admission ==
-                                null,
-                        ) {
-                            "one result may admit at most one later State"
-                        }
-
-                        admission =
-                            decide
-                    }
-
-                    internal fun build():
-                        Result<State> =
-                        Result(
-                            admission =
-                                admission,
-                        )
-                }
-            }
-        }
-    }
-
-    /*
-     * One live State holder.
-     *
-     * Family.currentState and Family.states expose this same StateRelay truth. Family does not retain
-     * a second semantic-State copy.
-     */
     private val stateLock =
         Any()
 
@@ -546,210 +538,213 @@ abstract class VexFamily<
             states.value
 
     /**
-     * Feature-owned State + Control meaning.
+     * Resolve one semantic Control against exact CURRENT State.
      *
-     * A concrete Family implements this function directly. State is traversed first because current
-     * State is the truth against which the incoming Control receives meaning.
+     * null means no lawful Act.
+     * stay(...) means lawful Act with no immediate State admission.
+     * admit(...) means lawful Act with immediate State admission.
      *
-     * Both State and Control traversal stay exhaustive at this semantic boundary. Do not use an
-     * else branch to absorb future vocabulary: a new State or Control should create compiler-visible
-     * relationship work. Controls with the exact same reviewed outcome may share one branch.
-     *
-     * Use [noAct] for a reviewed State + Control pair that has no lawful Act.
-     *
-     * This is relationship resolution, not execution. The same function is used by isAvailable(...)
-     * and activate(...), so implementations must not mutate Family State, invoke providers/Store,
-     * launch work, log accepted facts, or otherwise cause an external effect while resolving.
-     * begin(...) authors a consequence description only; it does not start that consequence here.
+     * This function is pure relationship meaning: no provider calls, persistence, logging, coroutine
+     * launch, or other runtime effect may happen while resolving. [begin], [beginEarliest],
+     * [beginLatest], and [beginQueued] only author inert Act consequence data here.
      */
     protected abstract fun act(
         currentState: FamilyState,
         control: FamilyControl,
     ):
-        Act<FamilyState>?
+        Act<
+            Family,
+            FamilyState,
+            FamilyEffect
+        >?
 
-    /**
-     * Authored Act outcome: keep current semantic State.
-     */
     protected fun stay(
         begin:
-            Act.Begin<FamilyState>? =
+            Act.Begin<
+                Family,
+                FamilyEffect
+            >? =
             null,
     ):
-        Act<FamilyState> =
+        Act<
+            Family,
+            FamilyState,
+            FamilyEffect
+        > =
         Act(
             admittedState =
                 null,
             begin =
                 begin,
+            relationshipId =
+                null,
         )
 
-    /**
-     * Reviewed absence of a lawful Act for this exact current State + incoming Control pair.
-     *
-     * This intentionally returns the nullable representation used by act(...), but concrete Family
-     * source does not communicate semantic absence with a naked null.
-     */
-    protected fun noAct():
-        Act<FamilyState>? =
-        null
-
-    /**
-     * Authored Act outcome: admit this semantic State when activate(...) applies the Act.
-     */
     protected fun admit(
-        state: FamilyState,
+        state:
+            FamilyState,
         begin:
-            Act.Begin<FamilyState>? =
+            Act.Begin<
+                Family,
+                FamilyEffect
+            >? =
             null,
     ):
-        Act<FamilyState> =
+        Act<
+            Family,
+            FamilyState,
+            FamilyEffect
+        > =
         Act(
             admittedState =
                 state,
             begin =
                 begin,
+            relationshipId =
+                null,
         )
 
-    /**
-     * Optional independent execution consequence carried by an Act.
-     */
+    /** Author a consequence where every accepted occurrence remains independently meaningful. */
     protected fun begin(
-        block:
-            Act.Begin.Scope<FamilyState>.() -> Unit,
+        effect:
+            FamilyEffect,
     ):
-        Act.Begin<FamilyState> =
-        buildBegin(
+        Act.Begin<
+            Family,
+            FamilyEffect
+        > =
+        Act.Begin(
             approach =
                 VexExecution.Approach.Independent,
-            block =
-                block,
+            effect =
+                effect,
         )
 
-    /**
-     * Earliest maintained relationship for the triggering Control.
-     *
-     * Relationship identity comes from the live Family + Control name + optional typed ResourceId.
-     */
+    /** Author a relationship where one unfinished earliest consequence is already sufficient. */
     protected fun beginEarliest(
-        block:
-            Act.Begin.Scope<FamilyState>.() -> Unit,
+        effect:
+            FamilyEffect,
     ):
-        Act.Begin<FamilyState> =
-        buildBegin(
+        Act.Begin<
+            Family,
+            FamilyEffect
+        > =
+        Act.Begin(
             approach =
                 VexExecution.Approach.Earliest,
-            block =
-                block,
+            effect =
+                effect,
         )
 
-    /**
-     * Latest maintained relationship for the triggering Control.
-     */
+    /** Author a relationship where the newest accepted consequence supersedes unfinished predecessors. */
     protected fun beginLatest(
-        block:
-            Act.Begin.Scope<FamilyState>.() -> Unit,
+        effect:
+            FamilyEffect,
     ):
-        Act.Begin<FamilyState> =
-        buildBegin(
+        Act.Begin<
+            Family,
+            FamilyEffect
+        > =
+        Act.Begin(
             approach =
                 VexExecution.Approach.Latest,
-            block =
-                block,
+            effect =
+                effect,
         )
 
-    /**
-     * Queued maintained relationship for the triggering Control.
-     */
+    /** Author a relationship where every accepted consequence remains meaningful in arrival order. */
     protected fun beginQueued(
-        block:
-            Act.Begin.Scope<FamilyState>.() -> Unit,
+        effect:
+            FamilyEffect,
     ):
-        Act.Begin<FamilyState> =
-        buildBegin(
+        Act.Begin<
+            Family,
+            FamilyEffect
+        > =
+        Act.Begin(
             approach =
                 VexExecution.Approach.Queued,
-            block =
-                block,
+            effect =
+                effect,
         )
-
-    private fun buildBegin(
-        approach:
-            VexExecution.Approach,
-        block:
-            Act.Begin.Scope<FamilyState>.() -> Unit,
-    ):
-        Act.Begin<FamilyState> =
-        Act.Begin.Scope<FamilyState>(
-            approach =
-                approach,
-        )
-            .apply(
-                block,
-            )
-            .build()
-
-    open val store:
-        Store<FamilyState>? =
-        null
 
     /**
-     * Observe one durable Family-State Store through the same StateRelay currentness boundary.
+     * Derive outward display meaning from one exact semantic State snapshot.
      *
-     * Execution owns only maintained Flow custody. Store owns durable State. The concrete Family
-     * owns how stored State combines with exact CURRENT State. The decision re-enters through
-     * [admitCurrent], so no session/presentation observer or second current-State holder is created.
+     * Concrete Families override this seam when richer repeated display interpretation is earned.
      */
-    protected fun observeStore(
-        stateStore:
-            StateStore<FamilyState>,
-        decide:
-            (
-                currentState: FamilyState,
-                storedState: FamilyState,
-            ) -> FamilyState,
+    open fun displayStateFor(
+        state:
+            FamilyState,
     ):
-        VexExecution.Handle =
-        VexExecution.observe(
-            executionRoot =
-                executionRoot,
-            owner =
-                this::class,
-            source =
-                stateStore::observableState,
-        ) { storedState ->
-            admitCurrent { currentState ->
-                decide(
-                    currentState,
-                    storedState,
+        DisplayState<
+            Family,
+            FamilyState
+        > =
+        DisplayState.StateOnly<
+            Family,
+            FamilyState
+        >(
+            state,
+        )
+
+    /**
+     * Bind one exact State snapshot to the DisplayState derived from that same value.
+     */
+    open fun projectionFor(
+        state:
+            FamilyState,
+    ):
+        Projection<
+            Family,
+            FamilyState,
+            DisplayState<
+                Family,
+                FamilyState
+            >
+        > =
+        Projection(
+            state =
+                state,
+            displayState =
+                displayStateFor(
+                    state,
+                ),
+        )
+
+    open val currentProjection:
+        Projection<
+            Family,
+            FamilyState,
+            DisplayState<
+                Family,
+                FamilyState
+            >
+        >
+        get() =
+            synchronized(
+                stateLock,
+            ) {
+                projectionFor(
+                    stateRelay.value,
                 )
             }
-        }
 
-    /**
-     * Current display classification for this Family.
-     *
-     * The default is complete and intentionally boring: no richer display classification has been
-     * earned beyond current semantic State. Override only when real consumers would otherwise repeat
-     * the same derived interpretation of State.
-     */
     open val displayState:
-        DisplayState<FamilyState>
+        DisplayState<
+            Family,
+            FamilyState
+        >
         get() =
-            DisplayState.StateOnly(
-                currentState,
-            )
+            currentProjection
+                .displayState
 
     /**
-     * Informative availability from the same direct act(currentState, control) relationship used by
-     * activate(...). A Control is available exactly when current State + that Control produces a
-     * lawful Act; noAct() means unavailable.
-     *
-     * Availability resolves and inspects the Act only. It never admits State and never starts an
-     * authored Begin. This is why concrete act(...) must remain relationship-pure.
+     * Availability and activation resolve through the exact same semantic relationship.
      */
     fun isAvailable(
-        control: FamilyControl,
+        control:
+            FamilyControl,
     ):
         Boolean =
         synchronized(
@@ -765,352 +760,93 @@ abstract class VexFamily<
         }
 
     /**
-     * Runtime entrance.
+     * Apply one lawful Control.
      *
-     * This is the explicit callsite another reader can follow:
+     * Ordering is part of the semantic contract:
      *
-     *     activate(control)
-     *     -> act(currentState, control)
+     *     act(CURRENT State, Control)
+     *     -> bind maintained RelationshipId when Begin requires one
+     *     -> admit immediate State when present
+     *     -> return accepted Act
+     *
+     * Family never realizes [Act.begin]. The caller hands that consequence to VexExecution after
+     * activation; this keeps availability/act resolution side-effect free.
      */
     fun activate(
-        control: FamilyControl,
+        control:
+            FamilyControl,
     ):
-        Boolean =
+        Act<
+            Family,
+            FamilyState,
+            FamilyEffect
+        >? =
         synchronized(
             stateLock,
         ) {
-            val before =
-                stateRelay.value
-
-            val act =
+            val resolved =
                 act(
                     currentState =
-                        before,
+                        stateRelay.value,
                     control =
                         control,
                 )
-                    ?: return false
+                    ?: return null
 
-            recordAcceptedFact(
-                VexLogger.Event.Family.ControlAccepted(
-                    family =
-                        this::class,
-                    control =
-                        control::class,
-                    currentState =
-                        before::class,
-                ),
-            )
+            val acceptedRelationshipId =
+                when (
+                    resolved.begin
+                        ?.approach
+                ) {
+                    VexExecution.Approach.Earliest,
+                    VexExecution.Approach.Latest,
+                    VexExecution.Approach.Queued,
+                    ->
+                        relationshipId(
+                            control,
+                        )
 
-            act.admittedState
+                    VexExecution.Approach.Independent,
+                    null,
+                    ->
+                        null
+                }
+
+            val accepted =
+                resolved.acceptedBy(
+                    owner =
+                        this,
+                    relationshipId =
+                        acceptedRelationshipId,
+                )
+
+            accepted.admittedState
                 ?.let(
                     ::setCurrentStateLocked,
                 )
 
-            act.begin
-                ?.let { begin ->
-                    execute(
-                        begin =
-                            begin,
-                        control =
-                            control,
-                    )
-                }
-
-            true
+            accepted
         }
 
     /**
-     * Concrete-Family semantic admission for already-reconciled outside truth.
+     * Mechanical active-work identity for one accepted Control relationship.
      *
-     * Keep the public/source-specific name on the concrete Family (for example providerReconciled).
-     * This protected seam only supplies exact CURRENT State + serialization; it does not decide what
-     * an observation means and it must not be used from act(...), which remains relationship-pure.
-     */
-    protected fun admitCurrent(
-        decide:
-            (
-                currentState: FamilyState,
-            ) -> FamilyState,
-    ):
-        FamilyState =
-        synchronized(
-            stateLock,
-        ) {
-            setCurrentStateLocked(
-                decide(
-                    stateRelay.value,
-                ),
-            )
-            stateRelay.value
-        }
-
-    /**
-     * One serialized Family StateRelay decision.
+     * This is deliberately an invisible consequence of semantic structure already authored here:
      *
-     * The caller supplies meaning; this boundary supplies exact CURRENT State and one-at-a-time
-     * admission. StateRelay remains the single live holder.
+     *     live Family instance
+     *     + Control kind/name
+     *     + optional typed Control.ResourceId
+     *
+     * Ordinary Control payload is not identity. [activate] binds this coordinate onto the accepted
+     * Act so realization consumes the authored relationship without reconstructing Control identity.
      */
-    private fun updateCurrentState(
-        decide:
-            (
-                currentState: FamilyState,
-            ) -> FamilyState,
-    ) {
-        synchronized(
-            stateLock,
-        ) {
-            setCurrentStateLocked(
-                decide(
-                    stateRelay.value,
-                ),
-            )
-        }
-    }
-
-    /**
-     * Commit one already-resolved next State while [stateLock] is held.
-     */
-    private fun setCurrentStateLocked(
-        state: FamilyState,
-    ) {
-        val before =
-            stateRelay.value
-
-        stateRelay.value =
-            state
-
-        if (
-            before !=
-            stateRelay.value
-        ) {
-            recordAcceptedFact(
-                VexLogger.Event.Family.StateAdmitted(
-                    family =
-                        this::class,
-                    fromState =
-                        before::class,
-                    toState =
-                        stateRelay.value::class,
-                ),
-            )
-        }
-    }
-
-    private fun execute(
-        begin:
-            Act.Begin<FamilyState>,
-        control:
-            FamilyControl,
-    ) {
-        executeSave(
-            approach =
-                begin.approach,
-            control =
-                control,
-            save =
-                begin.save,
-        )
-    }
-
-    private fun executeSave(
-        approach:
-            VexExecution.Approach,
-        control:
-            FamilyControl,
-        save:
-            Act.Begin.Save<FamilyState>,
-    ) {
-        val stateStore =
-            requireNotNull(
-                store,
-            ) {
-                "Save was authored for " +
-                    this::class.qualifiedName +
-                    " but this live Family has no Store"
-            }
-
-        val operation =
-            stateStore::save
-
-        val beforeOperation = {
-            recordAcceptedFact(
-                VexLogger.Event.Family.OperationBegan(
-                    family =
-                        this::class,
-                    operation =
-                        operation,
-                    state =
-                        save.state::class,
-                ),
-            )
-        }
-
-        val onResult:
-            (
-                Store.WriteResult,
-            ) -> Unit = { result ->
-                when (
-                    result
-                ) {
-                    Store.WriteResult.Success -> {
-                        recordAcceptedFact(
-                            VexLogger.Event.Family.OperationSuccess(
-                                family =
-                                    this::class,
-                                operation =
-                                    operation,
-                                state =
-                                    save.state::class,
-                            ),
-                        )
-
-                        applyLaterResult(
-                            save.results.success,
-                        )
-                    }
-
-                    is Store.WriteResult.Failure -> {
-                        recordAcceptedFact(
-                            VexLogger.Event.Family.OperationFailure(
-                                family =
-                                    this::class,
-                                operation =
-                                    operation,
-                                state =
-                                    save.state::class,
-                                failure =
-                                    result.cause
-                                        ?.let { cause ->
-                                            cause::class
-                                        },
-                            ),
-                        )
-
-                        applyLaterResult(
-                            save.results.failure,
-                        )
-                    }
-                }
-            }
-
-        val onFailure:
-            (
-                Throwable,
-            ) -> Unit = { failure ->
-                recordAcceptedFact(
-                    VexLogger.Event.Family.OperationFailure(
-                        family =
-                            this::class,
-                        operation =
-                            operation,
-                        state =
-                            save.state::class,
-                        failure =
-                            failure::class,
-                    ),
-                )
-
-                applyLaterResult(
-                    save.results.failure,
-                )
-            }
-
-        when (
-            approach
-        ) {
-            VexExecution.Approach.Independent ->
-                VexExecution.begin(
-                    executionRoot =
-                        executionRoot,
-                    owner =
-                        this::class,
-                    operation =
-                        operation,
-                    argument =
-                        save.state,
-                    beforeOperation =
-                        beforeOperation,
-                    onResult =
-                        onResult,
-                    onFailure =
-                        onFailure,
-                )
-
-            VexExecution.Approach.Earliest ->
-                VexExecution.beginEarliest(
-                    executionRoot =
-                        executionRoot,
-                    owner =
-                        this::class,
-                    relationshipId =
-                        relationshipId(
-                            control,
-                        ),
-                    operation =
-                        operation,
-                    argument =
-                        save.state,
-                    beforeOperation =
-                        beforeOperation,
-                    onResult =
-                        onResult,
-                    onFailure =
-                        onFailure,
-                )
-
-            VexExecution.Approach.Latest ->
-                VexExecution.beginLatest(
-                    executionRoot =
-                        executionRoot,
-                    owner =
-                        this::class,
-                    relationshipId =
-                        relationshipId(
-                            control,
-                        ),
-                    operation =
-                        operation,
-                    argument =
-                        save.state,
-                    beforeOperation =
-                        beforeOperation,
-                    onResult =
-                        onResult,
-                    onFailure =
-                        onFailure,
-                )
-
-            VexExecution.Approach.Queued ->
-                VexExecution.beginQueued(
-                    executionRoot =
-                        executionRoot,
-                    owner =
-                        this::class,
-                    relationshipId =
-                        relationshipId(
-                            control,
-                        ),
-                    operation =
-                        operation,
-                    argument =
-                        save.state,
-                    beforeOperation =
-                        beforeOperation,
-                    onResult =
-                        onResult,
-                    onFailure =
-                        onFailure,
-                )
-        }
-    }
-
-    internal fun relationshipId(
+    private fun relationshipId(
         control:
             FamilyControl,
     ):
-        RelationshipId<Family> {
-        val controlType =
+        VexExecution.RelationshipId {
+        val controlType:
+            KClass<*> =
             control::class
         val controlName =
             (
@@ -1133,7 +869,7 @@ abstract class VexFamily<
             )
                 ?.resourceId
 
-        return RelationshipId(
+        return FamilyRelationshipId(
             family =
                 this,
             controlType =
@@ -1146,33 +882,32 @@ abstract class VexFamily<
     }
 
     /**
-     * Best-effort observation of an already-authored/accepted Family fact.
+     * Publish already-reconciled semantic reality.
      *
-     * Logger projection is deliberately non-authoritative. A Sink failure must not reject a lawful
-     * Control, suppress State admission or Store execution, or convert a successful operation into
-     * the Family-authored failure result.
+     * This is intentionally not a current-State callback and not a second decision DSL. The caller
+     * must already own provider/repository interpretation, stale-result gating, and construction of
+     * the truthful Family State before calling observe(...).
      */
-    private fun recordAcceptedFact(
-        event:
-            VexLogger.Event,
-    ) {
-        try {
-            logger.record(
-                event,
+    fun observe(
+        state:
+            FamilyState,
+    ):
+        FamilyState =
+        synchronized(
+            stateLock,
+        ) {
+            setCurrentStateLocked(
+                state,
             )
-        } catch (_: Throwable) {
-            // Observation failure is not Family semantic failure.
+            stateRelay.value
         }
-    }
 
-    private fun applyLaterResult(
-        result:
-            Act.Begin.Result<FamilyState>,
+    private fun setCurrentStateLocked(
+        state:
+            FamilyState,
     ) {
-        result.admission
-            ?.let(
-                ::updateCurrentState,
-            )
+        stateRelay.value =
+            state
     }
 }
 

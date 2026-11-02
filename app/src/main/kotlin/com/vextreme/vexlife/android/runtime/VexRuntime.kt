@@ -231,11 +231,16 @@ data class AppActionRequest(
  * element click/toggle/FAB
  * -> [activate]
  * -> snapshot [currentScreen] BEFORE changing navigation
- * -> record the action + before/after screen meaning
+ * -> record the interaction against that exact current Screen
  * -> [applyIntent]
  * -> navigation/presentation state changes OR Invoke is handed to [appActions]
- * -> exactly one feature-local AppActionRegistration owns the effect
+ * -> when navigation changes, record the Screen that is actually current after mutation
+ * -> exactly one feature-local AppActionRegistration owns an invoked effect
  * -> Compose observes resulting state and renders the new result
+ *
+ * Production chronology therefore preserves observation order rather than writing an expected
+ * before/after transition before navigation occurs. A debug/test projection may derive A -> B from
+ * the ordered interaction + CurrentScreen facts.
  *
  * Debugging map:
  * - "What screen is active?" -> [currentScreen]
@@ -355,23 +360,28 @@ class VexRuntime(
 
         val before =
             currentScreen
-        val target =
-            screen.takeIf {
-                it.screenId !=
-                    before.screenId
-            }
 
         logger.recordInteractionRef(
-            subjectRef = subjectRef,
-            screenBefore = before,
-            screenAfter = target,
-            action = "Opened",
+            subjectRef =
+                subjectRef,
+            screen =
+                before,
+            action =
+                "Opened",
         )
 
-        if (target != null) {
+        if (
+            screen.screenId !=
+            before.screenId
+        ) {
             presentation.clearAll()
             activeBackLayer = null
-            navigation.push(screen)
+            navigation.push(
+                screen,
+            )
+            logger.recordNavigationCurrent(
+                currentScreen,
+            )
         }
     }
 
@@ -389,7 +399,7 @@ class VexRuntime(
 
         logger.recordInteraction(
             element = element,
-            screenBefore = currentScreen,
+            screen = currentScreen,
             action = "Dismissed",
         )
         presentation.close(element)
@@ -410,9 +420,9 @@ class VexRuntime(
             subjectRef,
         )
 
-        logger.recordInteractionRef(
+        logger.recordRuntimeInteractionRef(
             subjectRef = subjectRef,
-            screenBefore = currentScreen,
+            screen = currentScreen,
             action = action,
         )
     }
@@ -442,18 +452,10 @@ class VexRuntime(
 
         val before =
             currentScreen
-        val target =
-            navigationTarget(
-                element.intent,
-            )?.takeIf { screen ->
-                screen.screenId !=
-                    before.screenId
-            }
 
-        logger.recordInteractionRef(
+        logger.recordRuntimeInteractionRef(
             subjectRef = subjectRef,
-            screenBefore = before,
-            screenAfter = target,
+            screen = before,
             action = "Clicked",
         )
 
@@ -510,16 +512,18 @@ class VexRuntime(
 
         requireActiveSource(uiElement)
 
-        val before = currentScreen
-        val target = navigationTarget(element.intent)
-            ?.takeIf { it.screenId != before.screenId }
+        val before =
+            currentScreen
 
         logger.recordInteraction(
-            element = uiElement,
-            screenBefore = before,
-            screenAfter = target,
-            action = logAction,
-            detailsJson = detailsJson,
+            element =
+                uiElement,
+            screen =
+                before,
+            action =
+                logAction,
+            detailsJson =
+                detailsJson,
         )
 
         applyIntent(
@@ -539,8 +543,12 @@ class VexRuntime(
         val before = currentScreen
         if (!isPrimary(before) || before.screenId == target.screenId) return
 
-        logger.recordScreenGesture(before, target)
-        navigation.selectPrimary(target)
+        navigation.selectPrimary(
+            target,
+        )
+        logger.recordScreenGesture(
+            currentScreen,
+        )
     }
 
     /**
@@ -575,23 +583,38 @@ class VexRuntime(
 
         if (logEvent) {
             logger.recordBack(
-                screenBefore = before,
-                screenAfter = resolution.screenAfter,
+                before,
             )
         }
 
-        return when (resolution) {
-            BackResolution.DismissPresentation ->
-                presentation.closeTop() != null
+        val handled =
+            when (resolution) {
+                BackResolution.DismissPresentation ->
+                    presentation.closeTop() !=
+                        null
 
-            is BackResolution.PopLocalLayer ->
-                resolution.layer.goBack()
+                is BackResolution.PopLocalLayer ->
+                    resolution.layer.goBack()
 
-            is BackResolution.AppNavigation -> {
-                navigation.applyBack(resolution.step)
-                true
+                is BackResolution.AppNavigation -> {
+                    navigation.applyBack(
+                        resolution.step,
+                    )
+                    true
+                }
             }
+
+        if (
+            handled &&
+            currentScreen.screenId !=
+            before.screenId
+        ) {
+            logger.recordNavigationCurrent(
+                currentScreen,
+            )
         }
+
+        return handled
     }
 
     /**
@@ -624,13 +647,7 @@ class VexRuntime(
         }
     }
 
-    private fun navigationTarget(intent: ElementIntent): ScreenElement? = when (intent) {
-        is ElementIntent.NavigateTo -> intent.screen
-        ElementIntent.NavigateBack ->
-            nextBack?.screenAfter
-        is ElementIntent.Sequence -> intent.intents.mapNotNull(::navigationTarget).lastOrNull()
-        else -> null
-    }
+
 
     /**
      * The small interpreter for the sentence-like intent grammar declared by screen elements.
@@ -645,8 +662,27 @@ class VexRuntime(
         submission: FormSubmission? = null,
     ) {
         when (intent) {
-            is ElementIntent.NavigateTo -> navigation.push(intent.screen)
-            ElementIntent.NavigateBack -> goBack(logEvent = false)
+            is ElementIntent.NavigateTo -> {
+                val before =
+                    currentScreen
+                navigation.push(
+                    intent.screen,
+                )
+                if (
+                    currentScreen.screenId !=
+                    before.screenId
+                ) {
+                    logger.recordNavigationCurrent(
+                        currentScreen,
+                    )
+                }
+            }
+
+            ElementIntent.NavigateBack ->
+                goBack(
+                    logEvent =
+                        false,
+                )
             is ElementIntent.Open -> presentation.open(intent.element)
             is ElementIntent.Close -> presentation.close(intent.element)
             is ElementIntent.Toggle -> presentation.toggle(intent.element)

@@ -5,7 +5,6 @@ import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeDocs
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.planning.VexMapsDistributionOptimizer
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteDocs
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.session.VexMapsDistributionExecution
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.session.VexMapsDistributionSession
 
 /**
@@ -29,10 +28,10 @@ import com.vextreme.vexlife.android.screens.shared.maps.distribution.session.Vex
  * - [VexMapsDeliveryRouteNavigationConvergenceRelay] relates the Delivery Route to one exact expected Navigation leg.
  * - [VexMapsDistributionSession] owns the process-lifetime lived relationship: current Draft, Plan,
  *   provider attempts, expected leg, failure/retry truth and bounded Control feedback.
- * - [VexMapsDistributionExecution] owns coroutine custody under the accepted VexExecution
- *   foundation: maintained convergence observation plus finite draft/preparation/leg operations.
- *   [VexMapsDistributionSession] still owns what those operations mean, currentness, provider
- *   result/failure meaning and retry law.
+ * - [VexMapsDistributionSession] directly extends the accepted VexExecution foundation for
+ *   coroutine custody of the async work that Session already owns: maintained convergence
+ *   observation plus finite draft/preparation/leg operations. The Session still owns what those
+ *   operations mean, currentness, provider result/failure meaning and retry law.
  * - [VexMapsDistributionUi] is the UI-facing boundary over the Session.
  *
  * Lower owners remain independently complete. Convergence never executes a foreign Effect; any

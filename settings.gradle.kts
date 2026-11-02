@@ -19,6 +19,7 @@ dependencyResolutionManagement {
 rootProject.name = "VexLife-Android"
 include(":app")
 include(":architecture:behavior")
+include(":architecture:dependency")
 include(":architecture:elements")
 include(":architecture:execution")
 include(":architecture:logging")

@@ -2,27 +2,37 @@ package com.vextreme.vexlife.android.logging
 
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
+import com.vextreme.vexlife.android.elements.ActionElement
+import com.vextreme.vexlife.android.elements.ElementIntent
 import com.vextreme.vexlife.android.elements.ScreenElement
+import com.vextreme.vexlife.android.elements.UIBlueprintRegistry
 import com.vextreme.vexlife.android.elements.UIElement
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import kotlin.reflect.KCallable
-import kotlin.reflect.KClass
 
 enum class VexLogKind {
     AppOpened,
     Interaction,
+    DynamicInteraction,
     Gesture,
+    Navigation,
+    Semantic,
+    Runtime,
+    Diagnostic,
 }
 
 /**
- * Canonical readable diagnostic fact.
+ * Canonical persisted/projected Logger fact.
  *
- * [detailsJson] is optional structured detail captured only at an explicit semantic boundary such
- * as form Submit. Draft field edits are never emitted as records.
+ * [detailsJson] is optional bounded detail already owned by the fact producer (for example one form
+ * Submit snapshot). It is not a generic metadata bag.
+ *
+ * Some fields remain for storage compatibility with the existing LogHistory schema. Their presence
+ * does not make before/after transition narration, duration, section, or sequence semantic identity
+ * or architectural truth. Current production APIs record only facts current at their own boundary.
  */
 data class VexLogRecord(
     val sequence: Long,
@@ -54,11 +64,60 @@ data class VexLogScreenScope(
         }
 }
 
+
+/**
+ * Read-only structural interpretation of one stable Logger subject coordinate.
+ *
+ * These fields are derived from the current matching Blueprint registry; they are not duplicated
+ * canonical metadata stored in each log record. A different/missing registry can therefore be
+ * reported honestly without rewriting the original fact.
+ */
+data class VexLogSubjectFields(
+    val subjectRef: String,
+    val ownerScreenId: String?,
+    val placementPath: List<String>,
+    val elementKind: String?,
+    val declaredIntent: String?,
+    val resolution: Resolution,
+) {
+    enum class Resolution {
+        RESOLVED,
+        RUNTIME_ELEMENT,
+        NOT_A_BLUEPRINT_ELEMENT,
+        BLUEPRINT_MAPPING_MISSING,
+    }
+}
+
+/**
+ * One chronological observation root for accepted/current facts.
+ *
+ * WHAT THIS IS
+ * VexLogger orders facts that rightful semantic, runtime, navigation, UI, or diagnostic owners
+ * already accepted or observed. It projects those records to local history/Logcat/persistence and
+ * can resolve UI source coordinates through the supplied Blueprint registry at read time.
+ *
+ * WHAT IT RELATES TO
+ * Producers report facts through direct UI helpers or [Sink]. LogHistory, Logcat, Debug UI, future
+ * VexSync/VexBoard/server delivery, and tests are downstream projections/consumers of that chronology.
+ *
+ * WHAT IT ADDRESSES / WHY THIS SHAPE EXISTS
+ * Chronology answers "what happened and in what order" without forcing Execution to retain completed
+ * history or inventing TraceId/CorrelationId systems. Structural UI interpretation is derived from
+ * Blueprint ownership instead of copied into every record.
+ *
+ * RESPONSIBILITY FENCE
+ * Logger does not decide Family meaning, provider success policy, navigation/presentation truth,
+ * RelationshipId meaning, active Job custody, dependency construction, or expected future outcomes.
+ * Do not turn [detailsJson] into a metadata warehouse, Logger into an event bus/network owner, or
+ * production history into expectation/reconciliation machinery. Tests/debug projections may compare
+ * expected vs actual; production Logger records only facts current at their rightful boundary.
+ */
 class VexLogger(
     private val clock: () -> Instant = { Instant.now() },
     private val zoneId: () -> ZoneId = { ZoneId.systemDefault() },
     private val maxRecords: Int = 256,
     private val onRecord: (VexLogRecord) -> Unit = {},
+    private val blueprintRegistry: UIBlueprintRegistry? = null,
 ) {
     /**
      * Root-owned structured logging boundary for foundations that need to report accepted facts
@@ -85,70 +144,52 @@ class VexLogger(
     }
 
     /**
-     * Structured events owned by the VexLogger root.
+     * Structured fact ingress for runtime/semantic owners.
+     *
+     * The sink is a projection into this same Logger root; it is not a peer logger or event bus.
+     */
+    val sink:
+        Sink =
+        Sink(
+            ::record,
+        )
+
+    /**
+     * Already-accepted facts from rightful owners.
+     *
+     * Logger does not infer semantic/runtime meaning from Kotlin callables or class names. The
+     * producer supplies the fact coordinate, action, and bounded detail that became true at its
+     * boundary; Logger only orders and projects it.
      */
     sealed interface Event {
-        /**
-         * Family-specific accepted facts. Family is a child namespace under the Logger event tree,
-         * not another logger root.
-         */
-        sealed interface Family :
-            Event {
-            val family:
-                KClass<*>
+        val subjectRef:
+            String
+        val action:
+            String
+        val detailsJson:
+            String?
 
-            data class ControlAccepted(
-                override val family:
-                    KClass<*>,
-                val control:
-                    KClass<*>,
-                val currentState:
-                    KClass<*>,
-            ) :
-                Family
+        data class Semantic(
+            override val subjectRef:
+                String,
+            override val action:
+                String,
+            override val detailsJson:
+                String? =
+                null,
+        ) :
+            Event
 
-            data class StateAdmitted(
-                override val family:
-                    KClass<*>,
-                val fromState:
-                    KClass<*>,
-                val toState:
-                    KClass<*>,
-            ) :
-                Family
-
-            data class OperationBegan(
-                override val family:
-                    KClass<*>,
-                val operation:
-                    KCallable<*>,
-                val state:
-                    KClass<*>?,
-            ) :
-                Family
-
-            data class OperationSuccess(
-                override val family:
-                    KClass<*>,
-                val operation:
-                    KCallable<*>,
-                val state:
-                    KClass<*>?,
-            ) :
-                Family
-
-            data class OperationFailure(
-                override val family:
-                    KClass<*>,
-                val operation:
-                    KCallable<*>,
-                val state:
-                    KClass<*>?,
-                val failure:
-                    KClass<out Throwable>?,
-            ) :
-                Family
-        }
+        data class Runtime(
+            override val subjectRef:
+                String,
+            override val action:
+                String,
+            override val detailsJson:
+                String? =
+                null,
+        ) :
+            Event
     }
 
     private val lock = Any()
@@ -164,6 +205,48 @@ class VexLogger(
         require(maxRecords > 0) { "maxRecords must be positive" }
     }
 
+    /**
+     * Record one already-accepted/observed structured fact.
+     */
+    fun record(
+        event:
+            Event,
+    ) {
+        when (event) {
+            is Event.Semantic ->
+                append(
+                    kind =
+                        VexLogKind.Semantic,
+                    subjectRef =
+                        event.subjectRef,
+                    action =
+                        event.action,
+                    screenBeforeId =
+                        null,
+                    screenAfterId =
+                        null,
+                    detailsJson =
+                        event.detailsJson,
+                )
+
+            is Event.Runtime ->
+                append(
+                    kind =
+                        VexLogKind.Runtime,
+                    subjectRef =
+                        event.subjectRef,
+                    action =
+                        event.action,
+                    screenBeforeId =
+                        null,
+                    screenAfterId =
+                        null,
+                    detailsJson =
+                        event.detailsJson,
+                )
+        }
+    }
+
     fun appOpened(screen: ScreenElement) {
         append(
             kind = VexLogKind.AppOpened,
@@ -175,70 +258,182 @@ class VexLogger(
     }
 
     fun recordInteraction(
-        element: UIElement,
-        screenBefore: ScreenElement,
-        screenAfter: ScreenElement? = null,
-        action: String = "Clicked",
-        detailsJson: String? = null,
+        element:
+            UIElement,
+        screen:
+            ScreenElement,
+        action:
+            String =
+            "Clicked",
+        detailsJson:
+            String? =
+            null,
     ) {
         recordInteractionRef(
-            subjectRef = element.elementId,
-            screenBefore = screenBefore,
-            screenAfter = screenAfter,
-            action = action,
-            detailsJson = detailsJson,
+            subjectRef =
+                element.elementId,
+            screen =
+                screen,
+            action =
+                action,
+            detailsJson =
+                detailsJson,
         )
     }
 
     /**
      * Dynamic repeated elements use a stable semantic ref even though they cannot all be members of
-     * the static UI registry. This records that already-formed identity without creating a second
-     * logger or pretending list position is identity.
+     * the static UI registry. [screen] is the Screen current when the fact is recorded; intended
+     * destinations are not accepted by this production API.
      */
     fun recordInteractionRef(
-        subjectRef: String,
-        screenBefore: ScreenElement,
-        screenAfter: ScreenElement? = null,
-        action: String = "Clicked",
-        detailsJson: String? = null,
+        subjectRef:
+            String,
+        screen:
+            ScreenElement,
+        action:
+            String =
+            "Clicked",
+        detailsJson:
+            String? =
+            null,
     ) {
-        require(subjectRef.isNotBlank()) {
+        require(
+            subjectRef.isNotBlank(),
+        ) {
             "interaction subjectRef must not be blank"
         }
 
         append(
-            kind = VexLogKind.Interaction,
+            kind =
+                VexLogKind.Interaction,
+            subjectRef =
+                subjectRef,
+            action =
+                action,
+            screenBeforeId =
+                screen.screenId,
+            screenAfterId =
+                null,
+            detailsJson =
+                detailsJson,
+        )
+
+        if (
+            subjectRef.startsWith(
+                "element.",
+            ) &&
+            blueprintRegistry !=
+                null &&
+            blueprintRegistry.element(
+                subjectRef,
+            ) ==
+                null
+        ) {
+            append(
+                kind =
+                    VexLogKind.Diagnostic,
+                subjectRef =
+                    subjectRef,
+                action =
+                    "BlueprintMappingMissing",
+                screenBeforeId =
+                    screen.screenId,
+                screenAfterId =
+                    null,
+            )
+        }
+    }
+
+    /**
+     * Record one intentional runtime-instance interaction.
+     *
+     * The subject may use element.* shape because it is still a UI coordinate, but it is not
+     * required to be a permanent static Blueprint member. This distinction prevents lawful dynamic
+     * rows/actions from being reported as missing architecture.
+     */
+    fun recordRuntimeInteractionRef(
+        subjectRef:
+            String,
+        screen:
+            ScreenElement,
+        action:
+            String =
+            "Clicked",
+    ) {
+        require(subjectRef.isNotBlank()) {
+            "runtime interaction subjectRef must not be blank"
+        }
+
+        append(
+            kind = VexLogKind.DynamicInteraction,
             subjectRef = subjectRef,
             action = action,
-            screenBeforeId = screenBefore.screenId,
-            screenAfterId = screenAfter?.screenId,
-            detailsJson = detailsJson,
+            screenBeforeId = screen.screenId,
+            screenAfterId = null,
         )
     }
 
     fun recordBack(
-        screenBefore: ScreenElement,
-        screenAfter: ScreenElement? = null,
+        screen:
+            ScreenElement,
     ) {
         append(
-            kind = VexLogKind.Gesture,
-            subjectRef = "system.back",
-            action = "Back",
-            screenBeforeId = screenBefore.screenId,
-            screenAfterId = screenAfter?.screenId,
+            kind =
+                VexLogKind.Gesture,
+            subjectRef =
+                "system.back",
+            action =
+                "Back",
+            screenBeforeId =
+                screen.screenId,
+            screenAfterId =
+                null,
         )
     }
 
-    fun recordScreenGesture(
-        screenBefore: ScreenElement,
-        screenAfter: ScreenElement,
+    /**
+     * Record only the Screen that navigation reports as current after mutation.
+     *
+     * A prior/expected Screen is deliberately absent. Debug/test layers may derive A -> B from
+     * chronological facts when they need that interpretation.
+     */
+    fun recordNavigationCurrent(
+        screen:
+            ScreenElement,
     ) {
         append(
-            kind = VexLogKind.Gesture,
-            subjectRef = "presentation.screen-pager",
-            action = "Swiped",
-            screenBeforeId = screenBefore.screenId,
-            screenAfterId = screenAfter.screenId,
+            kind =
+                VexLogKind.Navigation,
+            subjectRef =
+                screen.screenId,
+            action =
+                "CurrentScreen",
+            screenBeforeId =
+                null,
+            screenAfterId =
+                screen.screenId,
+        )
+    }
+
+    /**
+     * Pager callbacks arrive only after settlement, so the current Screen itself is the fact.
+     */
+    fun recordScreenGesture(
+        screen:
+            ScreenElement,
+    ) {
+        append(
+            kind =
+                VexLogKind.Gesture,
+            subjectRef =
+                "presentation.screen-pager",
+            action =
+                "Swiped",
+            screenBeforeId =
+                null,
+            screenAfterId =
+                screen.screenId,
         )
     }
 
@@ -267,6 +462,19 @@ class VexLogger(
         records = history.value,
         zoneId = zoneId(),
     )
+
+    /**
+     * Explicit structural projection for developer/debug use.
+     *
+     * Stable IDs remain the stored facts. The Blueprint registry resolves those IDs into owner,
+     * placement, kind and declared UI intent at read time so Logger does not maintain a second map.
+     */
+    fun renderStructuredHistory(): String =
+        formatStructuredHistory(
+            records = history.value,
+            zoneId = zoneId(),
+            registry = blueprintRegistry,
+        )
 
     private fun append(
         kind: VexLogKind,
@@ -312,6 +520,246 @@ class VexLogger(
     }
 
     companion object {
+        /**
+         * Resolve one stable subject coordinate through the rightful UI topology owner.
+         *
+         * element.* coordinates are expected to exist in the supplied Blueprint map unless they are
+         * intentionally runtime/dynamic identities. Callers decide whether a missing mapping is a
+         * conformance failure; this projection makes the gap visible instead of silently inventing
+         * fields from string parsing.
+         */
+        fun subjectFields(
+            subjectRef: String,
+            registry: UIBlueprintRegistry?,
+            runtimeCoordinate: Boolean = false,
+        ): VexLogSubjectFields {
+            if (
+                !subjectRef.startsWith(
+                    "element.",
+                )
+            ) {
+                return VexLogSubjectFields(
+                    subjectRef = subjectRef,
+                    ownerScreenId = null,
+                    placementPath = emptyList(),
+                    elementKind = null,
+                    declaredIntent = null,
+                    resolution = VexLogSubjectFields.Resolution.NOT_A_BLUEPRINT_ELEMENT,
+                )
+            }
+
+            val element =
+                registry
+                    ?.element(
+                        subjectRef,
+                    )
+                    ?: return VexLogSubjectFields(
+                        subjectRef = subjectRef,
+                        ownerScreenId = null,
+                        placementPath = emptyList(),
+                        elementKind = null,
+                        declaredIntent = null,
+                        resolution =
+                            if (
+                                runtimeCoordinate
+                            ) {
+                                VexLogSubjectFields.Resolution.RUNTIME_ELEMENT
+                            } else {
+                                VexLogSubjectFields.Resolution.BLUEPRINT_MAPPING_MISSING
+                            },
+                    )
+
+            val ancestors =
+                buildList {
+                    var current =
+                        registry.parentOf(
+                            element,
+                        )
+
+                    while (
+                        current !=
+                        null
+                    ) {
+                        add(
+                            current.elementId,
+                        )
+                        current =
+                            registry.parentOf(
+                                current,
+                            )
+                    }
+                }
+                    .asReversed()
+
+            return VexLogSubjectFields(
+                subjectRef = subjectRef,
+                ownerScreenId =
+                    registry
+                        .ownerScreenOf(
+                            element,
+                        )
+                        ?.screenId,
+                placementPath =
+                    ancestors +
+                        element.elementId,
+                elementKind =
+                    element.kind,
+                declaredIntent =
+                    (
+                        element as?
+                            ActionElement
+                    )
+                        ?.intent
+                        ?.let(
+                            ::intentField,
+                        ),
+                resolution = VexLogSubjectFields.Resolution.RESOLVED,
+            )
+        }
+
+        /**
+         * New explicit Debug/inspection representation.
+         *
+         * This intentionally keeps the old compact human history formatter available while the
+         * structured representation is pressure-tested by real consumers.
+         */
+        fun formatStructuredHistory(
+            records: List<VexLogRecord>,
+            zoneId: ZoneId,
+            registry: UIBlueprintRegistry?,
+        ): String {
+            if (records.isEmpty()) {
+                return "No actions recorded yet."
+            }
+
+            val formatter =
+                DateTimeFormatter
+                    .ofPattern(
+                        "h:mm:ssa MMM d, yyyy",
+                        Locale.US,
+                    )
+                    .withZone(
+                        zoneId,
+                    )
+
+            return records
+                .joinToString(
+                    separator = "\n\n",
+                ) { record ->
+                    val fields =
+                        subjectFields(
+                            subjectRef =
+                                record.subjectRef,
+                            registry =
+                                registry,
+                            runtimeCoordinate =
+                                record.kind ==
+                                    VexLogKind.DynamicInteraction,
+                        )
+
+                    buildString {
+                        appendLine(
+                            "[${formatter.format(record.timestamp)}]",
+                        )
+                        appendLine(
+                            "fact.kind = ${record.kind}",
+                        )
+                        appendLine(
+                            "fact.action = ${record.action}",
+                        )
+                        appendLine(
+                            "source.ref = ${fields.subjectRef}",
+                        )
+                        appendLine(
+                            "source.resolution = ${fields.resolution}",
+                        )
+
+                        fields.ownerScreenId
+                            ?.let { screenId ->
+                                appendLine(
+                                    "source.screen = $screenId",
+                                )
+                            }
+
+                        fields.elementKind
+                            ?.let { kind ->
+                                appendLine(
+                                    "source.kind = $kind",
+                                )
+                            }
+
+                        if (
+                            fields.placementPath
+                                .isNotEmpty()
+                        ) {
+                            appendLine(
+                                "source.path = " +
+                                    fields.placementPath
+                                        .joinToString(
+                                            " -> ",
+                                        ),
+                            )
+                        }
+
+                        fields.declaredIntent
+                            ?.let { intent ->
+                                appendLine(
+                                    "source.intent = $intent",
+                                )
+                            }
+
+                        record.detailsJson
+                            ?.takeIf {
+                                it.isNotBlank()
+                            }
+                            ?.let { details ->
+                                appendLine(
+                                    "fact.details = $details",
+                                )
+                            }
+                    }
+                        .trimEnd()
+                }
+        }
+
+        private fun intentField(
+            intent: ElementIntent,
+        ): String =
+            when (intent) {
+                is ElementIntent.NavigateTo ->
+                    "NavigateTo(${intent.screen.screenId})"
+
+                ElementIntent.NavigateBack ->
+                    "NavigateBack"
+
+                is ElementIntent.Open ->
+                    "Open(${intent.element.elementId})"
+
+                is ElementIntent.Close ->
+                    "Close(${intent.element.elementId})"
+
+                is ElementIntent.Toggle ->
+                    "Toggle(${intent.element.elementId})"
+
+                is ElementIntent.SwapTo ->
+                    "SwapTo(${intent.container.elementId},${intent.child.elementId})"
+
+                ElementIntent.LocalEffect ->
+                    "LocalEffect"
+
+                is ElementIntent.Invoke ->
+                    "Invoke(${intent.action.actionId})"
+
+                is ElementIntent.Sequence ->
+                    intent.intents
+                        .joinToString(
+                            prefix = "Sequence(",
+                            postfix = ")",
+                            separator = " -> ",
+                            transform = ::intentField,
+                        )
+            }
+
         /**
          * Groups canonical records into semantic Screen visits.
          *
@@ -479,5 +927,8 @@ class VexLogger(
                         if (ch.isLowerCase()) ch.titlecase(Locale.US) else ch.toString()
                     }
                 }
+
+
+
     }
 }
