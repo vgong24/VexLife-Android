@@ -59,28 +59,26 @@ does not resolve arbitrary dependencies from either factory.
 ~~~text
 UI / runtime source
         |
-        v
-Family.Parameter
+        +-> optional Family.Parameter
+        |   when a semantic value needs durable Family-scoped provenance
         |
         v
-Family.Control + exact CURRENT Family.State
+Family.Control
         |
         v
-Family.act(...)
+Family.activate(Control)
         |
-        v
-Act
-├─ admitted State? --------------------------+
-└─ Begin?                                    |
-   ├─ Effect                                 |
-   └─ Approach                               |
-      Independent / Earliest / Latest / Queued
+        +-> concrete Family.act(exact CURRENT State, Control)
+        |   -> Act?
+        |      ├─ admitted State?
+        |      └─ Begin?
+        |         ├─ Effect
+        |         └─ Approach
+        |            Independent / Earliest / Latest / Queued
         |
-        v
-Family.activate(...)
-├─ binds live Family execution owner
-├─ binds maintained RelationshipId when required
-└─ admits immediate semantic State when authored
+        +-> bind live Family execution owner
+        +-> bind maintained RelationshipId when Begin requires it
+        +-> admit immediate semantic State when authored
         |
         v
 accepted Act
@@ -123,6 +121,10 @@ Compose / platform manifestation
         v
 human experience
 ~~~
+
+Family.act(...) is the pure semantic decision called by activate(...); it is not a later execution
+stage. Family.Parameter is likewise not mandatory ceremony around every Control or Kotlin argument.
+It is earned when a semantic value needs to remain recognizable across Family relationships.
 
 The two sides meet through the explicit live objects built by the construction topology. Dependency
 construction does not become Family semantics, and Family semantics does not become dependency
@@ -278,12 +280,16 @@ VexLifeViewModel/session lifetime
 Debug Menu interaction
 -> ThemeModeFamily.Parameter.Mode(mode)
 -> Control.Select(the SAME Parameter)
--> Family.act(CURRENT State, Control)
+-> ThemeModeFamily.activateSelection(Control)
+   -> establishes the concrete ThemeMode unsettled-selection fence
+   -> Family.activate(Control)
+      -> Family.act(exact CURRENT State, Control)
+      -> Act?
+         -> immediate State admission when required
+         -> beginLatest(Effect.Save(the SAME Parameter))
+      -> bind maintained Select RelationshipId
+      -> bind live Family execution owner
 -> accepted Act
-   -> immediate State admission when required
-   -> beginLatest(Effect.Save(the SAME Parameter))
-   -> maintained Select RelationshipId
-   -> live Family execution owner
 -> Act.Method.Save(
        ThemeModeStore,
        the SAME Parameter
@@ -508,31 +514,36 @@ DebugMenu CurrentScreen
 Actual rendered presentation arrival remains a separate fact and is not claimed merely from
 navigation or provider success.
 
-## 7. Derived identity and the outward protocol edge
+## 7. Adjacent derived-identity exploration and the outward protocol edge
 
-Do not require a human-authored ID when existing meaning already supplies enough coordinates.
+DERIVED-IDENTITY-MAP.md preserves useful #208 design pressure, but PR #209 does **not** yet establish
+automatic host/action/content identity derivation as a general executable runtime law.
 
-Current design law remains:
+The adjacent exploration asks whether existing meaning may eventually be sufficient to derive some
+coordinates without a second manual-ID ceremony:
 
 ~~~text
 ACTION HOST
     Blueprint placement
     + Control
     + typed ResourceId when semantically required
-    -> derivable action relationship
+    -> possible derivable action relationship
 
 CONTENT HOST
     Blueprint placement
     + canonical native content source
-    -> derivable content relationship
+    -> possible derivable content relationship
 
 DYNAMIC PRODUCT INSTANCE
     Blueprint placement
     + feature-owned ResourceId
-    -> runtime presentation coordinate
+    -> possible runtime presentation coordinate
 ~~~
 
-See DERIVED-IDENTITY-MAP.md for the detailed host/content/action exploration.
+Treat those as design pressure to validate against real consumers, not as a claim that current #209
+source already derives all three shapes. Current executable truth is narrower: Screen/element
+coordinates and Blueprint structure exist; Logger can record/resolve those coordinates; dynamic
+runtime interactions remain explicitly distinguished.
 
 For future VexSync/server/VexBoard interpretation, the unresolved question is mainly **matching-map
 currentness/provenance**, not another execution occurrence identity:
