@@ -18,8 +18,9 @@ import kotlinx.coroutines.flow.asStateFlow
  * It owns that meaning and the one current semantic State holder.
  *
  * WHAT IT RELATES TO
- * A caller may call [activate], realize the returned [Act.begin] through VexExecution and the
- * rightful Store/provider boundary, then return already-reconciled semantic reality through
+ * A caller may call [activate], bind the returned accepted Act to one Family-owned executable
+ * [Act.Method] through [Act.launchWith], and let VexExecution provide Job custody while the Method
+ * touches the rightful Store/provider boundary. Already-reconciled semantic reality returns through
  * [observe]. Dependency construction may create a Family, but Family does not know that a dependency
  * system exists.
  *

@@ -338,7 +338,7 @@ meaningful accepted/observed failure facts to VexLogger when that history is req
 
 PR #209 exercises the refined execution law through:
 
-- ThemeMode Save: accepted Act carries Control.Select RelationshipId + authored Approach -> direct VexExecution -> Job custody;
+- ThemeMode Save: Family Parameter.Mode is carried through Control/Effect into fully-bound Act.Method.Save; accepted Act launchWith(...) consumes its live Family owner + Control.Select RelationshipId + authored Approach -> zero-argument direct VexExecution -> Job custody;
 - VexMaps Distribution Session directly uses VexExecution for async work whose meaning and lifecycle the Session already owns;
 - VexMaps destination/place search source-addressed replacement;
 - VexStream application/session and service execution roots;

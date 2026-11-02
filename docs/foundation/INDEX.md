@@ -52,9 +52,10 @@ Permanent candidate boundary:
 
 ~~~text
 VexFamily
-    owns State / Control / Act / Begin / Effect
+    owns Family-scoped Parameter / State / Control / Act / Begin / Effect semantic relationships
     owns current semantic State
-    binds maintained RelationshipId onto the accepted Act from Family + Control (+ typed ResourceId)
+    binds maintained RelationshipId and live Family execution owner onto the accepted Act
+    exposes bound Act.Method continuation without owning Job custody
 
 VexExecution
     owns Job custody / overlap / source observation
@@ -68,16 +69,21 @@ VexFamily
 ThemeMode is the PR #209 patient zero:
 
 ~~~text
-Control.Select(mode)
--> beginLatest(Effect.Save(mode))
--> Act.relationshipId
--> VexExecution.begin(approach = Act.Begin.approach)
+Parameter.Mode(mode)
+-> Control.Select(the same Parameter.Mode)
+-> beginLatest(Effect.Save(the same Parameter.Mode))
+-> Act.Method.Save(ThemeModeStore, the same Parameter.Mode)
+-> Act.launchWith(VexExecutionRoot).method(Method.Save)
+   consumes live Family owner + Approach + RelationshipId from the accepted Act
+-> VexExecution Job custody
 -> ThemeModeStore
 -> VexLogger chronology
 ~~~
 
-The Act-authored Approach and Family-authored RelationshipId are consumed directly by the reusable
-execution foundation; execution adds custody rather than another feature/domain decision.
+The Family-owned Parameter is carried rather than reconstructed. The accepted Act's live Family
+owner, Act-authored Approach, and Family-authored RelationshipId are consumed through launchWith(...)
+by the reusable execution foundation; execution adds custody rather than another feature/domain
+decision.
 
 Exact repository-owned Gradle/JVM proof is pending on the current #209 candidate. The prior #193 proof
 remains valid evidence for its accepted historical tree; it is not proof for this new refinement.

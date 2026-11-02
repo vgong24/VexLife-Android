@@ -30,8 +30,10 @@ internal enum class ThemeMode :
  * than making today's two-state Switch the semantic contract. A target may realize Light/Dark with
  * a toggle, segmented control, menu, or another presentation without changing this relationship.
  *
- * The selected mode is Control payload. The Act authors Save as Latest here because overlap is part
- * of the Select consequence relationship; VexExecution later realizes that authored consequence.
+ * The selected mode is one Family Parameter.Mode value carried intact through Control.Select and
+ * Effect.Save into the bound Act.Method.Save. The Act authors Save as Latest because overlap is part
+ * of the Select consequence relationship; VexExecution later realizes that authored consequence
+ * without reconstructing the mode, Approach, RelationshipId, or live Family execution owner.
  */
 internal class ThemeModeFamily(
     initialState:

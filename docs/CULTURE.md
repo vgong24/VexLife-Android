@@ -142,15 +142,22 @@ predecessor knowledge.
 GOOD
 
 VexFamily
+-> Parameter
 -> DisplayState
    -> StateOnly
 -> Act
+   -> Method
    -> <only relationships Act actually owns>
 
 ThemeModeFamily
+-> Parameter
+   -> Mode
 -> State
 -> Control
+-> Effect
 -> DisplayState
+-> Act
+   -> Method.Save
 
 NOT SUFFICIENT
 

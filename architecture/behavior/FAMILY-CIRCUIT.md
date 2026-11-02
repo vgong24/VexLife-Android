@@ -62,7 +62,11 @@ A concrete Family owns the relationship in ordinary Kotlin:
 override fun act(
     currentState: ThemeMode,
     control: Control,
-): VexFamily.Act<ThemeMode, Effect>? =
+): VexFamily.Act<
+    ThemeModeFamily,
+    ThemeMode,
+    Effect
+>? =
     when (control) {
         is Control.Select -> {
             val save =
@@ -72,11 +76,11 @@ override fun act(
                     ),
                 )
 
-            if (currentState == control.mode) {
+            if (currentState == control.mode.mode) {
                 stay(save)
             } else {
                 admit(
-                    state = control.mode,
+                    state = control.mode.mode,
                     begin = save,
                 )
             }
@@ -148,13 +152,20 @@ overlap meaning, not to "State changed" or "State stayed".
 For ThemeMode:
 
 ~~~text
-Control.Select(Dark)
+Parameter.Mode(Dark)
+-> Control.Select(the same Parameter.Mode)
 -> immediate ThemeMode.Dark semantic admission
--> beginLatest(Effect.Save(Dark))
+-> beginLatest(Effect.Save(the same Parameter.Mode))
 
 realization boundary
--> Act.relationshipId
--> VexExecution.begin(approach = Act.Begin.approach)
+-> Act.Method.Save(
+       ThemeModeStore,
+       the same Parameter.Mode
+   )
+-> accepted Act.launchWith(VexExecutionRoot)
+-> MethodFollowUp.method(Method.Save)
+   consumes the Act's live Family owner + authored Approach + RelationshipId
+-> VexExecution Job custody
 -> ThemeModeStore.save(Dark)
 -> current Logger facts
 -> observed ThemeMode truth
@@ -345,15 +356,17 @@ VexLifeViewModel/session lifetime
     VexLogger
 
 Debug Menu action
--> ThemeModeFamily.activate(Control.Select)
+-> ThemeModeFamily.Parameter.Mode
+-> ThemeModeFamily.activate(Control.Select(the same Mode))
 -> Act
    -> immediate State?
-   -> beginLatest(Effect.Save)
--> VexExecution.begin(
-       owner = same live Family,
-       approach = Act.Begin.approach,
-       relationshipId = Act.relationshipId
-   )
+   -> beginLatest(Effect.Save(the same Mode))
+-> Act.Method.Save(ThemeModeStore, the same Mode)
+-> Act.launchWith(VexExecutionRoot).method(Method.Save)
+   -> consumes already-bound live Family owner
+   -> consumes already-authored Approach
+   -> consumes already-authored RelationshipId
+-> VexExecution Job custody
 -> ThemeModeStore
 -> accepted/observed Logger chronology
 -> Family.observeStoredThemeMode(...)
