@@ -26,6 +26,20 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VexExecutionTest {
+    private class BoundOperation(
+        private val value:
+            String,
+        private val calls:
+            MutableList<String>,
+    ) {
+        suspend operator fun invoke():
+            String {
+            calls +=
+                value
+            return value
+        }
+    }
+
     private class TestRepository {
         var onceCount = 0
         val collectAttempts = AtomicInteger(0)
@@ -698,6 +712,69 @@ class VexExecutionTest {
                 providerDispatcher.close()
                 workerExecutor.shutdownNow()
                 providerExecutor.shutdownNow()
+            }
+        }
+
+    @Test
+    fun directAuthoredRelationshipAcceptsFullyBoundZeroArgumentMethod() =
+        runBlocking {
+            val root =
+                VexExecutionRoot()
+            val owner =
+                Any()
+            val relationship =
+                DirectRelationship(
+                    "bound-save",
+                )
+            val calls =
+                mutableListOf<String>()
+            val results =
+                mutableListOf<String>()
+            val method =
+                BoundOperation(
+                    value =
+                        "Dark",
+                    calls =
+                        calls,
+                )
+
+            try {
+                val job =
+                    VexExecution.begin(
+                        executionRoot =
+                            root,
+                        owner =
+                            owner,
+                        approach =
+                            VexExecution.Approach.Latest,
+                        relationshipId =
+                            relationship,
+                        operation =
+                            method::invoke,
+                        onResult = { result ->
+                            results +=
+                                result
+                        },
+                    )
+
+                job.join()
+
+                assertEquals(
+                    listOf(
+                        "Dark",
+                    ),
+                    calls,
+                )
+                assertEquals(
+                    listOf(
+                        "Dark",
+                    ),
+                    results,
+                )
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
             }
         }
 

@@ -6,6 +6,7 @@ import com.vextreme.vexlife.android.execution.VexExecution
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -28,6 +29,36 @@ class ThemeModeTest {
         assertNotEquals(
             ThemeMode.NotSet,
             ThemeMode.Dark,
+        )
+    }
+
+    @Test
+    fun selectCarriesTheSameFamilyModeParameterIntoItsSaveEffect() {
+        val family =
+            ThemeModeFamily(
+                initialState =
+                    ThemeMode.Light,
+            )
+        val mode =
+            ThemeModeFamily.Parameter.Mode(
+                mode =
+                    ThemeMode.Dark,
+            )
+
+        val act =
+            family.activate(
+                ThemeModeFamily.Control.Select(
+                    mode,
+                ),
+            )
+
+        val effect =
+            act?.effect as
+                ThemeModeFamily.Effect.Save
+
+        assertSame(
+            mode,
+            effect.mode,
         )
     }
 

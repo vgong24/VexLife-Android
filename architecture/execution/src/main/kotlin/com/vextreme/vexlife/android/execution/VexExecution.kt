@@ -579,6 +579,37 @@ abstract class VexExecution protected constructor(
         return true
     }
 
+    protected fun <Result> begin(
+        operation:
+            KSuspendFunction0<Result>,
+        beforeOperation:
+            () -> Unit =
+            {},
+        onResult:
+            (Result) -> Unit =
+            {},
+        onFailure:
+            (Throwable) -> Unit =
+            {},
+    ):
+        Job =
+        launchSource(
+            source =
+                operation,
+        ) {
+            executeOperation(
+                operation = {
+                    operation()
+                },
+                beforeOperation =
+                    beforeOperation,
+                onResult =
+                    onResult,
+                onFailure =
+                    onFailure,
+            )
+        }
+
     protected fun <Argument, Result> begin(
         operation:
             KSuspendFunction1<
@@ -603,10 +634,11 @@ abstract class VexExecution protected constructor(
                 operation,
         ) {
             executeOperation(
-                operation =
-                    operation,
-                argument =
-                    argument,
+                operation = {
+                    operation(
+                        argument,
+                    )
+                },
                 beforeOperation =
                     beforeOperation,
                 onResult =
@@ -665,10 +697,13 @@ abstract class VexExecution protected constructor(
                 Approach.Earliest,
             relationshipId =
                 relationshipId,
-            operation =
+            source =
                 operation,
-            argument =
-                argument,
+            operation = {
+                operation(
+                    argument,
+                )
+            },
             beforeOperation =
                 beforeOperation,
             onResult =
@@ -704,10 +739,13 @@ abstract class VexExecution protected constructor(
                 Approach.Latest,
             relationshipId =
                 relationshipId,
-            operation =
+            source =
                 operation,
-            argument =
-                argument,
+            operation = {
+                operation(
+                    argument,
+                )
+            },
             beforeOperation =
                 beforeOperation,
             onResult =
@@ -743,10 +781,13 @@ abstract class VexExecution protected constructor(
                 Approach.Queued,
             relationshipId =
                 relationshipId,
-            operation =
+            source =
                 operation,
-            argument =
-                argument,
+            operation = {
+                operation(
+                    argument,
+                )
+            },
             beforeOperation =
                 beforeOperation,
             onResult =
@@ -930,18 +971,15 @@ abstract class VexExecution protected constructor(
         return job
     }
 
-    private fun <Argument, Result> beginRelationship(
+    private fun <Result> beginRelationship(
         approach:
             Approach,
         relationshipId:
             RelationshipId,
+        source:
+            KCallable<*>,
         operation:
-            KSuspendFunction1<
-                Argument,
-                Result
-            >,
-        argument:
-            Argument,
+            suspend () -> Result,
         beforeOperation:
             () -> Unit,
         onResult:
@@ -1042,7 +1080,7 @@ abstract class VexExecution protected constructor(
                         name =
                             executionName +
                                 "." +
-                                operation.name,
+                                source.name,
                     ) {
                         predecessors
                             .forEach { predecessor ->
@@ -1052,8 +1090,6 @@ abstract class VexExecution protected constructor(
                         executeOperation(
                             operation =
                                 operation,
-                            argument =
-                                argument,
                             beforeOperation =
                                 beforeOperation,
                             onResult =
@@ -1067,7 +1103,7 @@ abstract class VexExecution protected constructor(
                     admitted
                 jobsBySource
                     .getOrPut(
-                        operation,
+                        source,
                     ) {
                         linkedSetOf()
                     } +=
@@ -1084,7 +1120,7 @@ abstract class VexExecution protected constructor(
                         )
 
                         jobsBySource[
-                            operation
+                            source
                         ]
                             ?.let { jobs ->
                                 jobs.remove(
@@ -1094,7 +1130,7 @@ abstract class VexExecution protected constructor(
                                     jobs.isEmpty()
                                 ) {
                                     jobsBySource.remove(
-                                        operation,
+                                        source,
                                     )
                                 }
                             }
@@ -1224,14 +1260,9 @@ abstract class VexExecution protected constructor(
         }
     }
 
-    private suspend fun <Argument, Result> executeOperation(
+    private suspend fun <Result> executeOperation(
         operation:
-            KSuspendFunction1<
-                Argument,
-                Result
-            >,
-        argument:
-            Argument,
+            suspend () -> Result,
         beforeOperation:
             () -> Unit,
         onResult:
@@ -1243,9 +1274,7 @@ abstract class VexExecution protected constructor(
 
         val result =
             try {
-                operation(
-                    argument,
-                )
+                operation()
             } catch (
                 cancelled:
                     CancellationException,
@@ -1347,6 +1376,85 @@ abstract class VexExecution protected constructor(
                     onFailure =
                         onFailure,
                 )
+
+        /**
+         * Consume an already-authored overlap Approach for one fully-bound zero-argument Method.
+         *
+         * The callable is still only the work to invoke and narrow local source bookkeeping.
+         * RelationshipId remains the maintained semantic address.
+         */
+        @RelationshipFoundationApi
+        fun <Result> begin(
+            executionRoot:
+                VexExecutionRoot,
+            owner:
+                Any,
+            approach:
+                Approach,
+            relationshipId:
+                RelationshipId?,
+            operation:
+                KSuspendFunction0<Result>,
+            beforeOperation:
+                () -> Unit =
+                {},
+            onResult:
+                (Result) -> Unit =
+                {},
+            onFailure:
+                (Throwable) -> Unit =
+                {},
+        ):
+            Job {
+            val execution =
+                executionRoot
+                    .directExecution(
+                        owner,
+                    )
+
+            return when (
+                approach
+            ) {
+                Approach.Independent ->
+                    execution.begin(
+                        operation =
+                            operation,
+                        beforeOperation =
+                            beforeOperation,
+                        onResult =
+                            onResult,
+                        onFailure =
+                            onFailure,
+                    )
+
+                Approach.Earliest,
+                Approach.Latest,
+                Approach.Queued,
+                ->
+                    execution.beginRelationship(
+                        approach =
+                            approach,
+                        relationshipId =
+                            requireNotNull(
+                                relationshipId,
+                            ) {
+                                approach.name +
+                                    " execution requires RelationshipId"
+                            },
+                        source =
+                            operation,
+                        operation = {
+                            operation()
+                        },
+                        beforeOperation =
+                            beforeOperation,
+                        onResult =
+                            onResult,
+                        onFailure =
+                            onFailure,
+                    )
+            }
+        }
 
         /**
          * Consume an already-authored overlap Approach without making the feature translate that

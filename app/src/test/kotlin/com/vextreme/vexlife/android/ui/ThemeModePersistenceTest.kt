@@ -15,24 +15,27 @@ import org.junit.Test
 
 class ThemeModePersistenceTest {
     @Test
-    fun saveMethodConsumesModeParameterAndOwnsTheConcreteStoreCall() {
+    fun saveMethodOwnsTheFamilyModeParameterAndConcreteStoreCall() {
         val store =
             RecordingThemeModeStore(
                 ThemeMode.NotSet,
             )
+        val parameter =
+            ThemeModeFamily.Parameter.Mode(
+                mode =
+                    ThemeMode.Dark,
+            )
         val method =
             ThemeModeFamily.Act.Method.Save(
-                store,
+                store =
+                    store,
+                parameter =
+                    parameter,
             )
 
         val result =
             runBlocking {
-                method(
-                    ThemeModeFamily.Act.Parameter.Mode(
-                        mode =
-                            ThemeMode.Dark,
-                    ),
-                )
+                method()
             }
 
         assertEquals(
@@ -47,6 +50,10 @@ class ThemeModePersistenceTest {
                 ThemeMode.Dark,
             ),
             store.savedStates,
+        )
+        assertTrue(
+            method.parameter ===
+                parameter,
         )
     }
 

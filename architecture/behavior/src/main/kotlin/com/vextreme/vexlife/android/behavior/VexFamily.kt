@@ -3,7 +3,9 @@
 package com.vextreme.vexlife.android.behavior
 
 import com.vextreme.vexlife.android.execution.VexExecution
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import kotlin.reflect.KClass
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -60,6 +62,23 @@ abstract class VexFamily<
     FamilyEffect : VexFamily.Effect<Family> {
     /** Current semantic truth belonging to one exact Family. */
     interface State<
+        Family,
+    > where
+        Family : VexFamily<
+            Family,
+            *,
+            *,
+            *
+        >
+
+    /**
+     * Family-owned semantic value that may remain recognizable across State, Control, Act,
+     * executable Method, observation, or convergence without becoming an unscoped primitive.
+     *
+     * Parameter names what the value IS inside one Family's world. It does not mirror a Method name,
+     * imply current State, or require every ordinary Kotlin argument to become a Parameter.
+     */
+    interface Parameter<
         Family,
     > where
         Family : VexFamily<
@@ -216,13 +235,17 @@ abstract class VexFamily<
      */
     @ConsistentCopyVisibility
     data class Act<
-        State : VexFamily.State<*>,
-        Effect : VexFamily.Effect<*>,
+        Family,
+        State,
+        Effect,
     > internal constructor(
         val admittedState:
             State?,
         val begin:
-            Begin<Effect>?,
+            Begin<
+                Family,
+                Effect
+            >?,
         /**
          * Accepted maintained-work identity mechanically bound by [activate] from the triggering
          * live Family + Control (+ typed ResourceId when required).
@@ -233,33 +256,32 @@ abstract class VexFamily<
         val relationshipId:
             VexExecution.RelationshipId? =
             null,
-    ) {
-        /**
-         * Family-bound semantic input accepted by an executable [Method].
-         *
-         * Parameter names what the input IS inside one Family's Act vocabulary; it does not mirror
-         * the Method name or erase the value into an untyped argument bag.
-         */
-        interface Parameter<
+    ) where
+        Family : VexFamily<
             Family,
-        > where
-            Family : VexFamily<
-                Family,
-                *,
-                *,
-                *
-            >
+            *,
+            *,
+            *
+        >,
+        State : VexFamily.State<Family>,
+        Effect : VexFamily.Effect<Family> {
+        /*
+         * Acceptance binds the live Family execution owner after pure act(...) resolution without
+         * putting runtime-owner identity into Act equality/copy semantics.
+         */
+        private var executionOwner:
+            Any? =
+            null
 
         /**
-         * Semantically-addressed executable function for one Act vocabulary.
+         * Semantically-addressed executable function belonging to one Family's Act vocabulary.
          *
-         * A Method owns the concrete call it performs. [Input] preserves the Family-bound semantic
-         * input type and [Output] is the truthful return type of that call. VexExecution remains the
-         * owner of Job custody / overlap / cancellation; Method is not another runtime/executor.
+         * A concrete Method is a fully-bound callable value: it contains the exact provider/Store
+         * dependency and Family Parameter required by that operation, then returns the truthful
+         * physical result of the call. VexExecution still owns Job custody / overlap / cancellation.
          */
         interface Method<
             Family,
-            in Input,
             out Output,
         > where
             Family : VexFamily<
@@ -267,14 +289,130 @@ abstract class VexFamily<
                 *,
                 *,
                 *
-            >,
-            Input : Parameter<Family> {
-            suspend operator fun invoke(
-                parameter:
-                    Input,
-            ):
+            > {
+            suspend operator fun invoke():
                 Output
         }
+
+        /**
+         * Compiler-visible continuation from an accepted Act into its Method.
+         *
+         * This type owns no semantic meaning. It only prevents callers from re-supplying the
+         * already-authored Approach, RelationshipId, or execution owner while selecting the exact
+         * bound Method that will realize the consequence.
+         */
+        class MethodFollowUp<
+            Family,
+        > internal constructor(
+            private val executionRoot:
+                VexExecutionRoot,
+            private val owner:
+                Any,
+            private val approach:
+                VexExecution.Approach,
+            private val relationshipId:
+                VexExecution.RelationshipId?,
+        ) where
+            Family : VexFamily<
+                Family,
+                *,
+                *,
+                *
+            > {
+            fun <Output> method(
+                method:
+                    Method<
+                        Family,
+                        Output
+                    >,
+                beforeOperation:
+                    () -> Unit =
+                    {},
+                onResult:
+                    (Output) -> Unit =
+                    {},
+                onFailure:
+                    (Throwable) -> Unit =
+                    {},
+            ):
+                Job =
+                VexExecution.begin(
+                    executionRoot =
+                        executionRoot,
+                    owner =
+                        owner,
+                    approach =
+                        approach,
+                    relationshipId =
+                        relationshipId,
+                    operation =
+                        method::invoke,
+                    beforeOperation =
+                        beforeOperation,
+                    onResult =
+                        onResult,
+                    onFailure =
+                        onFailure,
+                )
+        }
+
+        /**
+         * Continue one accepted Act through the execution relationship it already authored.
+         *
+         * null means this Act has no runtime consequence. The caller supplies only the
+         * VexExecutionRoot and then one bound Family Method; Approach, RelationshipId, and the live
+         * Family owner are consumed from this accepted Act rather than reconstructed downstream.
+         */
+        fun launchWith(
+            executionRoot:
+                VexExecutionRoot,
+        ):
+            MethodFollowUp<Family>? {
+            val authoredBegin =
+                begin
+                    ?: return null
+            val owner =
+                checkNotNull(
+                    executionOwner,
+                ) {
+                    "Only an Act accepted by VexFamily.activate(...) may launch"
+                }
+
+            return MethodFollowUp(
+                executionRoot =
+                    executionRoot,
+                owner =
+                    owner,
+                approach =
+                    authoredBegin.approach,
+                relationshipId =
+                    relationshipId,
+            )
+        }
+
+        internal fun acceptedBy(
+            owner:
+                Any,
+            relationshipId:
+                VexExecution.RelationshipId?,
+        ):
+            Act<
+                Family,
+                State,
+                Effect
+            > =
+            Act(
+                admittedState =
+                    admittedState,
+                begin =
+                    begin,
+                relationshipId =
+                    relationshipId,
+            )
+                .also { accepted ->
+                    accepted.executionOwner =
+                        owner
+                }
 
         val effect:
             Effect?
@@ -311,13 +449,21 @@ abstract class VexFamily<
          */
         @ConsistentCopyVisibility
         data class Begin<
-            Effect : VexFamily.Effect<*>,
+            Family,
+            Effect,
         > internal constructor(
             val approach:
                 VexExecution.Approach,
             val effect:
                 Effect,
-        )
+        ) where
+            Family : VexFamily<
+                Family,
+                *,
+                *,
+                *
+            >,
+            Effect : VexFamily.Effect<Family>
     }
 
     private class FamilyRelationshipId(
@@ -406,16 +552,21 @@ abstract class VexFamily<
         control: FamilyControl,
     ):
         Act<
+            Family,
             FamilyState,
             FamilyEffect
         >?
 
     protected fun stay(
         begin:
-            Act.Begin<FamilyEffect>? =
+            Act.Begin<
+                Family,
+                FamilyEffect
+            >? =
             null,
     ):
         Act<
+            Family,
             FamilyState,
             FamilyEffect
         > =
@@ -432,10 +583,14 @@ abstract class VexFamily<
         state:
             FamilyState,
         begin:
-            Act.Begin<FamilyEffect>? =
+            Act.Begin<
+                Family,
+                FamilyEffect
+            >? =
             null,
     ):
         Act<
+            Family,
             FamilyState,
             FamilyEffect
         > =
@@ -453,7 +608,10 @@ abstract class VexFamily<
         effect:
             FamilyEffect,
     ):
-        Act.Begin<FamilyEffect> =
+        Act.Begin<
+            Family,
+            FamilyEffect
+        > =
         Act.Begin(
             approach =
                 VexExecution.Approach.Independent,
@@ -466,7 +624,10 @@ abstract class VexFamily<
         effect:
             FamilyEffect,
     ):
-        Act.Begin<FamilyEffect> =
+        Act.Begin<
+            Family,
+            FamilyEffect
+        > =
         Act.Begin(
             approach =
                 VexExecution.Approach.Earliest,
@@ -479,7 +640,10 @@ abstract class VexFamily<
         effect:
             FamilyEffect,
     ):
-        Act.Begin<FamilyEffect> =
+        Act.Begin<
+            Family,
+            FamilyEffect
+        > =
         Act.Begin(
             approach =
                 VexExecution.Approach.Latest,
@@ -492,7 +656,10 @@ abstract class VexFamily<
         effect:
             FamilyEffect,
     ):
-        Act.Begin<FamilyEffect> =
+        Act.Begin<
+            Family,
+            FamilyEffect
+        > =
         Act.Begin(
             approach =
                 VexExecution.Approach.Queued,
@@ -609,6 +776,7 @@ abstract class VexFamily<
             FamilyControl,
     ):
         Act<
+            Family,
             FamilyState,
             FamilyEffect
         >? =
@@ -624,7 +792,7 @@ abstract class VexFamily<
                 )
                     ?: return null
 
-            val accepted =
+            val acceptedRelationshipId =
                 when (
                     resolved.begin
                         ?.approach
@@ -633,22 +801,23 @@ abstract class VexFamily<
                     VexExecution.Approach.Latest,
                     VexExecution.Approach.Queued,
                     ->
-                        Act(
-                            admittedState =
-                                resolved.admittedState,
-                            begin =
-                                resolved.begin,
-                            relationshipId =
-                                relationshipId(
-                                    control,
-                                ),
+                        relationshipId(
+                            control,
                         )
 
                     VexExecution.Approach.Independent,
                     null,
                     ->
-                        resolved
+                        null
                 }
+
+            val accepted =
+                resolved.acceptedBy(
+                    owner =
+                        this,
+                    relationshipId =
+                        acceptedRelationshipId,
+                )
 
             accepted.admittedState
                 ?.let(

@@ -374,7 +374,10 @@ private fun toggleThemeMode(
             family,
         control =
             ThemeModeFamily.Control.Select(
-                selectedMode,
+                ThemeModeFamily.Parameter.Mode(
+                    mode =
+                        selectedMode,
+                ),
             ),
         store =
             store,
