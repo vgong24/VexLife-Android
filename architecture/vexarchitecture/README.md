@@ -25,6 +25,8 @@ Fresh architecture orientation:
 root README
 -> architecture/vexarchitecture/README.md
 -> VEXLOGGER.md
+-> contexts/logger-readable-dependencies/TOPOLOGY-AND-ID-PROTOCOL.md
+   current relationship projection; navigation, not another truth owner
 -> REFINED-BOUNDARIES.md
 -> docs/foundation/VEX-BODY-SEMANTIC-BLUEPRINT.md
 -> PR #209 before/after review when the reason for a choice matters
@@ -94,6 +96,8 @@ After `VEXLOGGER.md`, continue with:
 
 ~~~text
 README.md                         <- you are here
+contexts/logger-readable-dependencies/TOPOLOGY-AND-ID-PROTOCOL.md
+    current cross-root relationship map; descend from it to owning source
 REFINED-BOUNDARIES.md
 reference/behavior/VexFamily.kt
 reference/ui/ThemeMode.kt
