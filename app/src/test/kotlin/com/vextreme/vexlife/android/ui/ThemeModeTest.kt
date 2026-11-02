@@ -106,7 +106,10 @@ class ThemeModeTest {
         val darkAct =
             family.activate(
                 ThemeModeFamily.Control.Select(
-                    ThemeMode.Dark,
+                    ThemeModeFamily.Parameter.Mode(
+                        mode =
+                            ThemeMode.Dark,
+                    ),
                 ),
             )
 
@@ -119,7 +122,10 @@ class ThemeModeTest {
         )
         assertEquals(
             ThemeModeFamily.Effect.Save(
-                ThemeMode.Dark,
+                ThemeModeFamily.Parameter.Mode(
+                    mode =
+                        ThemeMode.Dark,
+                ),
             ),
             darkAct?.effect,
         )
@@ -132,7 +138,10 @@ class ThemeModeTest {
         val sameAct =
             family.activate(
                 ThemeModeFamily.Control.Select(
-                    ThemeMode.Dark,
+                    ThemeModeFamily.Parameter.Mode(
+                        mode =
+                            ThemeMode.Dark,
+                    ),
                 ),
             )
 
@@ -142,7 +151,10 @@ class ThemeModeTest {
         )
         assertEquals(
             ThemeModeFamily.Effect.Save(
-                ThemeMode.Dark,
+                ThemeModeFamily.Parameter.Mode(
+                    mode =
+                        ThemeMode.Dark,
+                ),
             ),
             sameAct?.effect,
         )
@@ -159,13 +171,19 @@ class ThemeModeTest {
         val dark =
             family.activate(
                 ThemeModeFamily.Control.Select(
-                    ThemeMode.Dark,
+                    ThemeModeFamily.Parameter.Mode(
+                        mode =
+                            ThemeMode.Dark,
+                    ),
                 ),
             )
         val light =
             family.activate(
                 ThemeModeFamily.Control.Select(
-                    ThemeMode.Light,
+                    ThemeModeFamily.Parameter.Mode(
+                        mode =
+                            ThemeMode.Light,
+                    ),
                 ),
             )
 
@@ -186,7 +204,10 @@ class ThemeModeTest {
         val act =
             family.activate(
                 ThemeModeFamily.Control.Select(
-                    ThemeMode.Light,
+                    ThemeModeFamily.Parameter.Mode(
+                        mode =
+                            ThemeMode.Light,
+                    ),
                 ),
             )
 
@@ -201,7 +222,10 @@ class ThemeModeTest {
         val invalidSelection =
             runCatching {
                 ThemeModeFamily.Control.Select(
-                    ThemeMode.NotSet,
+                    ThemeModeFamily.Parameter.Mode(
+                        mode =
+                            ThemeMode.NotSet,
+                    ),
                 )
             }.exceptionOrNull()
 

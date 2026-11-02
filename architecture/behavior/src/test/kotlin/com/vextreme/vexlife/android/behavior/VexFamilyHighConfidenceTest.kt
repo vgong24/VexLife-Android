@@ -86,6 +86,7 @@ class VexFamilyHighConfidenceTest {
             control: Control,
         ):
             VexFamily.Act<
+                ValueFamily,
                 State,
                 Effect
             >? =
@@ -136,6 +137,7 @@ class VexFamilyHighConfidenceTest {
             control: Control,
         ):
             VexFamily.Act<
+                CounterFamily,
                 State,
                 Effect
             > =
