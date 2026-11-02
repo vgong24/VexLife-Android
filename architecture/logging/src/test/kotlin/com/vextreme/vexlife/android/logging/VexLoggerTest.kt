@@ -125,7 +125,7 @@ class VexLoggerTest {
         logger.appOpened(Home)
         logger.recordInteraction(
             element = SaveButton,
-            screenBefore = Home,
+            screen = Home,
             action = "Submitted",
             detailsJson = json,
         )

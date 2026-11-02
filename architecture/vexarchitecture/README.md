@@ -2,6 +2,74 @@
 
 [VXG RealForever]
 
+## Current implementation candidate and reasoning record
+
+The live implementation candidate that grew from this refined snapshot is:
+
+- [PR #209 — VexArchitecture executable composition / ThemeMode patient zero](https://github.com/vgong24/VexLife-Android/pull/209)
+
+PR #209 is intentionally useful as a **before / pressure / subtraction / after** review record. It
+shows traditional-looking alternatives that were actually tried or inherited, the duplication or
+ownership leaks they created, and the smaller relationships that replaced them. A fresh human or AI
+may use that diff to understand *why* the current design exists instead of cargo-culting either the
+old code or the final names.
+
+Until #209 is merged and its exact-head proof / review gates are complete, the PR is evidence and a
+current implementation candidate, not accepted-source authority. After merge, keep the PR link here
+as provenance for the rejected alternatives and causal reasoning; accepted source remains the
+repository itself.
+
+Fresh architecture orientation:
+
+~~~text
+root README
+-> architecture/vexarchitecture/README.md
+-> VEXLOGGER.md
+-> REFINED-BOUNDARIES.md
+-> docs/foundation/VEX-BODY-SEMANTIC-BLUEPRINT.md
+-> PR #209 before/after review when the reason for a choice matters
+-> exact owning production source + tests
+~~~
+
+The current causal body is broader than execution alone:
+
+~~~text
+REQUEST / CHANGE
+
+Family.Parameter
+-> Family.Control
+-> Family.Act
+-> Family.Effect
+-> Family.Act.Method
+-> outside provider / Store reality
+-> Observation
+-> Family.State
+
+EXPERIENCE / DISPLAY
+
+Family.State
+-> Family.Projection
+-> Family.DisplayState
+-> concrete presentation meaning
+-> concrete manifestation such as Compose
+-> human experience
+~~~
+
+ThemeMode is the current concrete display example:
+
+~~~text
+ThemeMode State
+-> ThemeModeFamily.DisplayState
+-> VexThemePresentation
+-> VexLifeTheme
+-> MaterialTheme / system bars / Compose Surface
+~~~
+
+DisplayState is Family-owned outward interpretation. Compose is a manifestation technology, not a
+Family child or semantic truth owner. Do not introduce a generic FamilyRenderer, UiState, or
+ViewState merely to bridge those layers when the concrete consumer already has a truthful
+presentation boundary.
+
 ## READ FIRST — VexLogger
 
 Before reading the rest of this package, read:
@@ -31,7 +99,8 @@ reference/behavior/VexFamily.kt
 reference/ui/ThemeMode.kt
 ~~~
 
-Do not use draft PR #206 as the entry point.
+Do not use draft PR #206 as the entry point. PR #209 is the current implementation/reasoning record;
+the snapshot below is historical reconstruction context that led into that candidate.
 
 > **REFERENCE SNAPSHOT — NOT A MERGE RECOMMENDATION**
 >
@@ -174,9 +243,13 @@ old draft review PR
 Those hashes explain where the snapshot came from. They do not make #206 current architecture
 authority.
 
-## Reconstruction rule
+## Historical reconstruction rule that produced the current candidate
 
-A successor implementing this architecture should:
+The steps below explain how this snapshot was intended to become implementation and are preserved as
+reasoning provenance. They are **not** an instruction to open another implementation PR while #209 is
+the active current candidate.
+
+A successor implementing this architecture from this historical snapshot should:
 
 ~~~text
 1. start from current main

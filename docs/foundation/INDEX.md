@@ -11,6 +11,13 @@
 
 This is the architecture map, not a requirement to read every foundation on every task.
 
+For VexArchitecture-level work, descend through
+[architecture/vexarchitecture/README.md](../../architecture/vexarchitecture/README.md). Its current
+implementation/reasoning record is
+[PR #209](https://github.com/vgong24/VexLife-Android/pull/209), which remains a draft candidate until
+its exact-head proof and review gates close. The PR is deliberately retained as before/after
+provenance so a fresh reader can inspect rejected alternatives and the reason they were subtracted.
+
 A foundation earns a dedicated entry when it has a real recurring consumer, invariant, or proof
 burden. Add detail at the narrowest rightful source rather than turning this index into a second
 implementation manual.
@@ -46,6 +53,16 @@ realization boundary
 -> VexExecution begin/observe foundation
 -> provider / Store
 -> observed State
+-> Projection(State, DisplayState)
+-> concrete presentation meaning when earned
+-> manifestation / UI
+
+ThemeMode display path:
+    ThemeMode State
+    -> ThemeModeFamily.DisplayState
+    -> VexThemePresentation
+    -> VexLifeTheme
+    -> Compose / system-bar presentation
 ~~~
 
 Permanent candidate boundary:
@@ -85,8 +102,11 @@ owner, Act-authored Approach, and Family-authored RelationshipId are consumed th
 by the reusable execution foundation; execution adds custody rather than another feature/domain
 decision.
 
-Exact repository-owned Gradle/JVM proof is pending on the current #209 candidate. The prior #193 proof
-remains valid evidence for its accepted historical tree; it is not proof for this new refinement.
+SourceOwner A004 reached the real repository-owned Gradle/JVM proof on #209 and exposed only stale
+tests that still depended on removed Logger/execution surfaces. The current candidate corrects those
+test dependencies; a fresh exact-head proof is still required before #209 may be called green or
+merge-ready. The prior #193 proof remains valid evidence for its accepted historical tree; it is not
+proof for this new refinement.
 
 Compound/Relay remains a separate semantic owner for multi-truth convergence.
 
