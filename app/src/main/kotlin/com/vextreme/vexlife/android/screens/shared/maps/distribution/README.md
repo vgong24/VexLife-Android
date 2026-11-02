@@ -57,7 +57,7 @@ WHO OWNS THE LIVED RELATIONSHIP?
     -> Distribution Session
 
 WHO OWNS COROUTINE CUSTODY?
-    VexMapsDistributionExecution
+    Distribution Session through VexExecution
 
 WHAT DOES COMPOSE USE?
     VexMapsDistributionUi + VexMapsDistributionContextDock
@@ -179,8 +179,8 @@ Convergence Relays
 Distribution Session
     owns lived currentness / failure / retry meaning
 
-VexMapsDistributionExecution
-    owns coroutine custody only
+Distribution Session
+    uses VexExecution directly for coroutine custody of work the Session already owns
 
 UI / Context Dock
     presents already-resolved truth

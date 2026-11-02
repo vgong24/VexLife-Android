@@ -9,7 +9,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.vextreme.vexlife.android.conversation.VexConversationHybridRelay
 import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.data.events.RelayEventsAttentionLabRepository
 import com.vextreme.vexlife.android.data.events.RelayEventsAttentionPreferenceRepository
@@ -25,14 +24,13 @@ import com.vextreme.vexlife.android.elements.ScreenBlueprint
 import com.vextreme.vexlife.android.elements.SwappableContainerElement
 import com.vextreme.vexlife.android.elements.UIElement
 import com.vextreme.vexlife.android.elements.VexElementTree
-import com.vextreme.vexlife.android.logging.VexLogger
-import com.vextreme.vexlife.android.runtime.AppActionRegistrations
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.AppScreenBlueprint
 import com.vextreme.vexlife.android.screens.AppScreens
-import com.vextreme.vexlife.android.screens.primary.events.EventsConvergenceRelay
 import com.vextreme.vexlife.android.shell.AppFrame
 import com.vextreme.vexlife.android.ui.VexLifeRelayGraph
+import com.vextreme.vexlife.android.ui.VexLifeSession
 import com.vextreme.vexlife.android.ui.VexLifeTheme
 import com.vextreme.vexlife.android.ui.VexThemePresentation
 
@@ -162,51 +160,19 @@ internal fun VexPreviewHost(
         }
     val scope = rememberCoroutineScope()
     val context = remember(id, scope) {
-        val repositories = repositoriesFactory()
-        val eventsRelay =
-            EventsConvergenceRelay(
-                eventsRepository =
-                    repositories.events,
-                attentionPreferences =
-                    repositories.eventsAttention,
-                attentionLab =
-                    repositories.eventsAttentionLab,
-                userProfile =
-                    repositories.userProfile,
+        val repositories =
+            repositoriesFactory()
+        val session =
+            VexLifeSession(
+                repositories =
+                    repositories,
+                scope =
+                    scope,
+                executionRoot =
+                    VexExecutionRoot(),
             )
-                .also { relay ->
-                    relay.activate(
-                        scope,
-                    )
-                }
-        val conversationRelay =
-            VexConversationHybridRelay(
-                conversationRepository =
-                    repositories.conversation,
-                conversationLab =
-                    null,
-            )
-                .also { relay ->
-                    relay.activate(
-                        scope,
-                    )
-                }
-        val relayGraph =
-            VexLifeRelayGraph(
-                events =
-                    eventsRelay,
-                conversation =
-                    conversationRelay,
-            )
-        val runtime = VexRuntime(
-            registry = AppScreens.registry,
-            logger = VexLogger(),
-            initialScreen = AppScreens.primary.first(),
-            primaryScreens = AppScreens.primary,
-            currentAppActions = {
-                AppActionRegistrations.Empty
-            },
-        )
+        val runtime =
+            session.runtime
 
         runtime.navigation.push(startScreen)
 
@@ -214,9 +180,12 @@ internal fun VexPreviewHost(
             .apply(previewSetup)
 
         VexPreviewContext(
-            runtime = runtime,
-            repositories = repositories,
-            relayGraph = relayGraph,
+            runtime =
+                runtime,
+            repositories =
+                session.repositories,
+            relayGraph =
+                session.relayGraph,
         )
     }
 

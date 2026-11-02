@@ -75,7 +75,7 @@ class VexLoggerTest {
         logger.recordInteraction(
             element =
                 DebugButton,
-            screenBefore =
+            screen =
                 Home,
         )
 
