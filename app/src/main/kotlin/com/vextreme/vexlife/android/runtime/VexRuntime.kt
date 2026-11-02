@@ -231,11 +231,16 @@ data class AppActionRequest(
  * element click/toggle/FAB
  * -> [activate]
  * -> snapshot [currentScreen] BEFORE changing navigation
- * -> record the action + before/after screen meaning
+ * -> record the interaction against that exact current Screen
  * -> [applyIntent]
  * -> navigation/presentation state changes OR Invoke is handed to [appActions]
- * -> exactly one feature-local AppActionRegistration owns the effect
+ * -> when navigation changes, record the Screen that is actually current after mutation
+ * -> exactly one feature-local AppActionRegistration owns an invoked effect
  * -> Compose observes resulting state and renders the new result
+ *
+ * Production chronology therefore preserves observation order rather than writing an expected
+ * before/after transition before navigation occurs. A debug/test projection may derive A -> B from
+ * the ordered interaction + CurrentScreen facts.
  *
  * Debugging map:
  * - "What screen is active?" -> [currentScreen]
