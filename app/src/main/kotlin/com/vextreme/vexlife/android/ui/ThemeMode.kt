@@ -59,6 +59,71 @@ internal class ThemeModeFamily(
             Parameter
     }
 
+    /*
+     * Currentness fence for Store observations while one accepted Select consequence is still
+     * settling.
+     *
+     * This is the SAME Family Parameter.Mode instance already carried through Control -> Effect ->
+     * Method. No generation/trace/operation ID is minted. The marker exists only so an older Store
+     * observation cannot overwrite a newer accepted semantic selection while that exact Method is
+     * still unresolved.
+     *
+     * act(...) remains pure. The realization boundary enters/leaves this fence through
+     * activateSelection(...) / selectionRealizationFinished(...).
+     */
+    private val selectionObservationLock =
+        Any()
+    private var unsettledSelection:
+        Parameter.Mode? =
+        null
+
+    internal fun activateSelection(
+        control:
+            Control.Select,
+    ):
+        VexFamily.Act<
+            ThemeModeFamily,
+            ThemeMode,
+            Effect
+        >? =
+        synchronized(
+            selectionObservationLock,
+        ) {
+            val previous =
+                unsettledSelection
+            unsettledSelection =
+                control.mode
+
+            activate(
+                control,
+            ).also { accepted ->
+                if (
+                    accepted ==
+                    null
+                ) {
+                    unsettledSelection =
+                        previous
+                }
+            }
+        }
+
+    internal fun selectionRealizationFinished(
+        parameter:
+            Parameter.Mode,
+    ) {
+        synchronized(
+            selectionObservationLock,
+        ) {
+            if (
+                unsettledSelection ===
+                parameter
+            ) {
+                unsettledSelection =
+                    null
+            }
+        }
+    }
+
     sealed interface Control :
         VexFamily.Control<ThemeModeFamily> {
         data class Select(
@@ -214,18 +279,37 @@ internal class ThemeModeFamily(
         observed:
             ThemeMode,
     ):
-        ThemeMode {
-        if (
-            observed ==
-            ThemeMode.NotSet
+        ThemeMode =
+        synchronized(
+            selectionObservationLock,
         ) {
-            return currentState
-        }
+            if (
+                observed ==
+                ThemeMode.NotSet
+            ) {
+                return@synchronized currentState
+            }
 
-        return observe(
-            observed,
-        )
-    }
+            val unsettled =
+                unsettledSelection
+            if (
+                unsettled !=
+                null &&
+                observed !=
+                unsettled.mode
+            ) {
+                /*
+                 * A newer accepted Select is still settling. This observation may have been emitted
+                 * by the prior Store state/save and carries no revision that proves it is newer than
+                 * the accepted Parameter, so it cannot overwrite the newer semantic State.
+                 */
+                return@synchronized currentState
+            }
+
+            observe(
+                observed,
+            )
+        }
 
     override fun act(
         currentState:
@@ -309,9 +393,14 @@ internal fun activateThemeMode(
     val before =
         family.currentState
     val act =
-        family.activate(
-            control,
-        )
+        when (
+            control
+        ) {
+            is ThemeModeFamily.Control.Select ->
+                family.activateSelection(
+                    control,
+                )
+        }
             ?: return false
 
     recordThemeModeFact(
@@ -397,6 +486,9 @@ internal fun activateThemeMode(
                             result
                         ) {
                             is ThemeModeStore.Result.Success -> {
+                                family.selectionRealizationFinished(
+                                    effect.mode,
+                                )
                                 recordThemeModeFact(
                                     logger =
                                         logger,
@@ -422,7 +514,10 @@ internal fun activateThemeMode(
                                 )
                             }
 
-                            is ThemeModeStore.Result.Failure ->
+                            is ThemeModeStore.Result.Failure -> {
+                                family.selectionRealizationFinished(
+                                    effect.mode,
+                                )
                                 recordThemeModeFact(
                                     logger =
                                         logger,
@@ -441,9 +536,13 @@ internal fun activateThemeMode(
                                                 ),
                                         ),
                                 )
+                            }
                         }
                     },
                     onFailure = { failure ->
+                        family.selectionRealizationFinished(
+                            effect.mode,
+                        )
                         recordThemeModeFact(
                             logger =
                                 logger,
@@ -487,24 +586,6 @@ internal fun observeThemeModeStore(
     logger:
         VexLogger,
 ) {
-    /*
-     * The first Store emission is a bootstrap snapshot, not a timestamped revision.
-     *
-     * Observation starts asynchronously. A local Control may therefore admit a newer semantic State
-     * after this observation is formed but before the Store's first snapshot reaches the collector.
-     * In that one bounded case, admitting the bootstrap snapshot would let older durable truth undo
-     * a newer accepted selection until Save later repaired it.
-     *
-     * Family.observe(...) deliberately does not solve stale-result policy. This ThemeMode boundary
-     * owns the only fact it can prove without inventing provider revisions: if Family State changed
-     * since observation formation, the first Store snapshot predates that accepted local change for
-     * this observer and is held. Subsequent Store emissions remain ordinary external/durable truth.
-     */
-    val stateAtObservationFormation =
-        family.currentState
-    var bootstrapObservationPending =
-        true
-
     VexExecution.observe(
         executionRoot =
             executionRoot,
@@ -513,31 +594,16 @@ internal fun observeThemeModeStore(
         source =
             store::states,
     ) { observed ->
-        val admitObservation =
-            if (
-                bootstrapObservationPending
-            ) {
-                bootstrapObservationPending =
-                    false
-                family.currentState ==
-                    stateAtObservationFormation
-            } else {
-                true
-            }
-
-        if (
-            admitObservation
-        ) {
-            observeThemeModeState(
-                family =
-                    family,
-                observed =
-                    observed,
-                logger =
-                    logger,
-            )
-        }
+        observeThemeModeState(
+            family =
+                family,
+            observed =
+                observed,
+            logger =
+                logger,
+        )
     }
+
 }
 
 private fun observeThemeModeState(

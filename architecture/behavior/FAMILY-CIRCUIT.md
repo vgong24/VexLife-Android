@@ -113,29 +113,40 @@ The caller of observe(...) must already own provider/repository interpretation, 
 and construction of the truthful semantic State. Family does not become a provider adapter merely
 because it can admit observed truth.
 
-ThemeMode now carries one concrete example of that law at its Store observation boundary. Store
-observation starts asynchronously, so its first emission is a bootstrap snapshot rather than a
-revisioned causal fact. If ThemeMode Family State changed after observation formation but before that
-first snapshot arrived, the boundary holds that stale bootstrap value rather than letting older
-durable truth undo a newer accepted Select. Later Store emissions remain ordinary observed truth.
+ThemeMode carries one concrete example of that law without adding a revision/trace identity. The same
+`Parameter.Mode` instance already flowing through Control -> Effect -> Method remains the local
+currentness fence until that exact Method reaches a terminal result.
+
+While that Parameter is unsettled, a Store observation that disagrees with its mode has no revision
+evidence proving it is newer than the accepted selection, so ThemeMode holds it. A matching
+observation may be read without changing semantic State, but only the terminal result of the exact
+bound Method clears that Parameter fence. Parameter identity therefore protects both delayed
+bootstrap truth and delayed observation from a prior local Save.
 
 ~~~text
-observation formed while Family = Dark
+Parameter.Mode(Light)
+-> Control.Select(same Parameter)
+-> immediate State = Light
+-> Method.Save(same Parameter)
         |
-local Select(Light)
--> immediate Family = Light
+        +-- delayed old Store observation = Dark
+        |       -> held while Light Parameter is unsettled
         |
-delayed first Store snapshot = Dark
-        |
-ThemeMode observation currentness gate
--> hold stale bootstrap snapshot
-        |
-Save/next Store observation
--> ordinary rightful reconciliation
+        v
+exact Method result
+-> settle the SAME Parameter identity
+-> ordinary Store observations resume
+
+rapid follow-up:
+
+Parameter.Mode(Dark)
+-> replaces the unsettled Light Parameter
+-> older Light Store observation
+   cannot overwrite newer Dark semantic State
 ~~~
 
-This is feature/provider currentness, not a new generic Family result grammar and not an Execution
-status registry.
+This is ThemeMode/provider currentness, not a generic Family result grammar, generation counter, or
+Execution status registry.
 
 ## Act / Effect / execution relationship
 

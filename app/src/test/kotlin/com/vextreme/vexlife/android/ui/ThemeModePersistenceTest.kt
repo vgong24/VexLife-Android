@@ -4,6 +4,7 @@ import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.logging.VexLogger
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
@@ -520,6 +521,122 @@ class ThemeModePersistenceTest {
     }
 
     @Test
+    fun delayedPriorSaveObservationCannotOverwriteNewerAcceptedSelection() {
+        val root =
+            VexExecutionRoot()
+        val store =
+            DelayedPriorObservationThemeModeStore()
+        val family =
+            ThemeModeFamily(
+                initialState =
+                    ThemeMode.Dark,
+            )
+        val logger =
+            VexLogger()
+
+        observeThemeModeStore(
+            family =
+                family,
+            store =
+                store,
+            executionRoot =
+                root,
+            logger =
+                logger,
+        )
+
+        try {
+            runBlocking {
+                withTimeout(
+                    5_000,
+                ) {
+                    store.observerStarted.await()
+                }
+            }
+
+            assertTrue(
+                activateThemeMode(
+                    family =
+                        family,
+                    control =
+                        ThemeModeFamily.Control.Select(
+                            ThemeModeFamily.Parameter.Mode(
+                                mode =
+                                    ThemeMode.Light,
+                            ),
+                        ),
+                    store =
+                        store,
+                    executionRoot =
+                        root,
+                    logger =
+                        logger,
+                ),
+            )
+
+            runBlocking {
+                withTimeout(
+                    5_000,
+                ) {
+                    store.firstSaveReturned.await()
+                }
+            }
+
+            assertTrue(
+                activateThemeMode(
+                    family =
+                        family,
+                    control =
+                        ThemeModeFamily.Control.Select(
+                            ThemeModeFamily.Parameter.Mode(
+                                mode =
+                                    ThemeMode.Dark,
+                            ),
+                        ),
+                    store =
+                        store,
+                    executionRoot =
+                        root,
+                    logger =
+                        logger,
+                ),
+            )
+            assertEquals(
+                ThemeMode.Dark,
+                family.currentState,
+            )
+
+            runBlocking {
+                withTimeout(
+                    5_000,
+                ) {
+                    store.latestSaveStarted.await()
+                }
+            }
+
+            store.emitDelayedPriorObservation(
+                ThemeMode.Light,
+            )
+            runBlocking {
+                withTimeout(
+                    5_000,
+                ) {
+                    store.delayedObservationDelivered.await()
+                }
+            }
+
+            assertEquals(
+                ThemeMode.Dark,
+                family.currentState,
+            )
+
+            store.releaseLatestSave()
+        } finally {
+            root.forceStopAll()
+        }
+    }
+
+    @Test
     fun selectPayloadDoesNotCreateAnotherExecutionRelationship() {
         val root =
             VexExecutionRoot()
@@ -609,6 +726,108 @@ class ThemeModePersistenceTest {
             )
         } finally {
             root.forceStopAll()
+        }
+    }
+
+    private class DelayedPriorObservationThemeModeStore :
+        ThemeModeStore {
+        private val observations =
+            Channel<ThemeMode>(
+                Channel.UNLIMITED,
+            )
+
+        val observerStarted =
+            CompletableDeferred<Unit>()
+        val firstSaveReturned =
+            CompletableDeferred<Unit>()
+        val latestSaveStarted =
+            CompletableDeferred<Unit>()
+        val delayedObservationDelivered =
+            CompletableDeferred<Unit>()
+        private val latestSaveGate =
+            CompletableDeferred<Unit>()
+
+        override val states:
+            Flow<ThemeMode> =
+            flow {
+                observerStarted.complete(
+                    Unit,
+                )
+                for (
+                    observed in
+                    observations
+                ) {
+                    emit(
+                        observed,
+                    )
+                    delayedObservationDelivered
+                        .complete(
+                            Unit,
+                        )
+                }
+            }
+
+        override suspend fun get():
+            ThemeMode =
+            ThemeMode.Dark
+
+        override suspend fun save(
+            state:
+                ThemeMode,
+        ):
+            ThemeModeStore.Result =
+            when (
+                state
+            ) {
+                ThemeMode.Light -> {
+                    firstSaveReturned.complete(
+                        Unit,
+                    )
+                    ThemeModeStore.Result.Success(
+                        observedState =
+                            ThemeMode.Light,
+                    )
+                }
+
+                ThemeMode.Dark -> {
+                    latestSaveStarted.complete(
+                        Unit,
+                    )
+                    latestSaveGate.await()
+                    ThemeModeStore.Result.Success(
+                        observedState =
+                            ThemeMode.Dark,
+                    )
+                }
+
+                ThemeMode.NotSet ->
+                    error(
+                        "NotSet is not selectable",
+                    )
+            }
+
+        override suspend fun forget():
+            ThemeModeStore.Result =
+            ThemeModeStore.Result.Success(
+                observedState =
+                    ThemeMode.NotSet,
+            )
+
+        fun emitDelayedPriorObservation(
+            state:
+                ThemeMode,
+        ) {
+            observations
+                .trySend(
+                    state,
+                )
+                .getOrThrow()
+        }
+
+        fun releaseLatestSave() {
+            latestSaveGate.complete(
+                Unit,
+            )
         }
     }
 

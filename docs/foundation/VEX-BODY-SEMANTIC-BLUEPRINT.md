@@ -1580,33 +1580,52 @@ rightful result / observation interpretation
 ThemeMode Family State when actually known
 ~~~
 
-#### Bootstrap observation currentness
+#### Store observation currentness through Parameter identity
 
-Exact-head A005 exposed a concrete ordering pressure that the smaller Family law already said must
-remain outside generic Family execution grammar:
+A005 first exposed a delayed-bootstrap race. A006/A009 then pressured the stronger case: the Store
+observation produced by an earlier local Save can arrive after a newer accepted Select and temporarily
+overwrite the newer semantic State.
+
+The correction does not mint a generation/revision/trace ID. It reuses the semantic identity already
+present:
 
 ~~~text
-Store observation formed at Dark
-        |
-        +---- collector has not received first Store snapshot yet
-        |
-Control.Select(Parameter.Mode(Light))
--> Family admits Light immediately
--> Save(Light) begins asynchronously
-        |
-delayed Store bootstrap snapshot emits Dark
+same Parameter.Mode instance
+
+Control.Select(Parameter)
+-> Effect.Save(Parameter)
+-> Act.Method.Save(Parameter)
+-> unsettled Store currentness fence
+-> exact Method terminal result settles that SAME Parameter
 ~~~
 
-Without a boundary-owned currentness check, that old bootstrap snapshot could temporarily overwrite
-the newer accepted Light State until Save completed.
+While one accepted Parameter is unsettled, a mismatching Store observation cannot prove that it is
+newer than the accepted local selection and is held. Rapid Select replaces the unsettled Parameter,
+so a delayed observation from the prior Save cannot overwrite the newer State.
 
-ThemeMode therefore gates only what it can actually prove: the first Store emission is treated as a
-bootstrap snapshot. If Family State changed since observation formation, that first snapshot is held.
-Subsequent Store emissions remain normal external/durable observations.
+~~~text
+Select(Light / Parameter A)
+-> State Light
+-> Save(A)
 
-This does **not** add provider revision, pending-State grammar, execution status projection, or a new
-ThemeMode runtime owner. If a future Store requires richer causal ordering than this bounded bootstrap
-case, that concrete provider must expose enough currentness evidence to earn it.
+Select(Dark / Parameter B)
+-> State Dark
+-> Save(B)
+
+delayed Store Light from A
+-> B is still unsettled
+-> hold Light
+
+terminal result for B
+-> settle B by object identity
+-> ordinary external Store observations resume
+~~~
+
+This keeps currentness in the concrete ThemeMode observation/realization boundary while preserving
+the generic Family law. No provider revision, pending-State grammar, execution status projection, or
+new ThemeMode runtime owner is added. If a future provider needs causal distinctions that semantic
+Parameter identity cannot prove, that provider must expose enough currentness evidence to earn a
+stronger form.
 
 ### What still needs pressure
 
