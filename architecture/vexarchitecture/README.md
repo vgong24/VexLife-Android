@@ -2,9 +2,9 @@
 
 [VXG RealForever]
 
-## Current implementation candidate and reasoning record
+## Accepted implementation origin and reasoning record
 
-The live implementation candidate that grew from this refined snapshot is:
+The first accepted executable VexArchitecture stability point that grew from this refined snapshot is:
 
 - [PR #209 — VexArchitecture executable composition / ThemeMode patient zero](https://github.com/vgong24/VexLife-Android/pull/209)
 
@@ -14,10 +14,10 @@ ownership leaks they created, and the smaller relationships that replaced them. 
 may use that diff to understand *why* the current design exists instead of cargo-culting either the
 old code or the final names.
 
-Until #209 is merged and its exact-head proof / review gates are complete, the PR is evidence and a
-current implementation candidate, not accepted-source authority. After merge, keep the PR link here
-as provenance for the rejected alternatives and causal reasoning; accepted source remains the
-repository itself.
+PR #209 produced the first accepted executable VexArchitecture stability point. The repository's
+current source and tests own current behavior. Keep the PR link here as provenance for the rejected
+alternatives, pressure, subtraction, and causal reasoning; accepted source remains the repository
+itself.
 
 Fresh architecture orientation:
 
@@ -103,8 +103,9 @@ reference/behavior/VexFamily.kt
 reference/ui/ThemeMode.kt
 ~~~
 
-Do not use draft PR #206 as the entry point. PR #209 is the current implementation/reasoning record;
-the snapshot below is historical reconstruction context that led into that candidate.
+Do not use draft PR #206 as the entry point. PR #209 is the accepted implementation-origin /
+reasoning record; the snapshot below is historical reconstruction context that led into the accepted
+body.
 
 > **REFERENCE SNAPSHOT — NOT A MERGE RECOMMENDATION**
 >
@@ -247,11 +248,11 @@ old draft review PR
 Those hashes explain where the snapshot came from. They do not make #206 current architecture
 authority.
 
-## Historical reconstruction rule that produced the current candidate
+## Historical reconstruction rule that produced the accepted #209 body
 
 The steps below explain how this snapshot was intended to become implementation and are preserved as
-reasoning provenance. They are **not** an instruction to open another implementation PR while #209 is
-the active current candidate.
+reasoning provenance. They are **not** an instruction to replay the implementation sequence now that
+#209 is accepted provenance and current repository source owns behavior.
 
 A successor implementing this architecture from this historical snapshot should:
 
