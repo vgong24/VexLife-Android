@@ -182,7 +182,7 @@ class VexLoggerTopologyTest {
         logger.recordInteractionRef(
             subjectRef =
                 "element.settings.body.unknown",
-            screenBefore =
+            screen =
                 screen,
         )
 

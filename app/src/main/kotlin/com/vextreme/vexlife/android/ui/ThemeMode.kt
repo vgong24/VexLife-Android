@@ -487,6 +487,24 @@ internal fun observeThemeModeStore(
     logger:
         VexLogger,
 ) {
+    /*
+     * The first Store emission is a bootstrap snapshot, not a timestamped revision.
+     *
+     * Observation starts asynchronously. A local Control may therefore admit a newer semantic State
+     * after this observation is formed but before the Store's first snapshot reaches the collector.
+     * In that one bounded case, admitting the bootstrap snapshot would let older durable truth undo
+     * a newer accepted selection until Save later repaired it.
+     *
+     * Family.observe(...) deliberately does not solve stale-result policy. This ThemeMode boundary
+     * owns the only fact it can prove without inventing provider revisions: if Family State changed
+     * since observation formation, the first Store snapshot predates that accepted local change for
+     * this observer and is held. Subsequent Store emissions remain ordinary external/durable truth.
+     */
+    val stateAtObservationFormation =
+        family.currentState
+    var bootstrapObservationPending =
+        true
+
     VexExecution.observe(
         executionRoot =
             executionRoot,
@@ -495,14 +513,30 @@ internal fun observeThemeModeStore(
         source =
             store::states,
     ) { observed ->
-        observeThemeModeState(
-            family =
-                family,
-            observed =
-                observed,
-            logger =
-                logger,
-        )
+        val admitObservation =
+            if (
+                bootstrapObservationPending
+            ) {
+                bootstrapObservationPending =
+                    false
+                family.currentState ==
+                    stateAtObservationFormation
+            } else {
+                true
+            }
+
+        if (
+            admitObservation
+        ) {
+            observeThemeModeState(
+                family =
+                    family,
+                observed =
+                    observed,
+                logger =
+                    logger,
+            )
+        }
     }
 }
 

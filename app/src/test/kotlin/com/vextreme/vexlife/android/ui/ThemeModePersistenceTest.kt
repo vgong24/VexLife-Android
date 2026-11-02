@@ -6,9 +6,11 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -233,7 +235,7 @@ class ThemeModePersistenceTest {
     }
 
     @Test
-    fun successfulSaveFactPrecedesResultStateAdmission() {
+    fun immediateStateAdmissionPrecedesSuccessfulSaveWithoutDuplicateResultAdmission() {
         val root =
             VexExecutionRoot()
         val store =
@@ -263,11 +265,11 @@ class ThemeModePersistenceTest {
                         family,
                     control =
                         ThemeModeFamily.Control.Select(
-                    ThemeModeFamily.Parameter.Mode(
-                        mode =
-                            ThemeMode.Dark,
-                    ),
-                ),
+                            ThemeModeFamily.Parameter.Mode(
+                                mode =
+                                    ThemeMode.Dark,
+                            ),
+                        ),
                     store =
                         store,
                     executionRoot =
@@ -277,13 +279,23 @@ class ThemeModePersistenceTest {
                 ),
             )
 
+            assertEquals(
+                ThemeMode.Dark,
+                family.currentState,
+            )
+
             runBlocking {
                 withTimeout(
                     5_000,
                 ) {
-                    family.states.first { state ->
-                        state ==
-                            ThemeMode.Dark
+                    while (
+                        logger.history.value
+                            .none { record ->
+                                record.action ==
+                                    "EffectSucceeded"
+                            }
+                    ) {
+                        yield()
                     }
                 }
             }
@@ -294,16 +306,183 @@ class ThemeModePersistenceTest {
                         it.action
                     }
 
-            assertTrue(
+            val stateAdmitted =
+                actions.indexOf(
+                    "StateAdmitted",
+                )
+            val effectRequested =
+                actions.indexOf(
+                    "EffectRequested",
+                )
+            val effectSucceeded =
                 actions.indexOf(
                     "EffectSucceeded",
-                ) <
-                    actions.lastIndexOf(
-                        "StateAdmitted",
-                    ),
+                )
+
+            assertTrue(
+                stateAdmitted >=
+                    0,
+            )
+            assertTrue(
+                stateAdmitted <
+                    effectRequested,
+            )
+            assertTrue(
+                effectRequested <
+                    effectSucceeded,
+            )
+            assertEquals(
+                1,
+                actions.count {
+                    it ==
+                        "StateAdmitted"
+                },
             )
         } finally {
             root.forceStopAll()
+        }
+    }
+
+    @Test
+    fun delayedBootstrapStoreSnapshotCannotOverwriteNewerAcceptedSelection() {
+        val root =
+            VexExecutionRoot()
+        val store =
+            DelayedBootstrapThemeModeStore(
+                initialState =
+                    ThemeMode.Dark,
+            )
+        val family =
+            ThemeModeFamily(
+                initialState =
+                    ThemeMode.Dark,
+            )
+        val logger =
+            VexLogger()
+
+        observeThemeModeStore(
+            family =
+                family,
+            store =
+                store,
+            executionRoot =
+                root,
+            logger =
+                logger,
+        )
+
+        try {
+            assertTrue(
+                activateThemeMode(
+                    family =
+                        family,
+                    control =
+                        ThemeModeFamily.Control.Select(
+                            ThemeModeFamily.Parameter.Mode(
+                                mode =
+                                    ThemeMode.Light,
+                            ),
+                        ),
+                    store =
+                        store,
+                    executionRoot =
+                        root,
+                    logger =
+                        logger,
+                ),
+            )
+            assertEquals(
+                ThemeMode.Light,
+                family.currentState,
+            )
+
+            store.releaseBootstrapObservation()
+
+            runBlocking {
+                withTimeout(
+                    5_000,
+                ) {
+                    store.awaitBootstrapObservationDelivered()
+                }
+            }
+
+            /*
+             * The Store snapshot was Dark when observation was formed, but the newer accepted
+             * Select(Light) happened before that bootstrap snapshot reached the collector.
+             */
+            assertEquals(
+                ThemeMode.Light,
+                family.currentState,
+            )
+
+            store.releaseSave()
+        } finally {
+            root.forceStopAll()
+        }
+    }
+
+    private class DelayedBootstrapThemeModeStore(
+        private val initialState:
+            ThemeMode,
+    ) :
+        ThemeModeStore {
+        private val bootstrapGate =
+            CompletableDeferred<Unit>()
+        private val bootstrapDelivered =
+            CompletableDeferred<Unit>()
+        private val saveGate =
+            CompletableDeferred<Unit>()
+
+        override val states:
+            Flow<ThemeMode> =
+            flow {
+                bootstrapGate.await()
+                emit(
+                    initialState,
+                )
+                bootstrapDelivered.complete(
+                    Unit,
+                )
+                awaitCancellation()
+            }
+
+        override suspend fun get():
+            ThemeMode =
+            initialState
+
+        override suspend fun save(
+            state:
+                ThemeMode,
+        ):
+            ThemeModeStore.Result {
+            saveGate.await()
+            return ThemeModeStore.Result.Success(
+                observedState =
+                    state,
+            )
+        }
+
+        override suspend fun forget():
+            ThemeModeStore.Result =
+            ThemeModeStore.Result.Success(
+                observedState =
+                    ThemeMode.NotSet,
+            )
+
+        fun releaseBootstrapObservation() {
+            bootstrapGate.complete(
+                Unit,
+            )
+        }
+
+        suspend fun awaitBootstrapObservationDelivered() {
+            bootstrapDelivered.await()
+        }
+
+        fun releaseSave() {
+            saveGate.complete(
+                Unit,
+            )
         }
     }
 

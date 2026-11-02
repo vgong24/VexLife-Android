@@ -1580,6 +1580,34 @@ rightful result / observation interpretation
 ThemeMode Family State when actually known
 ~~~
 
+#### Bootstrap observation currentness
+
+Exact-head A005 exposed a concrete ordering pressure that the smaller Family law already said must
+remain outside generic Family execution grammar:
+
+~~~text
+Store observation formed at Dark
+        |
+        +---- collector has not received first Store snapshot yet
+        |
+Control.Select(Parameter.Mode(Light))
+-> Family admits Light immediately
+-> Save(Light) begins asynchronously
+        |
+delayed Store bootstrap snapshot emits Dark
+~~~
+
+Without a boundary-owned currentness check, that old bootstrap snapshot could temporarily overwrite
+the newer accepted Light State until Save completed.
+
+ThemeMode therefore gates only what it can actually prove: the first Store emission is treated as a
+bootstrap snapshot. If Family State changed since observation formation, that first snapshot is held.
+Subsequent Store emissions remain normal external/durable observations.
+
+This does **not** add provider revision, pending-State grammar, execution status projection, or a new
+ThemeMode runtime owner. If a future Store requires richer causal ordering than this bounded bootstrap
+case, that concrete provider must expose enough currentness evidence to earn it.
+
 ### What still needs pressure
 
 This checkpoint does not call the architecture mastered yet.

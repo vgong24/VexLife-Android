@@ -113,6 +113,30 @@ The caller of observe(...) must already own provider/repository interpretation, 
 and construction of the truthful semantic State. Family does not become a provider adapter merely
 because it can admit observed truth.
 
+ThemeMode now carries one concrete example of that law at its Store observation boundary. Store
+observation starts asynchronously, so its first emission is a bootstrap snapshot rather than a
+revisioned causal fact. If ThemeMode Family State changed after observation formation but before that
+first snapshot arrived, the boundary holds that stale bootstrap value rather than letting older
+durable truth undo a newer accepted Select. Later Store emissions remain ordinary observed truth.
+
+~~~text
+observation formed while Family = Dark
+        |
+local Select(Light)
+-> immediate Family = Light
+        |
+delayed first Store snapshot = Dark
+        |
+ThemeMode observation currentness gate
+-> hold stale bootstrap snapshot
+        |
+Save/next Store observation
+-> ordinary rightful reconciliation
+~~~
+
+This is feature/provider currentness, not a new generic Family result grammar and not an Execution
+status registry.
+
 ## Act / Effect / execution relationship
 
 ~~~text
