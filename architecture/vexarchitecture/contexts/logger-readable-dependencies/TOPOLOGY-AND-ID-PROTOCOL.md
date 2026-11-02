@@ -1,432 +1,703 @@
-# Topology + ID protocol — readable construction and trace coordinates
+# Topology + ID protocol — current VexArchitecture relationship map
 
 [VXG RealForever]
 
-> **BRIDGE DESIGN NOTE**
+> **CURRENT TOPOLOGY PROJECTION — PR #209 CANDIDATE**
 >
-> This document captures the current intentionality behind the readable dependency topology and the
-> UI-ID -> VexLogger -> possible VexSync/server projection. It is not a final wire protocol or a
-> claim that current VexSync already implements the described server resolver.
+> This document is a readable projection of the relationships currently implemented by PR #209.
+> It is **not** a second architecture owner, runtime registry, wire protocol, or replacement for the
+> owning source. If this map disagrees with current production source or an owning architecture
+> contract, the map is stale and must be repaired.
+>
+> This file began as a #208 bridge design note. PR #209 has now made much of that exploration
+> executable. Keep #209 as the before / pressure / subtraction / after **source-of-origin record** when
+> the reason for a relationship matters; use the current owning source and tests for what the
+> relationship does now.
 
-## 1. Comparison lens: Koin and Vex are not aiming at the same center
+## 1. Whole current topology
 
-Koin is useful comparison pressure, not architecture authority.
+The current candidate has two different kinds of connectivity that meet through explicit live
+objects: **construction/lifetime** and **semantic/runtime truth**.
 
-Current Koin guidance favors constructor injection for ordinary classes, while Android/framework
-entry points may resolve dependencies through `inject()` / `get()`. Koin also supplies root,
-Activity, Fragment, ViewModel, Service and custom scope behavior.
-
-That solves the ordinary DI problem well:
-
-~~~text
-definition
--> scope/container resolution
--> constructor/object
-~~~
-
-The Vex direction overlaps mechanically:
+### Android construction and lifetime
 
 ~~~text
-definitions/providers
--> dependency prerequisites
--> lifetime
--> memoized/reused instance
--> consumer
+Android process
+└─ VexApplication
+   └─ parent VexDependencyFactory
+      ├─ Application
+      ├─ UIBlueprintRegistry
+      ├─ AppRepositories
+      └─ ThemeModeStore
+             application/process lifetime
+
+Android configuration/session
+└─ VexLifeViewModel
+   └─ child VexDependencyFactory
+      ├─ reuses parent-lifetime providers
+      ├─ CoroutineScope
+      ├─ VexExecutionRoot
+      ├─ LogHistoryPersistenceQueue
+      ├─ VexLogger
+      ├─ ThemeModeFamily
+      ├─ EventsConvergenceRelay
+      ├─ VexConversationHybridRelay
+      ├─ VexLifeRelayGraph        # projection only
+      ├─ AppActionRegistrations
+      ├─ VexRuntime
+      ├─ VexLifeSession
+      ├─ VexStreamStartupExecution
+      └─ VexStreamArtworkExecution
 ~~~
 
-but the intended center is different:
+VexApplication owns the process composition boundary. VexLifeViewModel owns the child
+configuration/session composition boundary. Ordinary feature/UI code receives concrete objects; it
+does not resolve arbitrary dependencies from either factory.
+
+### Semantic / runtime causal body
 
 ~~~text
-Koin-style priority
-    resolve the correct object conveniently
-
-Vex topology priority
-    preserve the construction relationship as readable architecture
-    while still resolving the correct object
+UI / runtime source
+        |
+        v
+Family.Parameter
+        |
+        v
+Family.Control + exact CURRENT Family.State
+        |
+        v
+Family.act(...)
+        |
+        v
+Act
+├─ admitted State? --------------------------+
+└─ Begin?                                    |
+   ├─ Effect                                 |
+   └─ Approach                               |
+      Independent / Earliest / Latest / Queued
+        |
+        v
+Family.activate(...)
+├─ binds live Family execution owner
+├─ binds maintained RelationshipId when required
+└─ admits immediate semantic State when authored
+        |
+        v
+accepted Act
+        |
+        v
+Family.Act.Method
+fully bound executable operation
+        |
+        v
+VexExecution
+RelationshipId -> actual Job(s)
+        |
+        v
+Store / provider / platform reality
+        |
+        v
+physical result / observation
+        |
+        v
+rightful feature/provider interpretation
+        |
+        v
+Family.observe(already-semantic State)
+        |
+        v
+Family.State
+        |
+        v
+Family.Projection
+        |
+        v
+Family.DisplayState
+        |
+        v
+concrete presentation meaning
+        |
+        v
+Compose / platform manifestation
+        |
+        v
+human experience
 ~~~
 
-Do not treat this as "Koin is bad" or "Vex must replace every DI capability".
+The two sides meet through the explicit live objects built by the construction topology. Dependency
+construction does not become Family semantics, and Family semantics does not become dependency
+construction.
 
-The useful question is:
-
-> Can a human or fresh instance understand why an object exists, what it depends on, who owns its
-> lifetime and where it is consumed by reading the relationship declarations, without mentally
-> executing a hidden container?
-
-If yes, the Vex topology is providing something materially different from ordinary DI convenience.
-
-Official Koin comparison references used while forming this note:
-- Koin Core Injection: https://insert-koin.io/docs/reference/koin-core/injection/
-- Koin Core Scopes: https://insert-koin.io/docs/reference/koin-core/scopes/
-- Koin Android Entry Points: https://insert-koin.io/docs/reference/koin-android/entry-points/
-- Koin Android Scopes: https://insert-koin.io/docs/reference/koin-android/scope/
-
-## 2. Scale pressures already have separate rightful coordinates
-
-Do not solve "scale" with one universal container ID.
-
-The emerging Vex architecture already places different scaling questions at different owners:
+### Cross-cutting chronology
 
 ~~~text
-DEPENDENCY TOPOLOGY
-    Which live object exists?
-    What did it require?
-    Which lifetime owns/reuses it?
-
-    -> dependency relationship / lifetime coordinate
-
-
-UI BLUEPRINT
-    Which visible element acted?
-    Which Screen owns it?
-    Where is it structurally placed?
-
-    -> screenId / elementId
-
-
-FAMILY
-    What semantic request was made?
-    What State / Act / Effect meaning is lawful?
-
-    -> Control / State / Effect
-
-
-EXECUTION
-    Which active semantic work relationship owns current Job(s)?
-
-    -> RelationshipId -> Job(s)
-
-
-LOGGER
-    What accepted/observed facts happened and in what order?
-
-    -> stable fact coordinates + chronology
+UI/runtime fact ---------------------+
+semantic Family boundary ------------+
+runtime/provider boundary -----------+--> VexLogger chronology
+navigation/presentation owner -------+
+architecture diagnostic -------------+
+                                      |
+                                      +-> Logcat
+                                      +-> LogHistory persistence
+                                      +-> Debug Log History
+                                      +-> later VexSync / VexBoard / server projection
 ~~~
 
-This decomposition may remove many reasons a general DI container needs increasingly broad
-qualifiers/scopes/lookup conventions: the semantic architecture is not asking the dependency system to
-also become UI identity, runtime identity or historical traceability.
+Logger follows accepted/observed truth. It does not decide that truth.
 
-The dependency topology still needs correct lifetime/reuse behavior. It simply should not absorb
-questions already answered elsewhere.
-
-## 3. Existing Elements foundation already provides protocol-shaped UI identity
-
-Current repository source already establishes:
+### Multi-truth convergence
 
 ~~~text
-ScreenElement.screenId
-    stable semantic Screen identity
-
-UIElement.elementId
-    stable semantic address used by:
-        registry relationships
-        logging
-        test tags
+complete independently-owned truth A
+complete independently-owned truth B
+complete independently-owned truth C
+        |
+        v
+Relay / convergence owner
+        |
+        v
+relationship truth
+        |
+        +-> optional bounded request
+            through the rightful target Family Control
 ~~~
 
-The Elements foundation also derives nested IDs from Screen Blueprint structure.
+Relay/convergence is not another stage after Family Effect and does not execute foreign Effects
+directly.
 
-Example from the current Elements README:
+## 2. One question, one rightful coordinate
 
-~~~text
-Screen:
-    screen.home
-
-nested structure:
-    element.home.body
-    element.home.body.preview
-    element.home.body.preview.title
-    element.home.body.preview.message
-~~~
-
-This is important: the screen coordinate is already embedded in the ordinary nested element address.
-
-`UIBlueprintRegistry` additionally indexes:
-
-~~~text
-screenId -> ScreenElement
-
-elementId -> UIElement
-elementId -> ElementPlacement
-elementId -> parent UIElement
-elementId -> owner Screen
-elementId -> children
-~~~
-
-So the app already has a readable structural map. Logger does not need to mint another "button trace
-ID" merely to identify which registered element was involved.
-
-## 4. Click ID -> Logger: preserve source coordinate, do not collapse meaning
-
-Victor's sketch pressure is:
-
-~~~text
-UI ButtonClicked
--> retrieve button ID
--> Logger
--> protocol/server interpretation
-~~~
-
-That is strongly compatible with the existing Elements identity law.
-
-Refined interpretation:
-
-~~~text
-element.home.body.actions.save
-    identifies WHERE / WHICH UI source acted
-
-Control.Save(...)
-    identifies WHAT semantic request was made
-
-RelationshipId(...)
-    identifies WHICH active runtime relationship when runtime work exists
-
-VexLogger timestamp/order
-    identifies WHEN / IN WHAT ORDER facts were accepted or observed
-~~~
-
-Do not force one of those coordinates to impersonate the others.
-
-A useful causal sequence could therefore be represented conceptually as:
-
-~~~text
-source = element.settings.body.theme.dark
-fact   = Clicked
-
-semantic owner = ThemeModeFamily
-control        = Select(Dark)
-fact           = Accepted
-
-effect         = Save(Dark)
-fact           = Requested
-
-fact           = SaveSucceeded
-
-presentation   = Dark
-fact           = Arrived
-~~~
-
-The exact VexLogger record schema is still held by #207. This document settles only the relationship
-between the coordinates.
-
-## 5. Do not parse English meaning out of strings when the Blueprint already owns structure
-
-The dot-delimited `elementId` is useful protocol shape, but the app should not need a pile of ad-hoc
-string parsing to rediscover relationships its Blueprint/registry already owns.
-
-Preferred direction:
-
-~~~text
-UI action
--> stable elementId
-
-local registry / exported blueprint map
--> exact owner Screen
--> exact structural path
--> exact element kind
--> stable symbolic identity
-~~~
-
-Then Logger may transmit/store the stable coordinate.
-
-A downstream consumer can resolve it against the corresponding blueprint map.
-
-This keeps:
-
-~~~text
-transport
-    compact stable IDs
-
-human view
-    resolved names / labels / paths
-~~~
-
-instead of storing localized English text as the canonical trace.
-
-## 6. VexSync/server-side interpretation opportunity
-
-If VexSync can carry/export the same Blueprint identity map on both sides, a downstream service could
-conceptually resolve:
-
-~~~text
-element.settings.body.theme.dark
-~~~
-
-into something like:
-
-~~~text
-Screen:
-    Settings
-
-Path:
-    body -> theme -> dark
-
-Kind:
-    Toggle / Button / relevant registered kind
-
-Symbolic owner:
-    the Blueprint element declaration
-
-Human projection:
-    "Dark theme"
-~~~
-
-The exact mapping source is TO DISCUSS.
-
-Possible sources include:
-
-~~~text
-shared Blueprint manifest
-VexSync-exported registry projection
-generated ID -> semantic-name map
-versioned application/Blueprint description
-~~~
-
-Do not assume the server can safely infer the current English label from the ID string alone.
-
-If human wording/localization is needed, resolve it from the matching blueprint/resource projection.
-
-This gives a useful split:
-
-~~~text
-APP / PROTOCOL
-    stable semantic coordinates
-
-SERVER / DEBUG / VEXBOARD
-    human-readable interpretation
-    localization
-    richer causal projection
-~~~
-
-The app does not need to bake English prose into every Logger event merely for remote readability.
-
-## 7. Cross-version correctness must be explicit
-
-A stable ID is only useful remotely if the receiver knows which identity map defines it.
-
-Therefore a future VexSync wire design must answer:
-
-~~~text
-How does the receiver know the matching Blueprint/application identity map?
-What happens if an element keeps its ID but its human label changes?
-What happens if an ID is removed or moved?
-What happens across localization?
-~~~
-
-Do not solve this prematurely by inventing a universal TraceId.
-
-The likely need is **mapping currentness/provenance**, not execution occurrence identity.
-
-Exact version/currentness representation remains TO DISCUSS and should be grounded in existing
-VexSync/Blueprint contracts before implementation.
-
-## 8. Human-readable reconstruction can remain downstream
-
-The strongest consequence of this topology is that the Logger record does not need to contain every
-human-readable field redundantly.
-
-Conceptually:
-
-~~~text
-stored/transmitted fact
-    timestamp
-    stable source coordinate
-    stable semantic fact coordinate
-    fact-specific payload where actually needed
-
-+
-
-Blueprint / semantic maps
-
-=
-
-human projection
-    "On Settings, Victor selected Dark theme"
-    "ThemeMode accepted Select(Dark)"
-    "Save succeeded"
-    "Dark presentation arrived"
-~~~
-
-The wording above is projection, not canonical fact storage.
-
-This is compatible with VexBoard and server-side interpretation without making Logger a giant
-presentation schema.
-
-## 9. Intentionality for future instances
-
-When extending this design, preserve these questions separately:
+Do not solve scale by making one ID or container answer unrelated questions.
 
 ~~~text
 CONSTRUCTION
-    what builds/owns/reuses the object?
+
+Question:
+    Which live object exists?
+    What prerequisites built it?
+    Which lifetime owns/reuses it?
+
+Owner / coordinate:
+    VexDependencyProvider declaration object identity
+    + VexDependencyFactory lifetime
+
 
 UI SOURCE
-    which registered element acted?
+
+Question:
+    Which registered or runtime-presented UI source acted?
+    Which Screen / placement owns it?
+
+Owner / coordinate:
+    ScreenElement.screenId
+    UIElement.elementId
+    UIBlueprintRegistry structure
+    explicit runtime element coordinate where the instance is dynamic
+
 
 SEMANTIC MEANING
-    what Control / State / Effect does it mean?
 
-ACTIVE RUNTIME
-    which RelationshipId owns current Job(s)?
+Question:
+    What value/request/truth/consequence exists in this Family world?
+
+Owner / coordinate:
+    Family.Parameter
+    Family.State
+    Family.Control
+    Family.Act
+    Family.Effect
+
+
+ACTIVE MAINTAINED WORK
+
+Question:
+    Which semantic/runtime relationship owns unfinished work?
+
+Owner / coordinate:
+    RelationshipId authored by the rightful semantic/runtime owner
+    VexExecution custody:
+        RelationshipId -> actual Job(s)
+
+
+RUNTIME OCCURRENCE
+
+Question:
+    Which concrete execution occurrence is alive now?
+
+Owner / coordinate:
+    actual Kotlin Job
+
 
 CHRONOLOGY
-    what accepted/observed facts happened?
 
-HUMAN INTERPRETATION
-    how should those stable coordinates be displayed here?
+Question:
+    What accepted/observed facts happened, and in what order?
+
+Owner / coordinate:
+    VexLogger chronology
+
+
+HUMAN / DEBUG INTERPRETATION
+
+Question:
+    How should stable coordinates and chronology be explained here?
+
+Owner:
+    downstream projection using the matching source maps
+    such as Debug Log History / later VexSync / VexBoard
 ~~~
 
-The clean architecture is the relationships between those answers.
-
-Do not create one universal ID, metadata object, dependency container or Logger schema that tries to
-own all six.
-
-<!-- [VXG RealForever][TOPOLOGY][ID-PROTOCOL][VEXLOGGER][VEXSYNC-BRIDGE] -->
-
-
-## 10. Derived host/content/action mapping
-
-Detailed refinement:
+Permanent distinction:
 
 ~~~text
-DERIVED-IDENTITY-MAP.md
+DEPENDENCY IDENTITY
+!= UI IDENTITY
+!= FAMILY SEMANTIC MEANING
+!= RELATIONSHIP IDENTITY
+!= JOB OCCURRENCE
+!= LOGGER CHRONOLOGY
+!= HUMAN PROJECTION
 ~~~
 
-The UI/source protocol can reduce manual ID management further.
+A relationship between these coordinates may be explicit without collapsing them into one universal
+ID.
 
-Prefer deriving identity from existing meaning:
+## 3. ThemeMode patient zero — current source-origin example
+
+ThemeMode is the concrete path that currently demonstrates the topology end to end.
 
 ~~~text
-action host
-    Blueprint placement + Control (+ typed ResourceId when needed)
+VexApplication lifetime
+    ThemeModeStore
 
-content host
-    Blueprint placement + canonical native content source
+VexLifeViewModel/session lifetime
+    ThemeModeFamily
+    VexExecutionRoot
+    VexLogger
 
-dynamic host
-    Blueprint placement + feature-owned ResourceId
+Debug Menu interaction
+-> ThemeModeFamily.Parameter.Mode(mode)
+-> Control.Select(the SAME Parameter)
+-> Family.act(CURRENT State, Control)
+-> accepted Act
+   -> immediate State admission when required
+   -> beginLatest(Effect.Save(the SAME Parameter))
+   -> maintained Select RelationshipId
+   -> live Family execution owner
+-> Act.Method.Save(
+       ThemeModeStore,
+       the SAME Parameter
+   )
+-> Act.launchWith(VexExecutionRoot).method(Method.Save)
+   consumes:
+       live Family owner
+       authored Latest Approach
+       authored RelationshipId
+-> VexExecution Job custody
+-> ThemeModeStore.save(mode)
+-> ThemeModeStore.Result / Store observation
+-> ThemeMode-owned currentness interpretation
+-> Family.observeStoredThemeMode(...)
+-> current ThemeMode State
+-> ThemeModeFamily.DisplayState
+-> VexThemePresentation
+-> VexLifeTheme
+-> Compose / system-bar manifestation
 ~~~
 
-For Android content, a native resource reference such as `R.string.*` may be projected to a readable
-canonical resource coordinate rather than accompanied by a second manually maintained text ID.
+The same Parameter.Mode object is deliberately preserved across Control -> Effect -> Method instead
+of flattening the semantic value into loose arguments and reconstructing it later.
 
-Styled text, plurals and formatting remain realizations of the same content-source identity.
-
-The resulting relationship map may then be filtered for crawler coverage, missing mappings,
-localization/content-source conformance, raw-native-component escapes, remote/VexSync interpretation,
-and similar questions without creating additional identity systems.
-
-
-## 11. Scalability and platform recycling rationale
-
-See:
+That same identity now also protects ThemeMode currentness while an accepted selection is unsettled:
 
 ~~~text
-USE-CASES-SCALABILITY-PLATFORM-RECYCLING.md
+Select(Light / Parameter A)
+-> State Light
+-> Save(A)
+
+Select(Dark / Parameter B)
+-> State Dark
+-> Save(B)
+
+delayed Store Light from A
+-> B remains unsettled
+-> Light has no provider revision proving it is newer
+-> hold Light
+
+terminal Method result for B
+-> settle B by object identity
+-> ordinary Store observations resume
 ~~~
 
-The topology scales by reusing the same relationship laws across many features, Screens, apps and
-platforms. Platform recycling preserves relationship shape while allowing each platform to retain its
-native source/resource system. Logger, crawler, VexSync and VexBoard consume filters/projections over
-the same map instead of maintaining independent mappings.
+This is a concrete ThemeMode/provider rule. It does **not** establish a generic generation counter,
+TraceId, pending-State hierarchy, execution-status registry, or ThemeMode runtime manager.
+
+When a future reader asks why the current path has this shape rather than the removed alternatives,
+PR #209 is the provenance record. Current source remains the behavioral authority.
+
+## 4. Execution topology — custody without feature re-authoring
+
+VexExecution supports two truthful authoring shapes.
+
+### Existing owner + direct execution custody
+
+When a Family/session/runtime owner already owns the meaning:
+
+~~~text
+existing owner
+-> VexExecution.begin(...)
+-> VexExecution.observe(...)
+-> owner-scoped Job custody
+~~~
+
+The stable live owner object supplies execution scope. It is not a new semantic identity.
+
+For a Family-authored maintained relationship:
+
+~~~text
+accepted Act
+    Approach
+    RelationshipId
+    live Family owner
+        |
+        v
+VexExecution
+    RelationshipId -> Job(s)
+~~~
+
+Execution consumes the authored relationship instead of asking the feature to invent another
+execution vocabulary.
+
+### Genuine sustained execution owner
+
+When a distinct object really owns a sustained body of source-addressed asynchronous work, it may
+extend VexExecution.
+
+Current examples include the session-owned VexStream execution objects and
+VexMapsDistributionSession, whose domain/session verbs remain on the Session while VexExecution
+provides custody.
+
+Permanent:
+
+~~~text
+SOURCE-ADDRESSED LOCAL WORK
+    exact callable / Flow source may be a narrow local address
+
+MAINTAINED SEMANTIC RELATIONSHIP
+    RelationshipId is the one maintained-work address
+
+callable name / reflected type
+    != RelationshipId
+    != durable identity
+~~~
+
+VexExecutionRoot owns the shared supervised coroutine lifetime and terminal shutdown. Individual
+execution owners use owner-scoped stop/join; one sibling does not terminate another merely because
+they share a root.
+
+There is no required public execution InstanceId, SourceRef, Handle, completed Snapshot registry,
+activeExecutions duplicate truth, or second CoordinationKey identity.
+
+## 5. Dependency topology — construction is readable source
+
+The executable dependency law is now:
+
+~~~text
+provider declaration
+-> explicit prerequisite provider declarations
+-> lazy dependency-first resolution
+-> one memoized Value per provider declaration per factory lifetime
+-> explicit concrete object delivered to consumer
+~~~
+
+Provider **object identity** is the construction coordinate. Class/name is a readable label, not a
+global key.
+
+~~~text
+VexApplication parent factory
+    process-lifetime declarations
+
+VexLifeViewModel child factory
+    reuses parent providers
+    owns session/configuration declarations
+~~~
+
+The ViewModel resolves the explicit startup roots that should start. Unrequested providers remain
+lazy until part of a requested prerequisite closure.
+
+The factory is a composition-root tool, not an ambient service locator. Providers may require only
+prerequisites they declared. Ordinary feature/UI consumers receive concrete objects.
+
+Permanent:
+
+~~~text
+CONSTRUCT EXPLICITLY
+REUSE AT THE RIGHTFUL LIFETIME
+NEVER GUESS FROM REFLECTION / PACKAGE / CLASS NAME
+~~~
+
+Dependency construction must not become Family policy, RelationshipId authoring, Logger chronology,
+provider business meaning, or feature runtime ownership.
+
+## 6. Logger + Blueprint topology — fact first, interpretation downstream
+
+Current production Logger accepts facts from rightful owners.
+
+~~~text
+UI/runtime
+    Interaction / DynamicInteraction / Gesture / CurrentScreen
+
+semantic boundary
+    ControlAccepted / StateAdmitted
+
+runtime/provider boundary
+    EffectRequested / EffectSucceeded / EffectFailed
+
+architecture diagnostics
+    BlueprintMappingMissing
+~~~
+
+Stable registered UI source coordinates remain compact:
+
+~~~text
+subjectRef = element.debug-menu.body.dark-mode
+~~~
+
+When a matching UIBlueprintRegistry is available:
+
+~~~text
+subjectRef
+-> owner Screen
+-> parent / placement path
+-> element kind
+-> declared UI intent
+~~~
+
+Those readable fields are derived at interpretation time rather than copied into every log record.
+
+Two different element shapes remain intentional:
+
+~~~text
+STATIC BLUEPRINT ELEMENT
+    registered elementId
+    -> registry resolution
+    -> RESOLVED
+
+DYNAMIC RUNTIME INSTANCE
+    stable runtime coordinate
+    -> DynamicInteraction
+    -> RUNTIME_ELEMENT
+~~~
+
+Missing expected static interpretation is observable as a diagnostic instead of silently becoming
+"unknown".
+
+Production chronology records what is current at the fact boundary. It does not serialize an
+expected destination/result as though it already happened.
+
+~~~text
+DebugMenu Clicked
+    current Screen = Home
+
+navigation mutates
+
+DebugMenu CurrentScreen
+    current Screen = DebugMenu
+~~~
+
+Actual rendered presentation arrival remains a separate fact and is not claimed merely from
+navigation or provider success.
+
+## 7. Derived identity and the outward protocol edge
+
+Do not require a human-authored ID when existing meaning already supplies enough coordinates.
+
+Current design law remains:
+
+~~~text
+ACTION HOST
+    Blueprint placement
+    + Control
+    + typed ResourceId when semantically required
+    -> derivable action relationship
+
+CONTENT HOST
+    Blueprint placement
+    + canonical native content source
+    -> derivable content relationship
+
+DYNAMIC PRODUCT INSTANCE
+    Blueprint placement
+    + feature-owned ResourceId
+    -> runtime presentation coordinate
+~~~
+
+See DERIVED-IDENTITY-MAP.md for the detailed host/content/action exploration.
+
+For future VexSync/server/VexBoard interpretation, the unresolved question is mainly **matching-map
+currentness/provenance**, not another execution occurrence identity:
+
+~~~text
+stable app coordinate
++ matching Blueprint/application map
+-> Screen/path/kind/symbolic meaning
+-> localized / human-readable projection
+~~~
+
+The exact cross-version transport/currentness representation remains held until the existing
+VexSync/Blueprint contracts provide enough evidence.
+
+## 8. Topology as a drift-review lens
+
+This map is useful only if it helps a future human or AI recognize duplicated ownership without
+turning the map into another framework.
+
+When new or clunky architecture appears, ask:
+
+~~~text
+1. What current topology node or relationship does this source represent?
+
+2. Does it own a genuinely new responsibility,
+   or does it merely restate an existing owner's verbs/identity/lifetime?
+
+3. Is a value being flattened and then reconstructed even though its semantic owner already carries it?
+
+4. Is a new ID answering a question already answered by:
+       provider declaration identity
+       Blueprint coordinates
+       Family semantic structure
+       RelationshipId
+       actual Job
+       Logger chronology?
+
+5. Is execution acquiring feature/domain vocabulary that belongs to an existing Family/Session?
+
+6. Is dependency construction becoming a semantic/runtime owner?
+
+7. Is Logger being asked to predict an expected outcome instead of record an accepted/observed fact?
+
+8. Is a projection becoming a new truth owner rather than reading the canonical owner?
+
+9. Is a wrapper needed for correctness/lifetime/ownership,
+   or only because conventional layering makes the source look familiar?
+~~~
+
+If removing a wrapper, ID, registry, bridge, or duplicate projection loses no required correctness,
+lifetime, ownership, currentness, or proof, subtraction is the preferred pressure.
+
+Different Kotlin shapes are allowed when they preserve different meanings. The topology is a
+relationship test, not a demand that every feature have the same classes.
+
+## 9. Canonical owners and provenance
+
+Use this map to navigate, then descend to the owner.
+
+~~~text
+Family semantics
+    architecture/behavior/FAMILY-CIRCUIT.md
+    architecture/behavior/.../VexFamily.kt
+    focused Family tests
+
+Execution custody
+    architecture/execution/README.md
+    architecture/execution/.../VexExecution.kt
+    VexExecutionRoot.kt
+    focused execution tests
+
+Chronological traceability
+    architecture/vexarchitecture/VEXLOGGER.md
+    architecture/logging/README.md
+    architecture/logging/.../VexLogger.kt
+    focused Logger tests
+
+Construction topology
+    architecture/dependency/README.md
+    architecture/dependency/.../VexDependencyFactory.kt
+    VexApplication.kt
+    VexLifeSession.kt
+    dependency/session tests
+
+Whole semantic/display body
+    docs/foundation/VEX-BODY-SEMANTIC-BLUEPRINT.md
+
+Relay / convergence
+    architecture/relay/README.md
+    exact concrete Relay source/tests
+
+UI identity / structural interpretation
+    Elements / Blueprint owning source
+    UIBlueprintRegistry
+    exact Screen Blueprint source/tests
+
+WHY / rejected alternatives / causal origin
+    PR #209 before / pressure / subtraction / after record
+    #207/#208 remain upstream provenance only
+~~~
+
+Permanent:
+
+~~~text
+TOPOLOGY MAP = READABLE PROJECTION / NAVIGATION
+
+TOPOLOGY MAP
+!= ROOT AUTHORITY
+!= RUNTIME REGISTRY
+!= SECOND SOURCE OF TRUTH
+!= UNIVERSAL ID SCHEMA
+~~~
+
+## 10. Deliberately held edges
+
+Current #209 source does **not** establish:
+
+~~~text
+full exact-head Gradle/JVM PASS for the current candidate
+Independent Assurance / merge readiness / VettedWithHuman / MASTERED
+a universal machine-readable topology registry
+a mandatory topology annotation on every class
+a universal Family runtime wrapper
+a universal Store interface across every Family
+a generic result -> Family State grammar
+a generic generation/revision/TraceId currentness system
+a CompoundParameter / ConvergenceMethod / RelationshipFamily
+a final VexSync cross-version identity-map protocol
+actual rendered presentation arrival where no presentation owner observes it
+legacy Room derived columns as Logger architecture law
+~~~
+
+Additional real-consumer pressure remains useful for:
+
+~~~text
+one multi-field Family Parameter / Method
+one genuine zero-input Family Method
+a second Method inside one Family
+an existing Convergence Relay
+~~~
+
+Those are pressure points, not permission to pre-author new abstractions.
+
+## 11. Historical comparison lens: ordinary DI versus readable topology
+
+The #208 bridge used Koin as comparison pressure, not architecture authority.
+
+Ordinary DI and the current Vex construction kernel overlap mechanically:
+
+~~~text
+definitions/providers
+-> prerequisites
+-> lifetime / scoped reuse
+-> object
+-> consumer
+~~~
+
+The additional Vex design goal is narrower:
+
+> A human or fresh instance should be able to recover why an object exists, what it depends on, who
+> owns/reuses it, and where it is consumed by reading the relationship declarations without mentally
+> executing a hidden container.
+
+That does not imply "Koin is bad", nor that Vex should reproduce every DI capability. It explains why
+the dependency graph is intentionally readable source while semantic identity, UI identity, active
+execution identity and chronology remain with their separate owners.
+
+<!-- [VXG RealForever][TOPOLOGY][PR209-CURRENT-PROJECTION][ID-PROTOCOL][VEXLOGGER] -->
