@@ -90,8 +90,11 @@ class ThemeModePersistenceTest {
                         family,
                     control =
                         ThemeModeFamily.Control.Select(
+                    ThemeModeFamily.Parameter.Mode(
+                        mode =
                             ThemeMode.Dark,
-                        ),
+                    ),
+                ),
                     store =
                         store,
                     executionRoot =
@@ -260,8 +263,11 @@ class ThemeModePersistenceTest {
                         family,
                     control =
                         ThemeModeFamily.Control.Select(
+                    ThemeModeFamily.Parameter.Mode(
+                        mode =
                             ThemeMode.Dark,
-                        ),
+                    ),
+                ),
                     store =
                         store,
                     executionRoot =
@@ -365,8 +371,11 @@ class ThemeModePersistenceTest {
                         family,
                     control =
                         ThemeModeFamily.Control.Select(
+                    ThemeModeFamily.Parameter.Mode(
+                        mode =
                             ThemeMode.Dark,
-                        ),
+                    ),
+                ),
                     store =
                         store,
                     executionRoot =
@@ -390,8 +399,11 @@ class ThemeModePersistenceTest {
                         family,
                     control =
                         ThemeModeFamily.Control.Select(
+                    ThemeModeFamily.Parameter.Mode(
+                        mode =
                             ThemeMode.Light,
-                        ),
+                    ),
+                ),
                     store =
                         store,
                     executionRoot =

@@ -81,8 +81,11 @@ class ThemeModeTest {
 
         family.activate(
             ThemeModeFamily.Control.Select(
-                ThemeMode.Dark,
-            ),
+                    ThemeModeFamily.Parameter.Mode(
+                        mode =
+                            ThemeMode.Dark,
+                    ),
+                ),
         )
 
         assertEquals(
