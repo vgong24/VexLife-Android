@@ -25,10 +25,18 @@ caller
 
 later realization boundary
 -> Act.Begin + Act.relationshipId
+-> bound Act.Method
+   -> specializes VexMethod
 -> VexExecution
--> Store/provider work
--> observed truth
--> Family.observe(already-semantic State)
+-> concrete realization
+-> VexMethod.Result
+   -> Success / Failure / Error
+-> rightful result interpretation
+
+outside/provider truth
+-> rightful observation / reconciliation
+-> already-semantic State
+-> Family.observe(State)
 ~~~
 
 ## Family vocabulary
@@ -54,6 +62,17 @@ Act.Begin
 Effect
     requested runtime transformation
     != resulting truth
+
+Act.Method
+    Family-owned specialization of VexMethod
+    fully-bound realization of the authored Effect
+
+VexMethod.Result
+    reusable outcome topology for a Method attempt
+    contract-owned Success / Failure carry domain meaning
+    Error is the shared exceptional result
+    != resulting State
+    != cancellation
 ~~~
 
 A concrete Family owns the relationship in ordinary Kotlin:
@@ -145,8 +164,9 @@ Parameter.Mode(Dark)
    cannot overwrite newer Dark semantic State
 ~~~
 
-This is ThemeMode/provider currentness, not a generic Family result grammar, generation counter, or
-Execution status registry.
+This is ThemeMode/provider currentness, not a generation counter or Execution status registry.
+The reusable VexMethod Result topology reports Method realization through Success / Failure / Error positions; it
+does not decide whether an observation is current or author semantic State.
 
 ## Act / Effect / execution relationship
 
@@ -202,6 +222,8 @@ realization boundary
    consumes the Act's live Family owner + authored Approach + RelationshipId
 -> VexExecution Job custody
 -> ThemeModeStore.save(Dark)
+   -> Boolean provider commit fact
+-> Method maps provider fact into VexMethod.Result
 -> current Logger facts
 -> observed ThemeMode truth
 ~~~
@@ -222,16 +244,104 @@ Act.Begin
     Approach
     accepted maintained RelationshipId
 
-provider/runtime result
-    -> rightful result/provider interpretation
+bound Family Act.Method
+    -> specializes VexMethod
+    -> provider / Store realization
+    -> VexMethod.Result
+       -> Success
+       -> Failure
+       -> Error when the Method escapes its ordinary returned contract
+    -> rightful result interpretation
+
+outside/provider truth
+    -> rightful observation / reconciliation
     -> already-semantic State
     -> Family.observe(State)
 ~~~
 
-This subtraction prevents a generic execution-result grammar from becoming a second place where
-feature State meaning is authored. It does not remove currentness requirements: when a feature
-needs stale-result gating or reconciliation, that meaning remains with the feature/provider boundary
-that knows what "still current" means.
+Result is reusable relationship vocabulary, not later-State admission. This preserves the #207
+subtraction: a result cannot become a second place where feature State meaning is authored. When a
+feature needs stale-result gating or reconciliation, that meaning remains with the feature/provider
+boundary that knows what "still current" means.
+
+### VexMethod Result branches and operation outputs
+
+The reusable architecture owns the terminal branches and their only concrete carriers:
+
+~~~text
+VexMethod
+-> Result
+   -> Success
+      -> Output<T>
+   -> Failure
+      -> Output<F>
+   -> Error
+      -> UnhandledException(Throwable)
+~~~
+
+Result is sealed and privately rooted. Success / Failure are the only lawful returned carriers.
+Error has a behavior-module-internal constructor, so provider/domain code cannot manufacture an
+escaped-Method error as an ordinary return. A domain supplies only the operation output already
+needed by Success or Failure.
+
+VexMethod.Result is the terminal return contract of `VexMethod.invoke()`. Provider / Store /
+repository contracts do not adopt it merely because they can succeed or fail. They return the
+smallest truthful provider/domain fact, and the bound Method interprets that fact.
+
+ThemeMode makes the ownership boundary explicit:
+
+~~~kotlin
+suspend fun ThemeModeStore.save(
+    state: ThemeMode,
+): Boolean
+~~~
+
+~~~text
+true
+    physical write committed
+
+false
+    physical write did not commit
+~~~
+
+The Family-owned executable then forms the Method result:
+
+~~~kotlin
+class Save(...) :
+    VexFamily.Act.Method<
+        ThemeModeFamily,
+        ThemeMode,
+        Unit
+    > {
+
+    override suspend fun invoke():
+        VexMethod.Result<
+            ThemeMode,
+            Unit
+        > =
+        if (store.save(parameter.mode)) {
+            VexMethod.Result.Success(parameter.mode)
+        } else {
+            VexMethod.Result.Failure(Unit)
+        }
+}
+~~~
+
+An escaped Method exception uses the only Error path:
+
+~~~kotlin
+VexMethod.Result.Error(
+    cause =
+        error,
+)
+~~~
+
+So the consumer exhaustively handles Success / Failure / Error without an `else`, without a
+Method-specific Error factory, and without another domain Result or Failure hierarchy.
+
+The Method result reports the realization attempt. It does not replace subsequent provider
+observation or decide semantic State merely because Success / Failure / Error is known.
+
 ## Display interpretation
 
 Family owns the bounded outward interpretation of its own State:
@@ -398,11 +508,14 @@ Debug Menu action
    -> beginLatest(Effect.Save(the same Mode))
 -> Act.Method.Save(ThemeModeStore, the same Mode)
 -> Act.launchWith(VexExecutionRoot).method(Method.Save)
+   -> returns one VexMethod Result form: Success / Failure / Error
    -> consumes already-bound live Family owner
    -> consumes already-authored Approach
    -> consumes already-authored RelationshipId
 -> VexExecution Job custody
 -> ThemeModeStore
+   -> Boolean provider commit fact
+-> Method-owned VexMethod.Result
 -> accepted/observed Logger chronology
 -> Family.observeStoredThemeMode(...)
 ~~~

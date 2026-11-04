@@ -12,28 +12,31 @@
 This is the architecture map, not a requirement to read every foundation on every task.
 
 For VexArchitecture-level work, descend through
-[architecture/vexarchitecture/README.md](../../architecture/vexarchitecture/README.md). Its current
-implementation/reasoning record is
-[PR #209](https://github.com/vgong24/VexLife-Android/pull/209), which remains a draft candidate until
-its exact-head proof and review gates close. The PR is deliberately retained as before/after
-provenance so a fresh reader can inspect rejected alternatives and the reason they were subtracted.
+[architecture/vexarchitecture/README.md](../../architecture/vexarchitecture/README.md). The accepted
+implementation-origin/reasoning record is
+[PR #209](https://github.com/vgong24/VexLife-Android/pull/209); current repository source and tests
+own current behavior. PR #209 remains useful before/after provenance so a fresh reader can inspect
+rejected alternatives and the reason they were subtracted.
 
 A foundation earns a dedicated entry when it has a real recurring consumer, invariant, or proof
 burden. Add detail at the narrowest rightful source rather than turning this index into a second
 implementation manual.
 
-### Direct Family candidate
+### Direct Family / Method candidate
 
 Current review source:
 
 ~~~text
 architecture/behavior/FAMILY-CIRCUIT.md
+architecture/behavior/src/main/.../VexMethod.kt
 architecture/behavior/src/main/.../VexFamily.kt
+architecture/behavior/src/test/.../VexMethodHighConfidenceTest.kt
 architecture/behavior/src/test/.../VexFamilyHighConfidenceTest.kt
 ~~~
 
-PR #193 remains accepted lineage for the earlier direct Family refinement. PR #209 is a deliberate
-subtractive candidate on top of the #207/#208 architecture review and is **not yet accepted**.
+PR #193 remains accepted lineage for the earlier direct Family refinement. PR #209 is the accepted
+subtractive VexArchitecture stability point on top of the #207/#208 review. Current source and tests
+own subsequent refinements.
 
 Current candidate call graph:
 
@@ -49,10 +52,18 @@ Family.activate(Control)
 -> Act returned
 
 realization boundary
--> Act.relationshipId
--> VexExecution begin/observe foundation
--> provider / Store
--> observed State
+-> Act.relationshipId + bound Act.Method
+   -> specializes VexMethod
+-> VexExecution custody
+-> concrete realization
+-> VexMethod.Result
+   -> Success / Failure / Error
+-> rightful result interpretation
+
+outside/provider truth
+-> rightful observation / reconciliation
+-> already-semantic State
+-> Family.observe(State)
 -> Projection(State, DisplayState)
 -> concrete presentation meaning when earned
 -> manifestation / UI
@@ -68,14 +79,23 @@ ThemeMode display path:
 Permanent candidate boundary:
 
 ~~~text
+VexMethod
+    owns one fully-bound executable contract
+    owns the terminal return contract of VexMethod.invoke():
+        Success<T>
+        Failure<F>
+        Error (behavior-foundation construction only)
+    is NOT a generic provider / Store / repository outcome wrapper
+    does NOT own Family State or VexExecution custody
+
 VexFamily
     owns Family-scoped Parameter / State / Control / Act / Begin / Effect semantic relationships
     owns current semantic State
     binds maintained RelationshipId and live Family execution owner onto the accepted Act
-    exposes bound Act.Method continuation without owning Job custody
+    exposes Act.Method as the Family specialization of VexMethod
 
 VexExecution
-    owns Job custody / overlap / source observation
+    owns Job custody / overlap / source observation / cancellation
 
 VexFamily
     does NOT own Store/provider mechanics
@@ -93,7 +113,13 @@ Parameter.Mode(mode)
 -> Act.launchWith(VexExecutionRoot).method(Method.Save)
    consumes live Family owner + Approach + RelationshipId from the accepted Act
 -> VexExecution Job custody
--> ThemeModeStore
+-> ThemeModeStore.save(mode)
+   -> Boolean provider commit fact
+-> ThemeModeFamily.Act.Method.Save maps that fact into:
+   VexMethod.Result<ThemeMode, Unit>
+   -> Success(ThemeMode)
+   -> Failure(Unit)
+   -> Error(Throwable) only when invocation escapes
 -> VexLogger chronology
 ~~~
 

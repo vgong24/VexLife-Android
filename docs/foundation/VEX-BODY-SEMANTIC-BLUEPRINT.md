@@ -1013,6 +1013,14 @@ vocabulary until the one execution foundation needs only mechanics.
 Current candidate:
 
 ~~~text
+VexMethod<SuccessOutput, FailureOutput>
+└─ Result<SuccessOutput, FailureOutput>
+   ├─ Success<T>
+   ├─ Failure<F>
+   └─ Error
+
+Concrete domains supply only T and F meaning.
+
 VexFamily
 ├─ Parameter<Family>
 ├─ State<Family>
@@ -1022,7 +1030,8 @@ VexFamily
    ├─ Begin<Family, Effect>
    │  ├─ Effect
    │  └─ Approach
-   ├─ Method<Family, Output>
+   ├─ Method<Family, SuccessOutput, FailureOutput>
+   │  └─ specializes VexMethod<SuccessOutput, FailureOutput>
    └─ MethodFollowUp<Family>
       compile-time continuation only
 
@@ -1162,13 +1171,21 @@ Current ThemeMode shape:
 class Save(
     private val store: ThemeModeStore,
     val parameter: Parameter.Mode,
-) : Method<ThemeModeStore.Result>() {
+) : Method<
+    ThemeMode,
+    Unit
+>() {
 
     override suspend operator fun invoke():
-        ThemeModeStore.Result =
-        store.save(
-            parameter.mode,
-        )
+        VexMethod.Result<
+            ThemeMode,
+            Unit
+        > =
+        if (store.save(parameter.mode)) {
+            VexMethod.Result.Success(parameter.mode)
+        } else {
+            VexMethod.Result.Failure(Unit)
+        }
 }
 ~~~
 
@@ -1183,7 +1200,9 @@ exact Family Parameter.Mode
 +
 actual executable save call
 +
-truthful ThemeModeStore.Result output
+smallest provider fact: Boolean commit success
++
+Method-owned VexMethod.Result carrier
 ~~~
 
 There is deliberately no:
@@ -1198,15 +1217,27 @@ Method.Save
 
 The Store is inside Save because Save is the Method.
 
+The Store does **not** adopt `VexMethod.Result` merely because its write can succeed or fail.
+It returns the smallest provider fact. The bound Method is the first owner allowed to turn that fact
+into the reusable Method result grammar. This keeps a fresh worker from treating VexMethod.Result as
+a universal Store / repository / provider outcome wrapper.
+
 ### Fully-bound Method means zero-argument invocation
 
 Once Store + Parameter are bound to Method.Save, Execution should not demand the Parameter again.
 
-Therefore current Method contract is:
+Therefore the reusable executable contract is:
 
 ~~~text
-Method<Family, Output>
--> suspend invoke(): Output
+VexMethod<SuccessOutput, FailureOutput>
+-> suspend invoke(): Result<SuccessOutput, FailureOutput>
+~~~
+
+and the Family specialization is:
+
+~~~text
+VexFamily.Act.Method<Family, SuccessOutput, FailureOutput>
+-> specializes VexMethod<SuccessOutput, FailureOutput>
 ~~~
 
 rather than:
@@ -1247,11 +1278,14 @@ that owner into Act equality/copy semantics.
 Then:
 
 ~~~kotlin
-act
-    .launchWith(
+checkNotNull(
+    act.launchWith(
         executionRoot,
-    )
-    ?.method(
+    ),
+) {
+    "Effect requires an executable Act Begin"
+}
+    .method(
         boundMethod,
     )
 ~~~
@@ -1283,8 +1317,11 @@ Effect
 Act.Method
     executable realization
 
-Method Output
-    physical/provider operation result
+Method Result
+    VexMethod.Result<SuccessOutput, FailureOutput>
+    Success carries the domain success output
+    Failure carries the domain lawful failure output
+    Error carries an escaped Throwable
 
 Family.State
     semantic truth once the rightful owner knows what is true
@@ -1294,9 +1331,17 @@ For ThemeMode:
 
 ~~~text
 Effect.Save(Parameter.Mode)
--> Method.Save(...).invoke()
--> ThemeModeStore.Result
--> rightful result / Store-observation interpretation
+-> Family Act.Method.Save(...), specializing VexMethod
+-> ThemeModeStore.save(mode)
+   -> Boolean provider commit fact
+-> Method forms VexMethod.Result<ThemeMode, Unit>
+   -> Success(ThemeMode)
+   -> Failure(Unit)
+   -> Error(Throwable) only when invocation escapes
+-> rightful result interpretation
+
+outside Store observation
+-> ThemeMode-owned reconciliation/currentness
 -> ThemeMode Family State when truth is known
 ~~~
 
@@ -1571,10 +1616,25 @@ Method.Save.invoke()
 ThemeModeStore.save(Dark)
         |
         v
-ThemeModeStore.Result
+Boolean provider commit fact
         |
         v
-rightful result / observation interpretation
+Method.Save interpretation
+        |
+        v
+VexMethod.Result<ThemeMode, Unit>
+        |
+        +-> Success(ThemeMode)
+        +-> Failure(Unit)
+        +-> Error(Throwable) only when invocation escapes
+        |
+        v
+rightful result interpretation
+
+independent Store observation
+        |
+        v
+ThemeMode-owned reconciliation/currentness
         |
         v
 ThemeMode Family State when actually known

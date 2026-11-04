@@ -3,6 +3,7 @@
 package com.vextreme.vexlife.android.ui
 
 import com.vextreme.vexlife.android.behavior.VexFamily
+import com.vextreme.vexlife.android.behavior.VexMethod
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.logging.VexLogger
@@ -166,11 +167,13 @@ internal class ThemeModeFamily(
      */
     object Act {
         sealed class Method<
-            out Output,
+            out SuccessOutput,
+            out FailureOutput,
         > :
             VexFamily.Act.Method<
                 ThemeModeFamily,
-                Output
+                SuccessOutput,
+                FailureOutput
             > {
             class Save(
                 private val store:
@@ -179,13 +182,29 @@ internal class ThemeModeFamily(
                     Parameter.Mode,
             ) :
                 Method<
-                    ThemeModeStore.Result
+                    ThemeMode,
+                    Unit
                 >() {
                 override suspend operator fun invoke():
-                    ThemeModeStore.Result =
-                    store.save(
-                        parameter.mode,
-                    )
+                    VexMethod.Result<
+                        ThemeMode,
+                        Unit
+                    > =
+                    if (
+                        store.save(
+                            parameter.mode,
+                        )
+                    ) {
+                        VexMethod.Result.Success(
+                            output =
+                                parameter.mode,
+                        )
+                    } else {
+                        VexMethod.Result.Failure(
+                            output =
+                                Unit,
+                        )
+                    }
             }
         }
     }
@@ -485,7 +504,7 @@ internal fun activateThemeMode(
                         when (
                             result
                         ) {
-                            is ThemeModeStore.Result.Success -> {
+                            is VexMethod.Result.Success -> {
                                 family.selectionRealizationFinished(
                                     effect.mode,
                                 )
@@ -508,13 +527,13 @@ internal fun activateThemeMode(
                                     family =
                                         family,
                                     observed =
-                                        result.observedState,
+                                        result.output,
                                     logger =
                                         logger,
                                 )
                             }
 
-                            is ThemeModeStore.Result.Failure -> {
+                            is VexMethod.Result.Failure -> {
                                 family.selectionRealizationFinished(
                                     effect.mode,
                                 )
@@ -531,6 +550,28 @@ internal fun activateThemeMode(
                                                 themeModeSaveDetails(
                                                     effect =
                                                         effect,
+                                                ),
+                                        ),
+                                )
+                            }
+
+                            is VexMethod.Result.Error -> {
+                                family.selectionRealizationFinished(
+                                    effect.mode,
+                                )
+                                recordThemeModeFact(
+                                    logger =
+                                        logger,
+                                    event =
+                                        VexLogger.Event.Runtime(
+                                            subjectRef =
+                                                THEME_MODE_FAMILY_SUBJECT,
+                                            action =
+                                                "EffectErrored",
+                                            detailsJson =
+                                                themeModeSaveDetails(
+                                                    effect =
+                                                        effect,
                                                     failure =
                                                         result.cause,
                                                 ),
@@ -538,29 +579,6 @@ internal fun activateThemeMode(
                                 )
                             }
                         }
-                    },
-                    onFailure = { failure ->
-                        family.selectionRealizationFinished(
-                            effect.mode,
-                        )
-                        recordThemeModeFact(
-                            logger =
-                                logger,
-                            event =
-                                VexLogger.Event.Runtime(
-                                    subjectRef =
-                                        THEME_MODE_FAMILY_SUBJECT,
-                                    action =
-                                        "EffectFailed",
-                                    detailsJson =
-                                        themeModeSaveDetails(
-                                            effect =
-                                                effect,
-                                            failure =
-                                                failure,
-                                        ),
-                                ),
-                        )
                     },
                 )
         }
