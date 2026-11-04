@@ -36,16 +36,26 @@ root README
 The current causal body is broader than execution alone:
 
 ~~~text
-REQUEST / CHANGE
+REQUEST / REALIZATION
 
 Family.Parameter
 -> Family.Control
 -> Family.Act
 -> Family.Effect
 -> Family.Act.Method
--> outside provider / Store reality
--> Observation
--> Family.State
+   -> specializes VexMethod
+-> concrete realization
+-> VexMethod.Result
+   -> Success / Failure / Error
+-> rightful result interpretation
+
+
+OUTSIDE / OBSERVATION
+
+outside/provider truth
+-> rightful observation / reconciliation
+-> already-semantic Family.State
+
 
 EXPERIENCE / DISPLAY
 
@@ -56,6 +66,13 @@ Family.State
 -> concrete manifestation such as Compose
 -> human experience
 ~~~
+
+VexMethod.Result reports the outcome of attempting one Method realization. It is the terminal
+return contract of `VexMethod.invoke()`, not a generic provider / Store / repository outcome wrapper.
+Those boundaries return their smallest truthful fact; the bound Method interprets that fact into
+Success / Failure. Error is formed inside the behavior foundation only when a Method actually escapes
+its returned contract. Result does not become resulting State or require a subsequent Observation,
+and cancellation remains Execution lifetime.
 
 ThemeMode is the current concrete display example:
 

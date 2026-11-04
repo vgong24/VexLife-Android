@@ -1,5 +1,7 @@
 package com.vextreme.vexlife.android.ui
 
+import com.vextreme.vexlife.android.behavior.VexFamily
+import com.vextreme.vexlife.android.behavior.VexMethod
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.logging.VexLogger
 import kotlinx.coroutines.CompletableDeferred
@@ -42,11 +44,15 @@ class ThemeModePersistenceTest {
             }
 
         assertEquals(
-            ThemeModeStore.Result.Success(
-                observedState =
+            VexMethod.Result.Success(
+                output =
                     ThemeMode.Dark,
             ),
             result,
+        )
+        assertTrue(
+            result is
+                VexMethod.Result.Success,
         )
         assertEquals(
             listOf(
@@ -58,6 +64,162 @@ class ThemeModePersistenceTest {
             method.parameter ===
                 parameter,
         )
+    }
+
+    @Test
+    fun storeReturnsProviderCommitFactAndBoundMethodOwnsResultMeaning() {
+        val store =
+            RecordingThemeModeStore(
+                ThemeMode.NotSet,
+            )
+
+        val committed =
+            runBlocking {
+                store.save(
+                    ThemeMode.Dark,
+                )
+            }
+        val invalidSave =
+            runBlocking {
+                runCatching {
+                    store.save(
+                        ThemeMode.NotSet,
+                    )
+                }.exceptionOrNull()
+            }
+
+        assertTrue(
+            committed,
+        )
+        assertTrue(
+            invalidSave is
+                IllegalArgumentException,
+        )
+
+        val method =
+            ThemeModeFamily.Act.Method.Save(
+                store =
+                    store,
+                parameter =
+                    ThemeModeFamily.Parameter.Mode(
+                        mode =
+                            ThemeMode.Light,
+                    ),
+            )
+
+        assertEquals(
+            VexMethod.Result.Success(
+                output =
+                    ThemeMode.Light,
+            ),
+            runBlocking {
+                method()
+            },
+        )
+    }
+
+    @Test
+    fun thrownSaveMapsToFamilyErrorAndReleasesThemeCurrentnessFence() {
+        val root =
+            VexExecutionRoot()
+        val store =
+            ThrowingThemeModeStore()
+        val family =
+            ThemeModeFamily(
+                initialState =
+                    ThemeMode.Light,
+            )
+        val logger =
+            VexLogger()
+
+        observeThemeModeStore(
+            family =
+                family,
+            store =
+                store,
+            executionRoot =
+                root,
+            logger =
+                logger,
+        )
+
+        try {
+            assertTrue(
+                activateThemeMode(
+                    family =
+                        family,
+                    control =
+                        ThemeModeFamily.Control.Select(
+                            ThemeModeFamily.Parameter.Mode(
+                                mode =
+                                    ThemeMode.Dark,
+                            ),
+                        ),
+                    store =
+                        store,
+                    executionRoot =
+                        root,
+                    logger =
+                        logger,
+                ),
+            )
+
+            runBlocking {
+                withTimeout(
+                    5_000,
+                ) {
+                    while (
+                        logger.history.value
+                            .none { record ->
+                                record.action ==
+                                    "EffectErrored"
+                            }
+                    ) {
+                        yield()
+                    }
+                }
+            }
+
+            assertEquals(
+                ThemeMode.Dark,
+                family.currentState,
+            )
+            assertEquals(
+                1,
+                logger.history.value
+                    .count {
+                        it.action ==
+                            "EffectErrored"
+                    },
+            )
+            assertEquals(
+                0,
+                logger.history.value
+                    .count {
+                        it.action ==
+                            "EffectFailed"
+                    },
+            )
+
+            store.emit(
+                ThemeMode.Light,
+            )
+
+            runBlocking {
+                withTimeout(
+                    5_000,
+                ) {
+                    while (
+                        family.currentState !=
+                        ThemeMode.Light
+                    ) {
+                        yield()
+                    }
+                }
+            }
+        } finally {
+            root.forceStopAll()
+        }
     }
 
     @Test
@@ -240,7 +402,7 @@ class ThemeModePersistenceTest {
         val root =
             VexExecutionRoot()
         val store =
-            ResultOnlyThemeModeStore()
+            NonEmittingThemeModeStore()
         val family =
             ThemeModeFamily(
                 initialState =
@@ -455,20 +617,14 @@ class ThemeModePersistenceTest {
             state:
                 ThemeMode,
         ):
-            ThemeModeStore.Result {
+            Boolean {
             saveGate.await()
-            return ThemeModeStore.Result.Success(
-                observedState =
-                    state,
-            )
+            return true
         }
 
         override suspend fun forget():
-            ThemeModeStore.Result =
-            ThemeModeStore.Result.Success(
-                observedState =
-                    ThemeMode.NotSet,
-            )
+            Boolean =
+            true
 
         fun releaseBootstrapObservation() {
             bootstrapGate.complete(
@@ -487,7 +643,7 @@ class ThemeModePersistenceTest {
         }
     }
 
-    private class ResultOnlyThemeModeStore :
+    private class NonEmittingThemeModeStore :
         ThemeModeStore {
         private val mutableState =
             MutableStateFlow(
@@ -506,18 +662,12 @@ class ThemeModePersistenceTest {
             state:
                 ThemeMode,
         ):
-            ThemeModeStore.Result =
-            ThemeModeStore.Result.Success(
-                observedState =
-                    state,
-            )
+            Boolean =
+            true
 
         override suspend fun forget():
-            ThemeModeStore.Result =
-            ThemeModeStore.Result.Success(
-                observedState =
-                    ThemeMode.NotSet,
-            )
+            Boolean =
+            true
     }
 
     @Test
@@ -775,7 +925,7 @@ class ThemeModePersistenceTest {
             state:
                 ThemeMode,
         ):
-            ThemeModeStore.Result =
+            Boolean =
             when (
                 state
             ) {
@@ -783,10 +933,7 @@ class ThemeModePersistenceTest {
                     firstSaveReturned.complete(
                         Unit,
                     )
-                    ThemeModeStore.Result.Success(
-                        observedState =
-                            ThemeMode.Light,
-                    )
+                    true
                 }
 
                 ThemeMode.Dark -> {
@@ -794,24 +941,18 @@ class ThemeModePersistenceTest {
                         Unit,
                     )
                     latestSaveGate.await()
-                    ThemeModeStore.Result.Success(
-                        observedState =
-                            ThemeMode.Dark,
-                    )
+                    true
                 }
 
                 ThemeMode.NotSet ->
                     error(
-                        "NotSet is not selectable",
+                        "ThemeMode.NotSet is not a saveable selection",
                     )
             }
 
         override suspend fun forget():
-            ThemeModeStore.Result =
-            ThemeModeStore.Result.Success(
-                observedState =
-                    ThemeMode.NotSet,
-            )
+            Boolean =
+            true
 
         fun emitDelayedPriorObservation(
             state:
@@ -859,7 +1000,7 @@ class ThemeModePersistenceTest {
             state:
                 ThemeMode,
         ):
-            ThemeModeStore.Result {
+            Boolean {
             if (
                 state ==
                 ThemeMode.Dark
@@ -883,18 +1024,49 @@ class ThemeModePersistenceTest {
             latestSaveCompleted.complete(
                 Unit,
             )
-            return ThemeModeStore.Result.Success(
-                observedState =
-                    state,
-            )
+            return true
         }
 
         override suspend fun forget():
-            ThemeModeStore.Result =
-            ThemeModeStore.Result.Success(
-                observedState =
-                    ThemeMode.NotSet,
+            Boolean =
+            true
+    }
+
+    private class ThrowingThemeModeStore :
+        ThemeModeStore {
+        private val mutableState =
+            MutableStateFlow(
+                ThemeMode.NotSet,
             )
+
+        override val states:
+            Flow<ThemeMode> =
+            mutableState
+
+        override suspend fun get():
+            ThemeMode =
+            mutableState.value
+
+        override suspend fun save(
+            state:
+                ThemeMode,
+        ):
+            Boolean =
+            error(
+                "synthetic ThemeMode save crash",
+            )
+
+        override suspend fun forget():
+            Boolean =
+            true
+
+        fun emit(
+            state:
+                ThemeMode,
+        ) {
+            mutableState.value =
+                state
+        }
     }
 
     private class RecordingThemeModeStore(
@@ -922,25 +1094,26 @@ class ThemeModePersistenceTest {
             state:
                 ThemeMode,
         ):
-            ThemeModeStore.Result {
+            Boolean {
+            require(
+                state !=
+                    ThemeMode.NotSet,
+            ) {
+                "ThemeMode.NotSet is absence of an explicit selection; use forget()"
+            }
+
             savedStates +=
                 state
             mutableState.value =
                 state
-            return ThemeModeStore.Result.Success(
-                observedState =
-                    state,
-            )
+            return true
         }
 
         override suspend fun forget():
-            ThemeModeStore.Result {
+            Boolean {
             mutableState.value =
                 ThemeMode.NotSet
-            return ThemeModeStore.Result.Success(
-                observedState =
-                    ThemeMode.NotSet,
-            )
+            return true
         }
 
         fun emit(

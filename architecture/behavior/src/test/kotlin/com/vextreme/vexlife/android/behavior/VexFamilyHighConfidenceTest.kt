@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.behavior
 
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -7,6 +8,7 @@ import java.util.concurrent.TimeUnit
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import kotlinx.coroutines.runBlocking
 import org.junit.Test
 
 /**
@@ -56,6 +58,51 @@ class VexFamilyHighConfidenceTest {
                 val value: String,
             ) :
                 Effect
+        }
+
+        class SaveMethod(
+            private val value: String,
+            private val shouldFail: Boolean,
+        ) :
+            VexFamily.Act.Method<
+                ValueFamily,
+                String,
+                Throwable?
+            > {
+            override suspend fun invoke():
+                VexMethod.Result<
+                    String,
+                    Throwable?
+                > =
+                if (shouldFail) {
+                    VexMethod.Result.Failure(
+                        output =
+                            IllegalStateException(
+                                "rejected",
+                            ),
+                    )
+                } else {
+                    VexMethod.Result.Success(
+                        output =
+                            value,
+                    )
+                }
+        }
+
+        class ThrowingSaveMethod :
+            VexFamily.Act.Method<
+                ValueFamily,
+                String,
+                Throwable?
+            > {
+            override suspend fun invoke():
+                VexMethod.Result<
+                    String,
+                    Throwable?
+                > =
+                error(
+                    "synthetic Method crash",
+                )
         }
 
         data class DisplayState(
@@ -199,6 +246,99 @@ class VexFamilyHighConfidenceTest {
             family.currentState,
         )
     }
+
+    @Test
+    fun boundFamilyMethodUsesContractOwnedResultCarriers() =
+        runBlocking {
+            val success =
+                ValueFamily.SaveMethod(
+                    value = "saved",
+                    shouldFail = false,
+                )()
+
+            val failure =
+                ValueFamily.SaveMethod(
+                    value = "ignored",
+                    shouldFail = true,
+                )()
+
+            val successResult =
+                success as
+                    VexMethod.Result.Success<String>
+            assertEquals(
+                "saved",
+                successResult.output,
+            )
+
+            val failureResult =
+                failure as
+                    VexMethod.Result.Failure<Throwable?>
+            assertEquals(
+                "rejected",
+                failureResult.output
+                    ?.message,
+            )
+        }
+
+    @Test
+    fun escapedMethodExceptionReturnsMethodErrorThroughTheSameResultChannel() =
+        runBlocking {
+            val root =
+                VexExecutionRoot()
+            val family =
+                ValueFamily(
+                    initialState =
+                        ValueFamily.State.Empty,
+                )
+            val act =
+                checkNotNull(
+                    family.activate(
+                        ValueFamily.Control.Save(
+                            value =
+                                "boom",
+                        ),
+                    ),
+                )
+            var received:
+                VexMethod.Result<
+                    String,
+                    Throwable?
+                >? =
+                null
+
+            try {
+                val job =
+                    checkNotNull(
+                        act.launchWith(
+                            root,
+                        ),
+                    ) {
+                        "Save Effect requires an executable Act Begin"
+                    }
+                        .method(
+                            method =
+                                ValueFamily.ThrowingSaveMethod(),
+                            onResult = { result ->
+                                received =
+                                    result
+                            },
+                        )
+
+                job.join()
+
+                val error =
+                    received as
+                        VexMethod.Result.Error
+                assertEquals(
+                    "synthetic Method crash",
+                    error.cause.message,
+                )
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
+            }
+        }
 
     @Test
     fun availabilityInspectsTheSameRelationshipWithoutMutatingStateOrRealizingEffect() {

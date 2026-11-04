@@ -37,6 +37,18 @@ import kotlinx.coroutines.flow.asStateFlow
  *     -> admitted State? + Begin?
  *        -> Effect + execution Approach
  *
+ *     accepted Act + bound Method
+ *     -> VexExecution custody
+ *     -> Method realization
+ *     -> VexMethod.Result.Success / Failure / Error
+ *     -> rightful interpretation
+ *
+ *     outside/provider truth
+ *     -> already-semantic State
+ *     -> observe(State)
+ *
+ * VexMethod.Result reports realization outcome; it does not become later State admission or cancellation.
+ *
  * RESPONSIBILITY FENCE
  * Family owns semantic RelationshipId composition because that identity is an invisible consequence
  * of the already-authored live Family + Control (+ typed ResourceId when needed). It does NOT own
@@ -275,25 +287,27 @@ abstract class VexFamily<
             null
 
         /**
-         * Semantically-addressed executable function belonging to one Family's Act vocabulary.
+         * Family-owned specialization of the reusable [VexMethod] contract.
          *
-         * A concrete Method is a fully-bound callable value: it contains the exact provider/Store
-         * dependency and Family Parameter required by that operation, then returns the truthful
-         * physical result of the call. VexExecution still owns Job custody / overlap / cancellation.
+         * Family kinship stays here because this Method realizes one accepted Family Act. The
+         * executable/result contract itself is shared through [VexMethod].
          */
         interface Method<
             Family,
-            out Output,
-        > where
+            out SuccessOutput,
+            out FailureOutput,
+        > :
+            VexMethod<
+                SuccessOutput,
+                FailureOutput
+            > where
             Family : VexFamily<
                 Family,
                 *,
                 *,
                 *
-            > {
-            suspend operator fun invoke():
-                Output
-        }
+            >
+
 
         /**
          * Compiler-visible continuation from an accepted Act into its Method.
@@ -320,20 +334,23 @@ abstract class VexFamily<
                 *,
                 *
             > {
-            fun <Output> method(
+            fun <SuccessOutput, FailureOutput> method(
                 method:
                     Method<
                         Family,
-                        Output
+                        SuccessOutput,
+                        FailureOutput
                     >,
                 beforeOperation:
                     () -> Unit =
                     {},
                 onResult:
-                    (Output) -> Unit =
-                    {},
-                onFailure:
-                    (Throwable) -> Unit =
+                    (
+                        VexMethod.Result<
+                            SuccessOutput,
+                            FailureOutput
+                        >
+                    ) -> Unit =
                     {},
             ):
                 Job =
@@ -350,10 +367,19 @@ abstract class VexFamily<
                         method::invoke,
                     beforeOperation =
                         beforeOperation,
-                    onResult =
-                        onResult,
-                    onFailure =
-                        onFailure,
+                    onResult = { result ->
+                        onResult(
+                            result,
+                        )
+                    },
+                    onFailure = { error ->
+                        onResult(
+                            VexMethod.Result.Error(
+                                cause =
+                                    error,
+                            ),
+                        )
+                    },
                 )
         }
 
@@ -443,10 +469,11 @@ abstract class VexFamily<
          * State-changing Act may be Independent, Earliest, Latest, or Queued according to the
          * relationship being authored.
          *
-         * Earlier #207 source also let Begin author success/failure-specific later-State admission.
-         * The current Family deliberately does not carry that result grammar. Begin authors only
-         * Effect + overlap meaning; provider/runtime results are interpreted by their rightful
-         * boundary and already-semantic truth re-enters through [observe].
+         * Earlier #207 source let Begin author success/failure-specific later-State admission.
+         * The current Family keeps that semantic decision removed: Begin authors only Effect +
+         * overlap meaning. [VexMethod.Result] reports the later realization outcome, but does not
+         * prescribe State. Outside truth is still interpreted by its rightful owner and
+         * already-semantic truth re-enters through [observe].
          */
         @ConsistentCopyVisibility
         data class Begin<

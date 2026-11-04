@@ -36,8 +36,7 @@ class ThemeModeStoreInstrumentedTest {
             )
 
         runBlocking {
-            assertEquals(
-                ThemeModeStore.Result.Success(observedState = ThemeMode.Light),
+            assertTrue(
                 firstStore.save(
                     ThemeMode.Light,
                 ),
@@ -118,17 +117,18 @@ class ThemeModeStoreInstrumentedTest {
 
         runBlocking {
             val invalidSave =
-                store.save(
-                    ThemeMode.NotSet,
-                )
+                runCatching {
+                    store.save(
+                        ThemeMode.NotSet,
+                    )
+                }.exceptionOrNull()
 
             assertTrue(
                 invalidSave is
-                    ThemeModeStore.Result.Failure,
+                    IllegalArgumentException,
             )
 
-            assertEquals(
-                ThemeModeStore.Result.Success(observedState = ThemeMode.Dark),
+            assertTrue(
                 store.save(
                     ThemeMode.Dark,
                 ),
@@ -138,8 +138,7 @@ class ThemeModeStoreInstrumentedTest {
                 store.get(),
             )
 
-            assertEquals(
-                ThemeModeStore.Result.Success(observedState = ThemeMode.NotSet),
+            assertTrue(
                 store.forget(),
             )
             assertEquals(

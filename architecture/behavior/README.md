@@ -2,6 +2,75 @@
 
 [VXG RealForever]
 
+## Current Direct Family entry
+
+For current Direct Family / Method work, use the smallest route:
+
+~~~text
+FAMILY-CIRCUIT.md
+-> VexMethod.kt
+-> VexFamily.kt
+-> VexMethodHighConfidenceTest.kt
+-> VexFamilyHighConfidenceTest.kt
+-> exact concrete consumer only when needed
+~~~
+
+Current source and tests own behavior. The reusable topology is:
+
+~~~text
+VexMethod
+-> Result
+   -> Success
+   -> Failure
+   -> Error
+
+VexFamily
+-> Act
+   -> Method
+      -> specializes VexMethod
+~~~
+
+VexMethod owns the reusable carriers:
+
+~~~text
+Result.Success<T>
+Result.Failure<F>
+Result.Error
+~~~
+
+The Result root has a private constructor. Success and Failure are the only lawful returned
+carriers. Error is the only exceptional carrier and its constructor is internal to the behavior
+foundation, so provider/domain code cannot manufacture Error as an ordinary return.
+
+Provider / Store / repository contracts do **not** return `VexMethod.Result` merely because an
+operation can succeed or fail. They return the smallest truthful provider/domain fact. The bound
+`VexMethod.invoke()` boundary is where that fact becomes Success / Failure.
+
+ThemeMode makes the boundary explicit:
+
+~~~text
+ThemeModeStore.save(mode)
+-> Boolean
+   true  = physical write committed
+   false = physical write did not commit
+
+ThemeModeFamily.Act.Method.Save.invoke()
+-> VexMethod.Result<ThemeMode, Unit>
+   Success(mode)
+   Failure(Unit)
+~~~
+
+An escaped Method exception becomes Error only at the Family / VexExecution continuation.
+
+Result != later State admission.
+Result != Observation.
+Result != Cancellation.
+
+
+The older exposition below is retained as lineage/background. Where it conflicts with
+FAMILY-CIRCUIT.md, VexFamily.kt, or current tests, follow current source rather than reconstructing
+historical grammar.
+
 The Direct `VexFamily` foundation accepted on main through
 [PR #193](https://github.com/vgong24/VexLife-Android/pull/193) is the smallest readable Family circuit for:
 

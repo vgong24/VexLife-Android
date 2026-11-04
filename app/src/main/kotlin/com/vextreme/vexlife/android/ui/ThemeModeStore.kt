@@ -21,29 +21,22 @@ internal interface ThemeModeStore {
     suspend fun get():
         ThemeMode
 
+    /**
+     * Attempt to persist one explicit ThemeMode selection.
+     *
+     * The Store owns only the provider fact: true means the physical write committed; false means
+     * the provider lawfully reported that it did not. VexMethod.Result begins at the bound Method,
+     * not at this outside-truth boundary.
+     */
     suspend fun save(
         state:
             ThemeMode,
     ):
-        Result
+        Boolean
 
+    /** Remove the explicit durable selection; return only whether the physical write committed. */
     suspend fun forget():
-        Result
-
-    sealed interface Result {
-        data class Success(
-            val observedState:
-                ThemeMode,
-        ) :
-            Result
-
-        data class Failure(
-            val cause:
-                Throwable? =
-                null,
-        ) :
-            Result
-    }
+        Boolean
 }
 
 /**
@@ -107,44 +100,33 @@ internal class SharedPreferencesThemeModeStore(
         state:
             ThemeMode,
     ):
-        ThemeModeStore.Result =
-        when (state) {
-            ThemeMode.NotSet ->
-                ThemeModeStore.Result.Failure(
-                    IllegalArgumentException(
-                        "ThemeMode.NotSet is absence of an explicit durable selection; use forget()",
-                    ),
-                )
-
-            ThemeMode.Light,
-            ThemeMode.Dark ->
-                write(
-                    editor =
-                        preferences
-                            .edit()
-                            .putString(
-                                KEY_THEME_MODE,
-                                storedValueFor(
-                                    state,
-                                ),
-                            ),
-                    observedState =
-                        state,
-                )
+        Boolean {
+        require(
+            state !=
+                ThemeMode.NotSet,
+        ) {
+            "ThemeMode.NotSet is absence of an explicit durable selection; use forget()"
         }
 
+        return preferences
+            .edit()
+            .putString(
+                KEY_THEME_MODE,
+                storedValueFor(
+                    state,
+                ),
+            )
+            .commit()
+    }
+
     override suspend fun forget():
-        ThemeModeStore.Result =
-        write(
-            editor =
-                preferences
-                    .edit()
-                    .remove(
-                        KEY_THEME_MODE,
-                    ),
-            observedState =
-                ThemeMode.NotSet,
-        )
+        Boolean =
+        preferences
+            .edit()
+            .remove(
+                KEY_THEME_MODE,
+            )
+            .commit()
 
     private fun readCurrent():
         ThemeMode =
@@ -180,24 +162,6 @@ internal class SharedPreferencesThemeModeStore(
                 error(
                     "ThemeMode.NotSet is never persisted as an explicit durable selection",
                 )
-        }
-
-    private fun write(
-        editor:
-            SharedPreferences.Editor,
-        observedState:
-            ThemeMode,
-    ):
-        ThemeModeStore.Result =
-        if (
-            editor.commit()
-        ) {
-            ThemeModeStore.Result.Success(
-                observedState =
-                    observedState,
-            )
-        } else {
-            ThemeModeStore.Result.Failure()
         }
 
     private companion object {
@@ -237,34 +201,24 @@ internal class InMemoryThemeModeStore(
         state:
             ThemeMode,
     ):
-        ThemeModeStore.Result {
-        if (
-            state ==
-            ThemeMode.NotSet
+        Boolean {
+        require(
+            state !=
+                ThemeMode.NotSet,
         ) {
-            return ThemeModeStore.Result.Failure(
-                IllegalArgumentException(
-                    "ThemeMode.NotSet is absence of an explicit selection; use forget()",
-                ),
-            )
+            "ThemeMode.NotSet is absence of an explicit selection; use forget()"
         }
 
         mutableState.value =
             state
-        return ThemeModeStore.Result.Success(
-            observedState =
-                state,
-        )
+        return true
     }
 
     override suspend fun forget():
-        ThemeModeStore.Result {
+        Boolean {
         mutableState.value =
             ThemeMode.NotSet
-        return ThemeModeStore.Result.Success(
-            observedState =
-                ThemeMode.NotSet,
-        )
+        return true
     }
 }
 
