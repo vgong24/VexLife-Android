@@ -116,9 +116,11 @@ class VexPartnerHighConfidenceTest {
                 decoder =
                     SensorPartner.Connection.Decoder(),
                 receiver =
-                    SensorPartner.Connection.Receiver(
-                        received::add,
-                    ),
+                    SensorPartner.Connection.Receiver { observation ->
+                        received.add(
+                            observation,
+                        )
+                    },
             )
 
         val observations =
