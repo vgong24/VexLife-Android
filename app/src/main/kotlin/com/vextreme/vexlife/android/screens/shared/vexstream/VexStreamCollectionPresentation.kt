@@ -616,6 +616,26 @@ private fun VexStreamCollectionCard(
     }
 }
 
+
+@Composable
+private fun vexStreamOfflineCollectionStatusText(
+    plan: VexStreamOfflineCollectionPlan,
+): String =
+    if (
+        plan.fullyOnDevice
+    ) {
+        stringResource(
+            R.string.vexstream_music_collection_available_offline,
+            plan.totalCount,
+        )
+    } else {
+        stringResource(
+            R.string.vexstream_music_on_device_count,
+            plan.onDeviceCount,
+            plan.totalCount,
+        )
+    }
+
 @Composable
 private fun VexStreamCollectionActions(
     runtime: VexRuntime,
