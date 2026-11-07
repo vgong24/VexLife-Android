@@ -54,6 +54,31 @@ class InsulinPartnerCircuitTest {
                 method.parameter,
             )
             assertEquals(
+                com.vextreme.vexlife.android.execution.VexExecution.Approach.Queued,
+                act.begin
+                    ?.approach,
+            )
+            assertNotNull(
+                act.relationshipId,
+            )
+
+            val secondAct =
+                family.activate(
+                    InsulinFamily.Control.RequestPumpDelivery(
+                        amount =
+                            InsulinFamily.Parameter.InsulinAmount(
+                                unitsHundredths =
+                                    125,
+                            ),
+                    ),
+                )
+
+            assertEquals(
+                act.relationshipId,
+                secondAct
+                    ?.relationshipId,
+            )
+            assertEquals(
                 InsulinFamily.State.Empty,
                 family.currentState,
             )
@@ -73,13 +98,10 @@ class InsulinPartnerCircuitTest {
                 )
 
             try {
-                val observations =
+                val receipt =
                     lab.receiveSyntheticPenPacket()
 
-                assertEquals(
-                    2,
-                    observations.size,
-                )
+                receipt.join()
                 assertEquals(
                     2,
                     lab.store
@@ -180,13 +202,11 @@ class InsulinPartnerCircuitTest {
                         .currentState,
                 )
 
-                val observations =
-                    lab.receiveSyntheticPumpDelivery()
-
-                assertEquals(
-                    2,
-                    observations.size,
-                )
+                val receipt =
+                    checkNotNull(
+                        lab.receiveSyntheticPumpDelivery(),
+                    )
+                receipt.join()
                 assertEquals(
                     2,
                     lab.store
@@ -253,6 +273,7 @@ class InsulinPartnerCircuitTest {
 
             try {
                 lab.receiveSyntheticPenPacket()
+                    .join()
 
                 val request =
                     lab.requestSyntheticPumpDelivery(
@@ -260,7 +281,9 @@ class InsulinPartnerCircuitTest {
                             125,
                     )
                 request.join()
-                lab.receiveSyntheticPumpDelivery()
+                checkNotNull(
+                    lab.receiveSyntheticPumpDelivery(),
+                ).join()
 
                 val snapshot =
                     lab.store
