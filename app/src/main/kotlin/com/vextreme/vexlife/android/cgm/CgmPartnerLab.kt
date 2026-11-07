@@ -4,6 +4,7 @@ package com.vextreme.vexlife.android.cgm
 
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import kotlinx.coroutines.Job
 
 /**
  * Lab-only composition owner for the first complete Partner circuit.
@@ -26,7 +27,7 @@ internal class CgmPartnerLab(
         System::currentTimeMillis,
     val store:
         CgmStore =
-        CgmStore(),
+        InMemoryCgmStore(),
     val family:
         CgmFamily =
         CgmFamily(),
@@ -87,6 +88,29 @@ internal class CgmPartnerLab(
      * product Effect.
      */
     fun receiveSyntheticPacket():
+        Job =
+        VexExecution.begin(
+            executionRoot =
+                executionRoot,
+            owner =
+                this,
+            operation =
+                ::receiveSyntheticPacketAndAwait,
+            argument =
+                Unit,
+        )
+
+    /**
+     * Awaitable form used by durability/restart proof.
+     *
+     * Returning from this function means every decoded Observation has completed Receiver -> Store
+     * admission. It does not mean Family has already interpreted the Store Flow emission.
+     */
+    internal suspend fun receiveSyntheticPacketAndAwait(
+        @Suppress("UNUSED_PARAMETER")
+        unit:
+            Unit,
+    ):
         List<
             CgmPartner.Connection.Observation
         > {
@@ -166,15 +190,12 @@ internal class CgmPartnerLab(
                     Charsets.UTF_8,
                 )
 
-        val observations =
-            connection.receive(
-                bytes =
-                    packet,
-                observedAtEpochMillis =
-                    nowEpochMillis(),
-            )
-
-        return observations
+        return connection.receive(
+            bytes =
+                packet,
+            observedAtEpochMillis =
+                nowEpochMillis(),
+        )
     }
 
     fun close() {
