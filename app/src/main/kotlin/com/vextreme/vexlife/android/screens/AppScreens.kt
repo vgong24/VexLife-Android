@@ -11,6 +11,7 @@ import com.vextreme.vexlife.android.screens.shared.cgm.CgmPartnerLabScreen
 import com.vextreme.vexlife.android.screens.shared.conversation.VexFamilyConversationScreen
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
 import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
+import com.vextreme.vexlife.android.screens.shared.insulin.InsulinPartnerLabScreen
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsScreen
 import com.vextreme.vexlife.android.screens.shared.vex.TalkToVexScreen
@@ -38,6 +39,7 @@ object AppScreens {
     val shared: List<AppScreenBlueprint> = listOf(
         DebugMenuScreen,
         CgmPartnerLabScreen,
+        InsulinPartnerLabScreen,
         GalleryScreen,
         UserProfileScreen,
         VexFamilyConversationScreen,
