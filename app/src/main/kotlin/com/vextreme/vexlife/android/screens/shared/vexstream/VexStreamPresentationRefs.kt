@@ -4,7 +4,7 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackAvailability
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
 import com.vextreme.vexlife.android.elements.ActionElement
 import com.vextreme.vexlife.android.elements.UIElement
-import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueFamily
 
 /**
  * One current VexStream track-presentation neighborhood.
@@ -217,7 +217,7 @@ internal object VexStreamPresentationRefs {
     }
 
     fun fullPlayerSwipe(
-        control: VexStreamQueueControl,
+        control: VexStreamQueueFamily.Control,
     ): String =
         "presentation.vexstream.full-player.swipe." +
             control.name.lowercase()

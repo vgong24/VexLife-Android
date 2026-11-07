@@ -46,7 +46,7 @@ import com.vextreme.vexlife.android.elements.VexText
 import com.vextreme.vexlife.android.elements.vex
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackReadState
-import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueFamily
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueOccurrence
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueuePlayRequest
 import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueExperience
@@ -77,8 +77,8 @@ internal fun VexStreamQueueContent(
         rememberVexStreamQueueExperience(
             controller,
         )
-    val queueProjection =
-        queueExperience.projection
+    val queueState =
+        queueExperience.state
     val queuePlayConnection =
         rememberVexStreamQueuePlayConnection(
             controller,
@@ -157,7 +157,7 @@ internal fun VexStreamQueueContent(
                         element,
                     )
                     queueExperience.activate(
-                        VexStreamQueueControl.Shuffle,
+                        VexStreamQueueFamily.Control.Shuffle,
                     )
                 }
 
@@ -175,7 +175,7 @@ internal fun VexStreamQueueContent(
                         element,
                     )
                     queueExperience.activate(
-                        VexStreamQueueControl.Clear,
+                        VexStreamQueueFamily.Control.Clear,
                     )
                 }
 
@@ -213,11 +213,10 @@ internal fun VexStreamQueueContent(
                     element = VexStreamMusicScreen.QueueShuffle,
                     handler = handler,
                     enabled =
-                        queueProjection
-                            ?.get(
-                                VexStreamQueueControl.Shuffle,
-                            )
-                            ?.isAvailable == true,
+                        queueState
+                            ?.isAvailable(
+                                VexStreamQueueFamily.Control.Shuffle,
+                            ) == true,
                 )
                 VexIconButton(
                     element = VexStreamMusicScreen.ToggleRepeat,
@@ -233,11 +232,10 @@ internal fun VexStreamQueueContent(
                     element = VexStreamMusicScreen.ClearQueue,
                     handler = handler,
                     enabled =
-                        queueProjection
-                            ?.get(
-                                VexStreamQueueControl.Clear,
-                            )
-                            ?.isAvailable == true,
+                        queueState
+                            ?.isAvailable(
+                                VexStreamQueueFamily.Control.Clear,
+                            ) == true,
                 )
             }
 

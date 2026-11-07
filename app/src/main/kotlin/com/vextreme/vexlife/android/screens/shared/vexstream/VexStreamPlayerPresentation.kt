@@ -55,7 +55,7 @@ import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackSeekRequ
 import com.vextreme.vexlife.android.vexstream.playback.present
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackSeekConnection
 import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackSeekPositionMs
-import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueFamily
 import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueExperience
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatFamily
 import com.vextreme.vexlife.android.vexstream.repeat.rememberVexStreamRepeatExperience
@@ -80,8 +80,8 @@ internal fun VexStreamMiniPlayer(
         rememberVexStreamQueueExperience(
             controller,
         )
-    val queueProjection =
-        queueExperience.projection
+    val queueState =
+        queueExperience.state
     val seekConnection =
         rememberVexStreamPlaybackSeekConnection(
             controller,
@@ -113,7 +113,7 @@ internal fun VexStreamMiniPlayer(
             when (element) {
                 VexStreamMusicScreen.PreviousTrack ->
                     queueExperience.activate(
-                        VexStreamQueueControl.Previous,
+                        VexStreamQueueFamily.Control.Previous,
                     )
 
                 VexStreamMusicScreen.TogglePlayback ->
@@ -123,12 +123,12 @@ internal fun VexStreamMiniPlayer(
 
                 VexStreamMusicScreen.NextTrack ->
                     queueExperience.activate(
-                        VexStreamQueueControl.Next,
+                        VexStreamQueueFamily.Control.Next,
                     )
 
                 VexStreamMusicScreen.ShuffleQueue ->
                     queueExperience.activate(
-                        VexStreamQueueControl.Shuffle,
+                        VexStreamQueueFamily.Control.Shuffle,
                     )
 
                 else -> Unit
@@ -226,11 +226,7 @@ internal fun VexStreamMiniPlayer(
                 element = VexStreamMusicScreen.PreviousTrack,
                 handler = handler,
                 enabled =
-                    queueProjection
-                        ?.get(
-                            VexStreamQueueControl.Previous,
-                        )
-                        ?.isAvailable == true,
+                    queueState?.isAvailable(VexStreamQueueFamily.Control.Previous) == true,
             )
             VexIconButton(
                 element = VexStreamMusicScreen.TogglePlayback,
@@ -242,21 +238,13 @@ internal fun VexStreamMiniPlayer(
                 element = VexStreamMusicScreen.NextTrack,
                 handler = handler,
                 enabled =
-                    queueProjection
-                        ?.get(
-                            VexStreamQueueControl.Next,
-                        )
-                        ?.isAvailable == true,
+                    queueState?.isAvailable(VexStreamQueueFamily.Control.Next) == true,
             )
             VexIconButton(
                 element = VexStreamMusicScreen.ShuffleQueue,
                 handler = handler,
                 enabled =
-                    queueProjection
-                        ?.get(
-                            VexStreamQueueControl.Shuffle,
-                        )
-                        ?.isAvailable == true,
+                    queueState?.isAvailable(VexStreamQueueFamily.Control.Shuffle) == true,
             )
             VexIconButton(
                 element = VexStreamMusicScreen.ShowQueue,
@@ -327,8 +315,8 @@ internal fun VexStreamFullPlayerSheet(
         rememberVexStreamQueueExperience(
             controller,
         )
-    val queueProjection =
-        queueExperience.projection
+    val queueState =
+        queueExperience.state
     val repeatExperience =
         rememberVexStreamRepeatExperience(
             controller,
@@ -369,7 +357,7 @@ internal fun VexStreamFullPlayerSheet(
             when (element) {
                 VexStreamMusicScreen.PreviousTrack ->
                     queueExperience.activate(
-                        VexStreamQueueControl.Previous,
+                        VexStreamQueueFamily.Control.Previous,
                     )
 
                 VexStreamMusicScreen.TogglePlayback ->
@@ -379,12 +367,12 @@ internal fun VexStreamFullPlayerSheet(
 
                 VexStreamMusicScreen.NextTrack ->
                     queueExperience.activate(
-                        VexStreamQueueControl.Next,
+                        VexStreamQueueFamily.Control.Next,
                     )
 
                 VexStreamMusicScreen.ShuffleQueue ->
                     queueExperience.activate(
-                        VexStreamQueueControl.Shuffle,
+                        VexStreamQueueFamily.Control.Shuffle,
                     )
 
                 VexStreamMusicScreen.ToggleRepeat ->
@@ -487,7 +475,7 @@ internal fun VexStreamFullPlayerSheet(
                             )
                             .pointerInput(
                                 playback.currentMediaId,
-                                queueProjection,
+                                queueState,
                             ) {
                                 detectHorizontalDragGestures(
                                     onDragStart = {
@@ -508,11 +496,7 @@ internal fun VexStreamFullPlayerSheet(
 
                                         if (
                                             control != null &&
-                                            queueProjection
-                                                ?.get(
-                                                    control,
-                                                )
-                                                ?.isAvailable == true
+                                            queueState?.isAvailable(control) == true
                                         ) {
                                             runtime
                                                 .recordDynamicInteraction(
@@ -671,12 +655,11 @@ internal fun VexStreamFullPlayerSheet(
                                 .PreviousTrack,
                         handler = handler,
                         enabled =
-                            queueProjection
-                                ?.get(
-                                    VexStreamQueueControl
+                            queueState
+                                ?.isAvailable(
+                                    VexStreamQueueFamily.Control
                                         .Previous,
-                                )
-                                ?.isAvailable == true,
+                                ) == true,
                         semanticRef =
                             VexStreamPresentationRefs
                                 .fullPlayerAction(
@@ -707,11 +690,7 @@ internal fun VexStreamFullPlayerSheet(
                                 .NextTrack,
                         handler = handler,
                         enabled =
-                            queueProjection
-                                ?.get(
-                                    VexStreamQueueControl.Next,
-                                )
-                                ?.isAvailable == true,
+                            queueState?.isAvailable(VexStreamQueueFamily.Control.Next) == true,
                         semanticRef =
                             VexStreamPresentationRefs
                                 .fullPlayerAction(
@@ -735,11 +714,7 @@ internal fun VexStreamFullPlayerSheet(
                                 .ShuffleQueue,
                         handler = handler,
                         enabled =
-                            queueProjection
-                                ?.get(
-                                    VexStreamQueueControl.Shuffle,
-                                )
-                                ?.isAvailable == true,
+                            queueState?.isAvailable(VexStreamQueueFamily.Control.Shuffle) == true,
                         semanticRef =
                             VexStreamPresentationRefs
                                 .fullPlayerAction(
@@ -929,7 +904,7 @@ private fun VexStreamPlaybackTimeline(
 internal fun vexStreamFullPlayerSwipeControl(
     dragDistancePx: Float,
     thresholdPx: Float,
-): VexStreamQueueControl? {
+): VexStreamQueueFamily.Control? {
     require(
         thresholdPx > 0f,
     ) {
@@ -938,10 +913,10 @@ internal fun vexStreamFullPlayerSwipeControl(
 
     return when {
         dragDistancePx >= thresholdPx ->
-            VexStreamQueueControl.Previous
+            VexStreamQueueFamily.Control.Previous
 
         dragDistancePx <= -thresholdPx ->
-            VexStreamQueueControl.Next
+            VexStreamQueueFamily.Control.Next
 
         else ->
             null

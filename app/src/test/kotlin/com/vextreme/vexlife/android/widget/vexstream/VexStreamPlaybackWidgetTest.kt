@@ -5,7 +5,7 @@ import com.vextreme.vexlife.android.MainActivity
 import com.vextreme.vexlife.android.resolveVexLifeExternalScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
-import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueFamily
 import com.vextreme.vexlife.android.widget.VexWidgetActionRef
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -21,7 +21,7 @@ class VexStreamPlaybackWidgetTest {
     fun widgetActionRefsResolveOnlyExistingPlaybackAndQueueControls() {
         assertEquals(
             VexStreamPlaybackWidgetCommand.Queue(
-                VexStreamQueueControl.Previous,
+                VexStreamQueueFamily.Control.Previous,
             ),
             vexStreamPlaybackWidgetCommand(
                 VexStreamPlaybackWidgetActions.Previous,
@@ -37,7 +37,7 @@ class VexStreamPlaybackWidgetTest {
         )
         assertEquals(
             VexStreamPlaybackWidgetCommand.Queue(
-                VexStreamQueueControl.Next,
+                VexStreamQueueFamily.Control.Next,
             ),
             vexStreamPlaybackWidgetCommand(
                 VexStreamPlaybackWidgetActions.Next,

@@ -3,39 +3,31 @@ package com.vextreme.vexlife.android.vexstream.queue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.media3.common.Player
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.session.MediaController
 
-/**
- * Compose-facing membrane for the VexStream neighboring-item Queue behavior.
- *
- * Queue does not currently need an additional DisplayState classification: the Behavior Projection
- * already answers the view question used by Mini Player and Context Dock. This boundary owns no
- * Queue truth; it observes the current projection and carries Controls back to the Connection.
- */
+/** Compose reads Queue Family State here and sends Family Controls to the provider bridge. */
 internal interface VexStreamQueueExperience {
-    val projection:
-        VexStreamQueueProjection?
+    val state:
+        VexStreamQueueFamily.State?
 
     fun activate(
         control:
-            VexStreamQueueControl,
+            VexStreamQueueFamily.Control,
     )
 }
 
 private class CurrentVexStreamQueueExperience(
-    override val projection:
-        VexStreamQueueProjection?,
+    override val state:
+        VexStreamQueueFamily.State?,
     private val connection:
-        VexStreamQueueConnection?,
+        Media3VexStreamQueueConnection?,
 ) :
     VexStreamQueueExperience {
     override fun activate(
         control:
-            VexStreamQueueControl,
+            VexStreamQueueFamily.Control,
     ) {
         connection?.activate(
             control,
@@ -47,79 +39,49 @@ private class CurrentVexStreamQueueExperience(
 internal fun rememberVexStreamQueueExperience(
     controller:
         MediaController?,
-): VexStreamQueueExperience {
+):
+    VexStreamQueueExperience {
     val connection =
         remember(
             controller,
         ) {
-            controller?.let {
-                Media3VexStreamQueueConnection(
-                    it,
-                )
-            }
-        }
-
-    var projection by
-        remember(
-            connection,
-        ) {
-            mutableStateOf(
-                connection
-                    ?.currentProjection,
+            controller?.let(
+                ::Media3VexStreamQueueConnection,
             )
         }
 
     DisposableEffect(
-        controller,
         connection,
     ) {
-        if (
-            controller == null ||
-            connection == null
-        ) {
-            projection = null
-            return@DisposableEffect onDispose {}
-        }
-
-        val listener =
-            object :
-                Player.Listener {
-                override fun onEvents(
-                    player: Player,
-                    events:
-                        Player.Events,
-                ) {
-                    projection =
-                        connection
-                            .currentProjection
-                }
-            }
-
-        controller.addListener(
-            listener,
-        )
-        projection =
-            connection
-                .currentProjection
-
         onDispose {
-            controller.removeListener(
-                listener,
-            )
+            connection?.close()
         }
     }
 
+    val state:
+        VexStreamQueueFamily.State? =
+        if (
+            connection == null
+        ) {
+            null
+        } else {
+            val observed by
+                connection.states
+                    .collectAsStateWithLifecycle()
+            observed
+        }
+
     return remember(
         connection,
-        projection,
+        state,
     ) {
         CurrentVexStreamQueueExperience(
-            projection =
-                projection,
+            state =
+                state,
             connection =
                 connection,
         )
     }
 }
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][QUEUE][EXPERIENCE]
