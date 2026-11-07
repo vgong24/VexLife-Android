@@ -57,8 +57,7 @@ import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlayback
 import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackSeekPositionMs
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
 import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueExperience
-import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatControl
-import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatState
+import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatFamily
 import com.vextreme.vexlife.android.vexstream.repeat.rememberVexStreamRepeatExperience
 
 /**
@@ -334,8 +333,8 @@ internal fun VexStreamFullPlayerSheet(
         rememberVexStreamRepeatExperience(
             controller,
         )
-    val repeatProjection =
-        repeatExperience.projection
+    val repeatState =
+        repeatExperience.state
     val seekConnection =
         rememberVexStreamPlaybackSeekConnection(
             controller,
@@ -390,7 +389,7 @@ internal fun VexStreamFullPlayerSheet(
 
                 VexStreamMusicScreen.ToggleRepeat ->
                     repeatExperience.activate(
-                        VexStreamRepeatControl.Toggle,
+                        VexStreamRepeatFamily.Control.Toggle,
                     )
 
                 else -> Unit
@@ -754,15 +753,11 @@ internal fun VexStreamFullPlayerSheet(
                                 .ToggleRepeat,
                         handler = handler,
                         enabled =
-                            repeatProjection
-                                ?.get(
-                                    VexStreamRepeatControl.Toggle,
-                                )
-                                ?.isAvailable == true,
+                            repeatState
+                                ?.toggleAvailable == true,
                         selected =
-                            repeatProjection
-                                ?.state is
-                                VexStreamRepeatState.Enabled,
+                            repeatState is
+                                VexStreamRepeatFamily.State.Enabled,
                         semanticRef =
                             VexStreamPresentationRefs
                                 .fullPlayerAction(
