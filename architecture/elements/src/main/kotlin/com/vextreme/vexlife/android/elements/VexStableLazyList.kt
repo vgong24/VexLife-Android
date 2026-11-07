@@ -30,12 +30,18 @@ import kotlinx.coroutines.flow.distinctUntilChanged
  *   list projection until its owning feature releases the condition;
  * - the list itself has one stable semantic ref/test tag;
  * - current visible item refs are projected as a Set for relationships such as anchored attention;
+ * - an optional [headerContent] scrolls with the list ahead of feature-owned items without becoming
+ *   one of those items or entering the visible-item projection;
  * - item meaning, actions, row layout, repositories, ordering policy, and presentation eligibility
  *   remain with the feature that supplied [items] and [itemContent].
  *
- * Real consumers now include Events (visibility/anchored-attention pressure) and VexStream Search
- * (runtime track identity/QA addressing). Their different domain meaning is evidence that the shared
- * concern is stable repeated-item mechanics rather than an Events-specific list abstraction.
+ * Real consumers include Events (visibility/anchored-attention pressure), Family Conversation
+ * (runtime messages), VexStream Search (runtime track identity/QA addressing), and VexStream library
+ * panels that preserve in-list navigation before stable repeated rows. Their different domain meaning
+ * earns this as stable repeated-item mechanics rather than a feature-specific list abstraction.
+ *
+ * A downstream projector can therefore recover one truthful repeated-item relationship from the same
+ * source contract without registering runtime rows as fake static Screen elements.
  *
  * Useful torture conditions for a caller:
  *
@@ -57,6 +63,7 @@ fun <Item> VexStableLazyColumn(
     verticalArrangement: Arrangement.Vertical =
         Arrangement.spacedBy(12.dp),
     onVisibleItemRefsChanged: (Set<String>) -> Unit = {},
+    headerContent: (@Composable LazyItemScope.() -> Unit)? = null,
     emptyContent: @Composable LazyItemScope.() -> Unit = {},
     itemContent: @Composable LazyItemScope.(Item) -> Unit,
 ) {
@@ -69,6 +76,13 @@ fun <Item> VexStableLazyColumn(
             items = items,
             itemRef = itemRef,
         )
+    val headerKey =
+        headerContent?.let {
+            stableListHeaderKey(
+                listRef = listRef,
+                itemRefs = refs,
+            )
+        }
     val listState =
         rememberLazyListState()
     val currentVisibleCallback by
@@ -96,7 +110,12 @@ fun <Item> VexStableLazyColumn(
             }
 
         if (index >= 0) {
-            listState.animateScrollToItem(index)
+            listState.animateScrollToItem(
+                stableLazyItemIndex(
+                    itemIndex = index,
+                    hasHeader = headerKey != null,
+                ),
+            )
         }
     }
 
@@ -125,6 +144,16 @@ listRef,
         verticalArrangement = verticalArrangement,
         userScrollEnabled = userScrollEnabled,
     ) {
+        if (
+            headerContent != null &&
+            headerKey != null
+        ) {
+            item(
+                key = headerKey,
+                content = headerContent,
+            )
+        }
+
         if (items.isEmpty()) {
             item(
                 key = "$listRef.empty",
@@ -139,6 +168,46 @@ listRef,
             )
         }
     }
+}
+
+/**
+ * Lazy-list position of one feature item when an optional non-item header precedes the item set.
+ */
+internal fun stableLazyItemIndex(
+    itemIndex: Int,
+    hasHeader: Boolean,
+): Int {
+    require(itemIndex >= 0) {
+        "stable list item index must be >= 0"
+    }
+
+    return itemIndex +
+        if (hasHeader) {
+            1
+        } else {
+            0
+        }
+}
+
+/**
+ * Compose-only key for the optional list header.
+ *
+ * Feature-owned item refs remain sovereign. If one already occupies the reserved derived key, fail
+ * closed instead of silently creating duplicate LazyColumn keys.
+ */
+internal fun stableListHeaderKey(
+    listRef: String,
+    itemRefs: Set<String>,
+): String {
+    require(listRef.isNotBlank()) {
+        "stable list ref must not be blank"
+    }
+
+    val key = "$listRef.header"
+    require(key !in itemRefs) {
+        "stable list header key collides with feature item ref: $key"
+    }
+    return key
 }
 
 internal fun <Item> stableItemRefs(
