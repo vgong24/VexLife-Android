@@ -185,6 +185,9 @@ internal fun InsulinPartnerLabScreenContent(
 
                     InsulinPartnerLabScreen.ReceivePumpDelivery ->
                         lab.receiveSyntheticPumpDelivery()
+
+                    else ->
+                        Unit
                 }
             }
         }
