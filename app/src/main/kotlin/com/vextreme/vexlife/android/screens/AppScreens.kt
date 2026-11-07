@@ -14,6 +14,7 @@ import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
 import com.vextreme.vexlife.android.screens.shared.insulin.InsulinPartnerLabScreen
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsScreen
+import com.vextreme.vexlife.android.screens.shared.partners.PartnersCircuitLabScreen
 import com.vextreme.vexlife.android.screens.shared.vex.TalkToVexScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
 import com.vextreme.vexlife.android.shell.AppShell
@@ -40,6 +41,7 @@ object AppScreens {
         DebugMenuScreen,
         CgmPartnerLabScreen,
         InsulinPartnerLabScreen,
+        PartnersCircuitLabScreen,
         GalleryScreen,
         UserProfileScreen,
         VexFamilyConversationScreen,
