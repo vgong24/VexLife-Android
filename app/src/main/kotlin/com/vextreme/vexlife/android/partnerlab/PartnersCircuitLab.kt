@@ -233,7 +233,13 @@ internal class PartnersCircuitLab(
     }
 
     fun receiveSyntheticCgmPacket() =
-        cgm.receiveSyntheticPacket()
+        receiveSyntheticCgmBlePacket()
+
+    fun receiveSyntheticCgmBlePacket() =
+        cgm.receiveSyntheticBlePacket()
+
+    fun receiveSyntheticCgmHttpResponse() =
+        cgm.receiveSyntheticHttpResponse()
 
     fun receiveSyntheticPenPacket() =
         insulin.receiveSyntheticPenPacket()
