@@ -16,7 +16,8 @@ internal object InsulinPumpPartner :
 
     data class Source(
         val pumpRef: String,
-    )
+    ) :
+        VexPartner.Source<InsulinPumpPartner>
 
     sealed interface Signal :
         VexPartner.Signal<InsulinPumpPartner> {
@@ -39,7 +40,12 @@ internal object InsulinPumpPartner :
 
     internal class Connection(
         override val id: Id,
-        private val decoder: Decoder,
+        private val conversion:
+            VexPartner.Connection.Conversion<
+                ByteArray,
+                InsulinPumpPartner,
+                Signal
+            >,
         private val receiver: Receiver,
     ) :
         VexPartner.Connection<
@@ -113,12 +119,12 @@ internal object InsulinPumpPartner :
          *     r|pump|remainingUnitsHundredths
          */
         class Decoder :
-            VexPartner.Connection.Decoder<
+            VexPartner.Connection.Conversion<
                 ByteArray,
                 InsulinPumpPartner,
                 Signal
             > {
-            override fun decode(
+            override fun convert(
                 input: ByteArray,
             ): List<Signal> =
                 input
@@ -229,8 +235,8 @@ internal object InsulinPumpPartner :
             observedAtEpochMillis: Long,
         ):
             List<Observation> =
-            decoder
-                .decode(
+            conversion
+                .convert(
                     bytes,
                 )
                 .map { signal ->
