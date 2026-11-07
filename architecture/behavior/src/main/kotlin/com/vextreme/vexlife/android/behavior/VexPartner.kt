@@ -50,13 +50,15 @@ interface VexPartner<
         Partner : VexPartner<Partner>,
         PartnerSignal : Signal<Partner> {
 
+        /** Exact typed identity of this live Connection relationship. */
+        val id:
+            Id<Partner>
+
         /** Typed identity for the concrete Connection occurrence/source of an Observation. */
         interface Id<
             Partner,
         > where
-            Partner : VexPartner<Partner> {
-            val value: String
-        }
+            Partner : VexPartner<Partner>
 
         /**
          * Provider representation -> zero or more Partner Signals.
