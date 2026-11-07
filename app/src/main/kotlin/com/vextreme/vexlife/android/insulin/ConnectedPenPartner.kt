@@ -155,14 +155,12 @@ internal object ConnectedPenPartner :
         ) :
             VexPartner.Connection.Receiver<
                 ConnectedPenPartner,
-                Signal
+                Signal,
+                Observation
             > {
-            override fun receive(
+            override suspend fun receive(
                 observation:
-                    VexPartner.Connection.Observation<
-                        ConnectedPenPartner,
-                        Signal
-                    >,
+                    Observation,
             ) {
                 store.commitPen(
                     observation,
@@ -170,7 +168,7 @@ internal object ConnectedPenPartner :
             }
         }
 
-        fun receive(
+        suspend fun receive(
             bytes: ByteArray,
             observedAtEpochMillis: Long,
         ):
@@ -187,9 +185,11 @@ internal object ConnectedPenPartner :
                             signal,
                         observedAtEpochMillis =
                             observedAtEpochMillis,
-                    ).also(
-                        receiver::receive,
-                    )
+                    ).also { observation ->
+                        receiver.receive(
+                            observation,
+                        )
+                    }
                 }
     }
 }
