@@ -117,7 +117,7 @@ internal object CgmPartner :
                         parts
                             .takeIf {
                                 it.size ==
-                                    8
+                                    6
                             }
                             ?.let {
                                 Signal.Glucose(
