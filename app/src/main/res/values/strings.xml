@@ -410,4 +410,15 @@
     <string name="insulin_partner_lab_receive_pump">Receive synthetic pump outcome</string>
     <string name="insulin_partner_lab_debug_helper">Pressure Partner symmetry with a sparse connected pen and a bidirectional pump. Synthetic architecture lab only; no treatment or real-device claim.</string>
 
+
+    <string name="partners_circuit_lab_title">Partners Circuit Lab</string>
+    <string name="partners_circuit_lab_open">Open Partners Circuit Lab</string>
+    <string name="partners_circuit_lab_intro">Close the synthetic loop: Partner signals rise through Store and Family, then a lab rule re-enters another Family through Control and reaches the Pump Partner through Effect and Method.</string>
+    <string name="partners_circuit_lab_automation_toggle">Enable synthetic CGM → Pump rule</string>
+    <string name="partners_circuit_lab_receive_cgm">Receive synthetic CGM packet</string>
+    <string name="partners_circuit_lab_receive_pen">Receive synthetic pen packet</string>
+    <string name="partners_circuit_lab_request_pump">Request synthetic pump delivery manually</string>
+    <string name="partners_circuit_lab_receive_pump">Receive synthetic pump outcome</string>
+    <string name="partners_circuit_lab_debug_helper">One Screen demonstrates sustained VexExecution listeners, Partner ingress, shared Store convergence, Family semantics, and the reverse Family Effect → Pump Partner path. Synthetic architecture fixture only.</string>
+
 </resources>
