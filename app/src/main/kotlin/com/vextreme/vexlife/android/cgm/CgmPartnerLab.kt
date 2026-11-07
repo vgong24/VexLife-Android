@@ -35,6 +35,9 @@ internal class CgmPartnerLab(
         VexExecutionRoot =
         VexExecutionRoot(),
 ) {
+    private object InboundAdmission :
+        VexExecution.RelationshipId
+
     private val receiver =
         CgmPartner.Connection.Receiver(
             store =
@@ -89,11 +92,13 @@ internal class CgmPartnerLab(
      */
     fun receiveSyntheticPacket():
         Job =
-        VexExecution.begin(
+        VexExecution.beginQueued(
             executionRoot =
                 executionRoot,
             owner =
-                this,
+                connection,
+            relationshipId =
+                InboundAdmission,
             operation =
                 ::receiveSyntheticPacketAndAwait,
             argument =
