@@ -117,7 +117,7 @@ internal object CgmPartner :
                         parts
                             .takeIf {
                                 it.size ==
-                                    6
+                                    7
                             }
                             ?.let {
                                 Signal.Glucose(
@@ -161,7 +161,7 @@ internal object CgmPartner :
                         parts
                             .takeIf {
                                 it.size ==
-                                    7
+                                    6
                             }
                             ?.let {
                                 Signal.Temperature(
