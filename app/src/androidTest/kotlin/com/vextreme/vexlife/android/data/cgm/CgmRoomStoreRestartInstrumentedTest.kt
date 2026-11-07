@@ -95,13 +95,17 @@ class CgmRoomStoreRestartInstrumentedTest {
                         .observations
                         .size,
                 )
-                assertSame(
-                    originalObservation
-                        .signal,
+                assertEquals(
+                    originalObservation,
                     admitted
                         .observations
-                        .single()
-                        .signal,
+                        .single(),
+                )
+                assertNotSame(
+                    originalObservation,
+                    admitted
+                        .observations
+                        .single(),
                 )
             } finally {
                 firstDatabase.close()
