@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.behavior
 
 import org.junit.Assert.assertEquals
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertSame
 import org.junit.Test
 
@@ -61,7 +62,7 @@ class VexPartnerHighConfidenceTest {
                     SensorPartner,
                     Signal
                 > {
-                override fun receive(
+                override suspend fun receive(
                     observation:
                         VexPartner.Connection.Observation<
                             SensorPartner,
@@ -70,7 +71,7 @@ class VexPartnerHighConfidenceTest {
                 )
             }
 
-            fun receive(
+            suspend fun receive(
                 input: ByteArray,
                 observedAtEpochMillis: Long,
             ): List<Observation> =
@@ -86,15 +87,18 @@ class VexPartnerHighConfidenceTest {
                                 signal,
                             observedAtEpochMillis =
                                 observedAtEpochMillis,
-                        ).also(
-                            receiver::receive,
-                        )
+                        ).also { observation ->
+                            receiver.receive(
+                                observation,
+                            )
+                        }
                     }
         }
     }
 
     @Test
-    fun oneProviderRepresentationMayProduceSeveralPartnerSignalsWithoutLosingConnectionOccurrence() {
+    fun oneProviderRepresentationMayProduceSeveralPartnerSignalsWithoutLosingConnectionOccurrence() =
+        runBlocking {
         val received =
             mutableListOf<
                 VexPartner.Connection.Observation<
