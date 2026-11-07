@@ -211,14 +211,12 @@ internal object CgmPartner :
         ) :
             VexPartner.Connection.Receiver<
                 CgmPartner,
-                Signal
+                Signal,
+                Observation
             > {
-            override fun receive(
+            override suspend fun receive(
                 observation:
-                    VexPartner.Connection.Observation<
-                        CgmPartner,
-                        Signal
-                    >,
+                    Observation,
             ) {
                 store.commit(
                     observation,
@@ -226,7 +224,7 @@ internal object CgmPartner :
             }
         }
 
-        fun receive(
+        suspend fun receive(
             bytes: ByteArray,
             observedAtEpochMillis: Long,
         ):
@@ -243,9 +241,11 @@ internal object CgmPartner :
                             signal,
                         observedAtEpochMillis =
                             observedAtEpochMillis,
-                    ).also(
-                        receiver::receive,
-                    )
+                    ).also { observation ->
+                        receiver.receive(
+                            observation,
+                        )
+                    }
                 }
     }
 }
