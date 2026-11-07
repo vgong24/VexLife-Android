@@ -16,6 +16,7 @@ class VexPartnerHighConfidenceTest {
         sealed interface Signal :
             VexPartner.Signal<SensorPartner> {
             data class Value(
+                val source: Source,
                 val value: Int,
             ) :
                 Signal
@@ -51,6 +52,11 @@ class VexPartnerHighConfidenceTest {
                 ): List<Signal> =
                     input.map { value ->
                         Signal.Value(
+                            source =
+                                Source(
+                                    sensorRef =
+                                        "sensor.synthetic",
+                                ),
                             value =
                                 value.toInt(),
                         )
@@ -162,7 +168,13 @@ class VexPartnerHighConfidenceTest {
         )
         assertEquals(
             SensorPartner.Signal.Value(
-                value = 11,
+                source =
+                    SensorPartner.Source(
+                        sensorRef =
+                            "sensor.synthetic",
+                    ),
+                value =
+                    11,
             ),
             observations[0].signal,
         )
