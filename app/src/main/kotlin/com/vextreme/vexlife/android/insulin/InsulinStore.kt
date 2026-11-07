@@ -1,21 +1,14 @@
 package com.vextreme.vexlife.android.insulin
 
-import com.vextreme.vexlife.android.behavior.VexPartner
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 internal typealias InsulinPenObservation =
-    VexPartner.Connection.Observation<
-        ConnectedPenPartner,
-        ConnectedPenPartner.Signal
-    >
+    ConnectedPenPartner.Connection.Observation
 
 internal typealias InsulinPumpObservation =
-    VexPartner.Connection.Observation<
-        InsulinPumpPartner,
-        InsulinPumpPartner.Signal
-    >
+    InsulinPumpPartner.Connection.Observation
 
 /**
  * One durable-domain convergence boundary fed by two different Partners.
@@ -102,7 +95,7 @@ internal class InsulinStore {
         get() =
             snapshots.value
 
-    internal fun commitPen(
+    internal suspend fun commitPen(
         observation:
             InsulinPenObservation,
     ):
@@ -123,7 +116,7 @@ internal class InsulinStore {
             )
         }
 
-    internal fun commitPump(
+    internal suspend fun commitPump(
         observation:
             InsulinPumpObservation,
     ):
