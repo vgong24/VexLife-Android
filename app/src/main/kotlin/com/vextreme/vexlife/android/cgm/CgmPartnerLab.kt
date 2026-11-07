@@ -57,8 +57,9 @@ internal class CgmPartnerLab(
                 receiver,
         )
 
-    private var nextSequence =
-        1L
+    private var nextSequence:
+        Long? =
+        null
 
     init {
         /*
@@ -120,7 +121,7 @@ internal class CgmPartnerLab(
             CgmPartner.Connection.Observation
         > {
         val sequence =
-            nextSequence++
+            nextSyntheticSequence()
         val capturedAt =
             nowEpochMillis()
         val mgDl =
@@ -201,6 +202,84 @@ internal class CgmPartnerLab(
             observedAtEpochMillis =
                 nowEpochMillis(),
         )
+    }
+
+    private suspend fun nextSyntheticSequence():
+        Long {
+        val current =
+            nextSequence
+
+        if (
+            current !=
+            null
+        ) {
+            nextSequence =
+                current +
+                    1L
+            return current
+        }
+
+        /*
+         * Restart does not create a new acquisition history. Resume the synthetic source sequence
+         * from durable Store truth for this exact source/epoch.
+         *
+         * This lookup happens inside the queued inbound Connection relationship, so two rapid
+         * synthetic packets cannot race the initialization.
+         */
+        val restoredMax =
+            store
+                .readCurrent()
+                .observations
+                .asSequence()
+                .map {
+                    it.signal
+                }
+                .filter { signal ->
+                    when (
+                        signal
+                    ) {
+                        is CgmPartner.Signal.Glucose ->
+                            signal.source ==
+                                CgmPartner.Source(
+                                    deviceRef =
+                                        "cgm-synthetic",
+                                    acquisitionEpoch =
+                                        "epoch-a",
+                                )
+
+                        is CgmPartner.Signal.Temperature ->
+                            signal.source ==
+                                CgmPartner.Source(
+                                    deviceRef =
+                                        "cgm-synthetic",
+                                    acquisitionEpoch =
+                                        "epoch-a",
+                                )
+                    }
+                }
+                .map { signal ->
+                    when (
+                        signal
+                    ) {
+                        is CgmPartner.Signal.Glucose ->
+                            signal.sequence
+
+                        is CgmPartner.Signal.Temperature ->
+                            signal.sequence
+                    }
+                }
+                .maxOrNull()
+                ?: 0L
+
+        val next =
+            restoredMax +
+                1L
+
+        nextSequence =
+            next +
+                1L
+
+        return next
     }
 
     fun close() {
