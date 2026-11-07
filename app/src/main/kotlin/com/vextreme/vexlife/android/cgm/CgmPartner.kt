@@ -220,16 +220,8 @@ internal object CgmPartner :
                         Signal
                     >,
             ) {
-                val cgmObservation =
-                    requireNotNull(
-                        observation as?
-                            Observation,
-                    ) {
-                        "CgmPartner.Connection.Receiver requires CgmPartner.Connection.Observation"
-                    }
-
                 store.commit(
-                    cgmObservation,
+                    observation,
                 )
             }
         }
