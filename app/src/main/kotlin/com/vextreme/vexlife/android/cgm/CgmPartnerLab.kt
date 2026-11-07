@@ -6,7 +6,9 @@ import android.content.Context
 import com.vextreme.vexlife.android.data.cgm.CgmStoreFactory
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.sync.Mutex
 
 /**
  * Lab composition for one CGM Partner vocabulary realized through two provider representations.
@@ -84,8 +86,11 @@ internal class CgmPartnerLab(
                 receiver,
         )
 
+    private val sequenceInitialization =
+        Mutex()
+
     private var nextSequence:
-        Long? =
+        AtomicLong? =
         null
 
     init {
@@ -384,75 +389,80 @@ internal class CgmPartnerLab(
 
     private suspend fun nextSyntheticSequence():
         Long {
-        val current =
-            nextSequence
-
-        if (
-            current !=
-            null
-        ) {
-            nextSequence =
-                current +
-                    1L
-            return current
-        }
-
-        val source =
-            CgmPartner.Source(
-                deviceRef =
-                    "cgm-synthetic",
-                acquisitionEpoch =
-                    "epoch-a",
-            )
+        nextSequence
+            ?.let {
+                return it.getAndIncrement()
+            }
 
         /*
-         * Restart does not create a new acquisition history. Resume the synthetic Source sequence
-         * from durable Store truth inside the queued live-Connection admission lane.
+         * BLE and HTTP are independent Connection execution lanes but share one synthetic Partner
+         * Source. Real CGM sequence comes from the device; this lab must emulate that Source-owned
+         * sequence safely across both transport realizations.
          */
-        val restoredMax =
-            store
-                .readCurrent()
-                .observations
-                .asSequence()
-                .map {
-                    it.signal
-                }
-                .filter { signal ->
-                    when (
-                        signal
-                    ) {
-                        is CgmPartner.Signal.Glucose ->
-                            signal.source ==
-                                source
+        sequenceInitialization.lock()
 
-                        is CgmPartner.Signal.Temperature ->
-                            signal.source ==
-                                source
+        try {
+            nextSequence
+                ?.let {
+                    return it.getAndIncrement()
+                }
+
+            val source =
+                CgmPartner.Source(
+                    deviceRef =
+                        "cgm-synthetic",
+                    acquisitionEpoch =
+                        "epoch-a",
+                )
+
+            val restoredMax =
+                store
+                    .readCurrent()
+                    .observations
+                    .asSequence()
+                    .map {
+                        it.signal
                     }
-                }
-                .map { signal ->
-                    when (
-                        signal
-                    ) {
-                        is CgmPartner.Signal.Glucose ->
-                            signal.sequence
+                    .filter { signal ->
+                        when (
+                            signal
+                        ) {
+                            is CgmPartner.Signal.Glucose ->
+                                signal.source ==
+                                    source
 
-                        is CgmPartner.Signal.Temperature ->
-                            signal.sequence
+                            is CgmPartner.Signal.Temperature ->
+                                signal.source ==
+                                    source
+                        }
                     }
-                }
-                .maxOrNull()
-                ?: 0L
+                    .map { signal ->
+                        when (
+                            signal
+                        ) {
+                            is CgmPartner.Signal.Glucose ->
+                                signal.sequence
 
-        val next =
-            restoredMax +
-                1L
+                            is CgmPartner.Signal.Temperature ->
+                                signal.sequence
+                        }
+                    }
+                    .maxOrNull()
+                    ?: 0L
 
-        nextSequence =
-            next +
-                1L
+            val counter =
+                AtomicLong(
+                    restoredMax +
+                        1L,
+                )
 
-        return next
+            nextSequence =
+                counter
+
+            return counter.getAndIncrement()
+        } finally {
+            sequenceInitialization.unlock()
+        }
     }
 
     fun close() {
