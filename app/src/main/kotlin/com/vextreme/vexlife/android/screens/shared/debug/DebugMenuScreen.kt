@@ -13,6 +13,7 @@ import com.vextreme.vexlife.android.elements.TextRole
 import com.vextreme.vexlife.android.elements.VexElementStyles
 import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.elements.invoke
+import com.vextreme.vexlife.android.elements.navigateTo
 import com.vextreme.vexlife.android.elements.open
 import com.vextreme.vexlife.android.data.events.SyntheticExternalEventController
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryFixture
@@ -20,7 +21,10 @@ import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
 import com.vextreme.vexlife.android.screens.AppScreenBlueprint
 import com.vextreme.vexlife.android.screens.ScreenActionContext
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
+import com.vextreme.vexlife.android.screens.shared.cgm.CgmPartnerLabScreen
 import com.vextreme.vexlife.android.screens.shared.debug.loghistory.LogHistorySheet
+import com.vextreme.vexlife.android.screens.shared.insulin.InsulinPartnerLabScreen
+import com.vextreme.vexlife.android.screens.shared.partners.PartnersCircuitLabScreen
 import com.vextreme.vexlife.android.shell.AppShell
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.AppActions
@@ -120,6 +124,33 @@ object DebugMenuScreen : AppScreenBlueprint(
         intent = invoke(AppActions.UseRandomAttentionLab),
     )
 
+
+    val OpenCgmPartnerLab = buttonRef(
+        id = "body.cgm-partner.actions.open",
+        labelRes = R.string.cgm_partner_lab_open,
+        style = VexElementStyles.Navigation,
+        icon = ElementIcon.Add,
+        intent = navigateTo(CgmPartnerLabScreen),
+    )
+
+
+    val OpenInsulinPartnerLab = buttonRef(
+        id = "body.insulin-partner.actions.open",
+        labelRes = R.string.insulin_partner_lab_open,
+        style = VexElementStyles.Navigation,
+        icon = ElementIcon.Add,
+        intent = navigateTo(InsulinPartnerLabScreen),
+    )
+
+
+    val OpenPartnersCircuitLab = buttonRef(
+        id = "body.partners-circuit.actions.open",
+        labelRes = R.string.partners_circuit_lab_open,
+        style = VexElementStyles.Navigation,
+        icon = ElementIcon.Add,
+        intent = navigateTo(PartnersCircuitLabScreen),
+    )
+
     val NextAttentionLabScenario = buttonRef(
         id = "body.events-simulator.actions.next-scenario",
         labelRes = R.string.events_simulator_next_scenario,
@@ -144,6 +175,51 @@ object DebugMenuScreen : AppScreenBlueprint(
                 text(
                     id = "helper",
                     textRes = R.string.log_history_helper,
+                    role = TextRole.Supporting,
+                )
+            }
+
+
+            card("cgm-partner") {
+                text(
+                    id = "title",
+                    textRes = R.string.cgm_partner_lab_title,
+                    role = TextRole.Title,
+                )
+                button(OpenCgmPartnerLab)
+                text(
+                    id = "helper",
+                    textRes = R.string.cgm_partner_lab_debug_helper,
+                    role = TextRole.Supporting,
+                )
+            }
+
+
+            card("insulin-partner") {
+                text(
+                    id = "title",
+                    textRes = R.string.insulin_partner_lab_title,
+                    role = TextRole.Title,
+                )
+                button(OpenInsulinPartnerLab)
+                text(
+                    id = "helper",
+                    textRes = R.string.insulin_partner_lab_debug_helper,
+                    role = TextRole.Supporting,
+                )
+            }
+
+
+            card("partners-circuit") {
+                text(
+                    id = "title",
+                    textRes = R.string.partners_circuit_lab_title,
+                    role = TextRole.Title,
+                )
+                button(OpenPartnersCircuitLab)
+                text(
+                    id = "helper",
+                    textRes = R.string.partners_circuit_lab_debug_helper,
                     role = TextRole.Supporting,
                 )
             }

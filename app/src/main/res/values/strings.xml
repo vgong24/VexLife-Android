@@ -394,4 +394,33 @@
     <string name="vexmaps_distribution_retry">Retry</string>
     <string name="vexmaps_distribution_plan_eta">Optimized travel estimate: ~%1$d min</string>
     <string name="vexmaps_distribution_optimized_order">Optimized order</string>
+
+    <string name="cgm_partner_lab_title">CGM Partner Circuit</string>
+    <string name="cgm_partner_lab_open">Open CGM Partner Circuit</string>
+    <string name="cgm_partner_lab_intro">Inject BLE-like bytes or an HTTP-like response and watch both provider representations convert into the same Partner Signals before Observation, Store, Family State, and Projection.</string>
+    <string name="cgm_partner_lab_receive_packet">Receive BLE-like CGM packet</string>
+    <string name="cgm_partner_lab_receive_http">Receive HTTP-like CGM response</string>
+    <string name="cgm_partner_lab_debug_helper">Patient-zero architecture lab for two provider representations → one Partner Signal vocabulary → Store → Family. Synthetic only; no clinical or real-device claim.</string>
+
+
+    <string name="insulin_partner_lab_title">Insulin Partner Circuit</string>
+    <string name="insulin_partner_lab_open">Open Insulin Partner Circuit</string>
+    <string name="insulin_partner_lab_intro">Compare two Partners converging into one Store and Family. Pen reports sparse dose truth; Pump exercises Family Effect → Method → Partner acknowledgement, then a separate reported outcome back through Store.</string>
+    <string name="insulin_partner_lab_receive_pen">Receive synthetic pen packet</string>
+    <string name="insulin_partner_lab_request_pump">Request synthetic pump delivery</string>
+    <string name="insulin_partner_lab_receive_pump">Receive synthetic pump outcome</string>
+    <string name="insulin_partner_lab_debug_helper">Pressure Partner symmetry with a sparse connected pen and a bidirectional pump. Synthetic architecture lab only; no treatment or real-device claim.</string>
+
+
+    <string name="partners_circuit_lab_title">Partners Circuit Lab</string>
+    <string name="partners_circuit_lab_open">Open Partners Circuit Lab</string>
+    <string name="partners_circuit_lab_intro">Close the synthetic loop: Partner signals rise through Store and Family, then a lab rule re-enters another Family through Control and reaches the Pump Partner through Effect and Method.</string>
+    <string name="partners_circuit_lab_automation_toggle">Enable synthetic CGM → Pump rule</string>
+    <string name="partners_circuit_lab_receive_cgm">Receive BLE-like CGM packet</string>
+    <string name="partners_circuit_lab_receive_cgm_http">Receive HTTP-like CGM response</string>
+    <string name="partners_circuit_lab_receive_pen">Receive synthetic pen packet</string>
+    <string name="partners_circuit_lab_request_pump">Request synthetic pump delivery manually</string>
+    <string name="partners_circuit_lab_receive_pump">Receive synthetic pump outcome</string>
+    <string name="partners_circuit_lab_debug_helper">One Screen demonstrates sustained VexExecution listeners, Partner ingress, shared Store convergence, Family semantics, and the reverse Family Effect → Pump Partner path. Synthetic architecture fixture only.</string>
+
 </resources>

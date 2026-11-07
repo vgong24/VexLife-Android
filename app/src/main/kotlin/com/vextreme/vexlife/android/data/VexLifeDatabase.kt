@@ -6,6 +6,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.vextreme.vexlife.android.data.cgm.CgmObservationDao
+import com.vextreme.vexlife.android.data.cgm.CgmObservationEntity
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryDao
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryEntity
 import com.vextreme.vexlife.android.data.maps.VexMapsDao
@@ -30,8 +32,9 @@ import com.vextreme.vexlife.android.data.userprofile.UserProfileEntity
         VexMapsStateEntity::class,
         VexMapsDistributionDraftEntity::class,
         VexMapsDistributionStopEntity::class,
+        CgmObservationEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 abstract class VexLifeDatabase : RoomDatabase() {
@@ -39,6 +42,7 @@ abstract class VexLifeDatabase : RoomDatabase() {
     abstract fun userProfileDao(): UserProfileDao
     abstract fun vexMapsDao(): VexMapsDao
     abstract fun vexMapsDistributionDao(): VexMapsDistributionDao
+    abstract fun cgmObservationDao(): CgmObservationDao
 
     companion object {
         /**
@@ -216,6 +220,61 @@ abstract class VexLifeDatabase : RoomDatabase() {
                 )
             }
         }
+
+        /**
+         * v6 adds the first durable Partner-observation patient zero.
+         *
+         * The table stores already-admitted CGM Observation provenance and Signal fields explicitly.
+         * Restoring these rows reconstructs Store truth; it does not replay Decoder / Receiver.
+         */
+        val migration5To6 =
+            object :
+                Migration(
+                    5,
+                    6,
+                ) {
+                override fun migrate(
+                    db:
+                        SupportSQLiteDatabase,
+                ) {
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS cgm_partner_observation (
+                            database_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            connection_ref TEXT NOT NULL,
+                            observed_at_epoch_millis INTEGER NOT NULL,
+                            signal_kind TEXT NOT NULL,
+                            source_device_ref TEXT NOT NULL,
+                            source_acquisition_epoch TEXT NOT NULL,
+                            signal_sequence INTEGER NOT NULL,
+                            captured_at_epoch_millis INTEGER NOT NULL,
+                            glucose_mg_dl INTEGER,
+                            glucose_reported_trend TEXT,
+                            temperature_celsius_hundredths INTEGER
+                        )
+                        """.trimIndent(),
+                    )
+
+                    db.execSQL(
+                        """
+                        CREATE INDEX IF NOT EXISTS index_cgm_partner_observation_source_device_ref_source_acquisition_epoch_signal_sequence
+                        ON cgm_partner_observation (
+                            source_device_ref,
+                            source_acquisition_epoch,
+                            signal_sequence
+                        )
+                        """.trimIndent(),
+                    )
+
+                    db.execSQL(
+                        """
+                        CREATE INDEX IF NOT EXISTS index_cgm_partner_observation_observed_at_epoch_millis
+                        ON cgm_partner_observation (observed_at_epoch_millis)
+                        """.trimIndent(),
+                    )
+                }
+            }
+
     }
 }
 
@@ -243,6 +302,7 @@ object VexLifeDatabaseFactory {
                     VexLifeDatabase.migration2To3,
                     VexLifeDatabase.migration3To4,
                     VexLifeDatabase.migration4To5,
+                    VexLifeDatabase.migration5To6,
                 )
                 .build()
                 .also { instance = it }
