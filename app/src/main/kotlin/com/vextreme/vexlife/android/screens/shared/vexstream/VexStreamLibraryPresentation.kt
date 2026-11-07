@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -28,6 +27,8 @@ import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.VexActionFab
 import com.vextreme.vexlife.android.elements.VexButton
 import com.vextreme.vexlife.android.elements.VexElementStyles
+import com.vextreme.vexlife.android.elements.VexModifier
+import com.vextreme.vexlife.android.elements.VexStableLazyColumn
 import com.vextreme.vexlife.android.elements.VexText
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.collection.VexStreamCollectionPlaybackOrder
@@ -265,6 +266,14 @@ internal fun VexStreamLibraryFabActions(
     }
 }
 
+/**
+ * Songs panel realization.
+ *
+ * The registered panel identity is also the repeated-item container identity. Stable item identity
+ * remains the trackRef owned by VexStream; the shared list owns only Android repeated-item mechanics.
+ * This makes the population relationship inspectable without registering runtime tracks as static
+ * Screen elements or teaching a downstream projector feature-specific row semantics.
+ */
 @Composable
 internal fun VexStreamSongsPane(
     runtime: VexRuntime,
@@ -280,25 +289,25 @@ internal fun VexStreamSongsPane(
             controller = controller,
             resolver = resolver,
         )
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+    VexStableLazyColumn(
+        listRef =
+            VexStreamMusicScreen.SongsPanel.elementId,
+        items = tracks,
+        itemRef = {
+            it.track.trackRef.value
+        },
+        contentType = {
+            "vexstream-track-row"
+        },
+        modifier = VexModifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        item(
-            key = "songs-tabs",
-        ) {
+        headerContent = {
             VexStreamLibraryTabs(
                 runtime = runtime,
             )
-        }
-
-        if (
-            tracks.isEmpty() &&
-            canShowTerminalEmptyState
-        ) {
-            item(
-                key = "songs-empty",
-            ) {
+        },
+        emptyContent = {
+            if (canShowTerminalEmptyState) {
                 VexStreamEmptyMessage(
                     text =
                         stringResource(
@@ -306,30 +315,29 @@ internal fun VexStreamSongsPane(
                         ),
                 )
             }
-        } else if (
-            tracks.isNotEmpty()
-        ) {
-            items(
-                items = tracks,
-                key = { it.track.trackRef.value },
-            ) { track ->
-                VexStreamTrackCard(
-                    runtime = runtime,
-                    presentationScope =
-                        VexStreamTrackPresentationScope.Songs,
-                    state = track,
-                    contextTracks = tracks,
-                    playbackConnection =
-                        trackPlaybackConnection,
-                    offlineCopyConnection =
-                        offlineCopyConnection,
-                    onVisitArtist = onVisitArtist,
-                )
-            }
-        }
+        },
+    ) { track ->
+        VexStreamTrackCard(
+            runtime = runtime,
+            presentationScope =
+                VexStreamTrackPresentationScope.Songs,
+            state = track,
+            contextTracks = tracks,
+            playbackConnection =
+                trackPlaybackConnection,
+            offlineCopyConnection =
+                offlineCopyConnection,
+            onVisitArtist = onVisitArtist,
+        )
     }
 }
 
+/**
+ * Downloads panel realization.
+ *
+ * The same repeated-row law is reused under the registered Downloads panel. Filtering remains
+ * VexStream feature truth; the stable-list owner receives only the already-selected runtime items.
+ */
 @Composable
 internal fun VexStreamDownloadsPane(
     runtime: VexRuntime,
@@ -352,25 +360,25 @@ internal fun VexStreamDownloadsPane(
                     VexStreamLocalCopyState.Downloaded
             }
         }
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+    VexStableLazyColumn(
+        listRef =
+            VexStreamMusicScreen.DownloadsPanel.elementId,
+        items = downloaded,
+        itemRef = {
+            it.track.trackRef.value
+        },
+        contentType = {
+            "vexstream-track-row"
+        },
+        modifier = VexModifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        item(
-            key = "downloads-tabs",
-        ) {
+        headerContent = {
             VexStreamLibraryTabs(
                 runtime = runtime,
             )
-        }
-
-        if (
-            downloaded.isEmpty() &&
-            canShowTerminalEmptyState
-        ) {
-            item(
-                key = "downloads-empty",
-            ) {
+        },
+        emptyContent = {
+            if (canShowTerminalEmptyState) {
                 VexStreamEmptyMessage(
                     text =
                         stringResource(
@@ -378,27 +386,20 @@ internal fun VexStreamDownloadsPane(
                         ),
                 )
             }
-        } else if (
-            downloaded.isNotEmpty()
-        ) {
-            items(
-                items = downloaded,
-                key = { it.track.trackRef.value },
-            ) { track ->
-                VexStreamTrackCard(
-                    runtime = runtime,
-                    presentationScope =
-                        VexStreamTrackPresentationScope.Downloads,
-                    state = track,
-                    contextTracks = downloaded,
-                    playbackConnection =
-                        trackPlaybackConnection,
-                    offlineCopyConnection =
-                        offlineCopyConnection,
-                    onVisitArtist = onVisitArtist,
-                )
-            }
-        }
+        },
+    ) { track ->
+        VexStreamTrackCard(
+            runtime = runtime,
+            presentationScope =
+                VexStreamTrackPresentationScope.Downloads,
+            state = track,
+            contextTracks = downloaded,
+            playbackConnection =
+                trackPlaybackConnection,
+            offlineCopyConnection =
+                offlineCopyConnection,
+            onVisitArtist = onVisitArtist,
+        )
     }
 }
 
