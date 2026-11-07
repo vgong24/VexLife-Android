@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.screens.shared.vexstream
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -563,9 +564,16 @@ private fun VexStreamCollectionCard(
                         onOpen()
                     },
         ) {
-            VexColumn(
-                id = "copy",
-                modifier = VexModifier.padding(14.dp),
+            /*
+             * Match the established runtime-track pattern: the existing layout container carries
+             * the exact runtime row ref, while nested Vex cells inherit that ref and add only local
+             * presentation roles. No extra semantic container is invented just for projectability.
+             */
+            Column(
+                modifier =
+                    VexModifier
+                        .padding(14.dp)
+                        .vex(rowRef),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 VexText(
