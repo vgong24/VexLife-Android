@@ -2,7 +2,9 @@
 
 package com.vextreme.vexlife.android.insulin
 
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertSame
@@ -61,67 +63,78 @@ class InsulinPartnerCircuitTest {
     }
 
     @Test
-    fun penSignalsCommitToSharedStoreAndThenReachFamilyWithoutInventingCgmContinuity() {
-        val lab =
-            InsulinPartnerLab(
-                nowEpochMillis = {
-                    5_000L
-                },
-            )
+    fun penSignalsCommitToSharedStoreAndThenReachFamilyWithoutInventingCgmContinuity() =
+        runBlocking {
+            val lab =
+                InsulinPartnerLab(
+                    nowEpochMillis = {
+                        5_000L
+                    },
+                )
 
-        try {
-            val observations =
-                lab.receiveSyntheticPenPacket()
+            try {
+                val observations =
+                    lab.receiveSyntheticPenPacket()
 
-            assertEquals(
-                2,
-                observations.size,
-            )
-            assertEquals(
-                2,
-                lab.store
-                    .current
-                    .penObservations
-                    .size,
-            )
-            assertEquals(
-                0,
-                lab.store
-                    .current
-                    .pumpObservations
-                    .size,
-            )
+                assertEquals(
+                    2,
+                    observations.size,
+                )
+                assertEquals(
+                    2,
+                    lab.store
+                        .current
+                        .penObservations
+                        .size,
+                )
+                assertEquals(
+                    0,
+                    lab.store
+                        .current
+                        .pumpObservations
+                        .size,
+                )
 
-            val dose =
-                lab.store
-                    .current
-                    .latestPenDose
+                val dose =
+                    lab.store
+                        .current
+                        .latestPenDose
 
-            assertNotNull(
-                dose,
-            )
-            assertEquals(
-                "dose-1",
-                dose?.doseRef,
-            )
+                assertNotNull(
+                    dose,
+                )
+                assertEquals(
+                    "dose-1",
+                    dose?.doseRef,
+                )
 
-            val state =
-                lab.family
-                    .currentState as
-                    InsulinFamily.State.Admitted
+                val state =
+                    withTimeout(
+                        2_000L,
+                    ) {
+                        lab.family
+                            .states
+                            .first { state ->
+                                state is
+                                    InsulinFamily.State.Admitted &&
+                                    state.latestPenDose !=
+                                    null
+                            }
+                    } as
+                        InsulinFamily.State.Admitted
 
-            assertSame(
-                dose,
-                state.latestPenDose,
-            )
-            assertEquals(
-                2,
-                state.storedObservationCount,
-            )
-        } finally {
-            lab.close()
+                assertSame(
+                    dose,
+                    state.latestPenDose,
+                )
+                assertEquals(
+                    2,
+                    state.storedObservationCount,
+                )
+            } finally {
+                lab.close()
+            }
         }
-    }
 
     @Test
     fun pumpAcknowledgementDoesNotBecomeStoredDeliveryUntilLaterPartnerSignalArrives() =
@@ -200,8 +213,18 @@ class InsulinPartnerCircuitTest {
                 )
 
                 val state =
-                    lab.family
-                        .currentState as
+                    withTimeout(
+                        2_000L,
+                    ) {
+                        lab.family
+                            .states
+                            .first { state ->
+                                state is
+                                    InsulinFamily.State.Admitted &&
+                                    state.latestPumpDelivery !=
+                                    null
+                            }
+                    } as
                         InsulinFamily.State.Admitted
 
                 assertSame(
@@ -262,8 +285,20 @@ class InsulinPartnerCircuitTest {
                 )
 
                 val state =
-                    lab.family
-                        .currentState as
+                    withTimeout(
+                        2_000L,
+                    ) {
+                        lab.family
+                            .states
+                            .first { state ->
+                                state is
+                                    InsulinFamily.State.Admitted &&
+                                    state.latestPenDose !=
+                                    null &&
+                                    state.latestPumpDelivery !=
+                                    null
+                            }
+                    } as
                         InsulinFamily.State.Admitted
 
                 assertNotNull(
