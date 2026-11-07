@@ -20,6 +20,7 @@ import com.vextreme.vexlife.android.conversation.projectVexConversationSurface
 import com.vextreme.vexlife.android.conversation.projectVexFamilyConversationSendAvailability
 import com.vextreme.vexlife.android.conversation.VexFamilyConversationSurfaceSendAvailability
 import com.vextreme.vexlife.android.ui.VexLifeTheme
+import com.vextreme.vexlife.android.ui.VexThemePresentation
 
 /**
  * Semantic visual case: conversation.family-room.baseline
@@ -153,7 +154,7 @@ private fun ConversationGolden(
             draft.isNotBlank()
 
     VexLifeTheme(
-        darkTheme = true,
+        presentation = VexThemePresentation.Dark,
     ) {
         Surface {
             VexConversationRoom(
