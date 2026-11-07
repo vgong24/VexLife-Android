@@ -394,4 +394,11 @@
     <string name="vexmaps_distribution_retry">Retry</string>
     <string name="vexmaps_distribution_plan_eta">Optimized travel estimate: ~%1$d min</string>
     <string name="vexmaps_distribution_optimized_order">Optimized order</string>
+
+    <string name="cgm_partner_lab_title">CGM Partner Circuit</string>
+    <string name="cgm_partner_lab_open">Open CGM Partner Circuit</string>
+    <string name="cgm_partner_lab_intro">Inject one synthetic packet and watch Partner Signals cross Connection observation, Store admission, Family State, and Projection.</string>
+    <string name="cgm_partner_lab_receive_packet">Receive synthetic CGM packet</string>
+    <string name="cgm_partner_lab_debug_helper">Patient-zero architecture lab for Partner → Connection → Store → Family. It uses synthetic bytes only; no clinical or real-device claim.</string>
+
 </resources>
