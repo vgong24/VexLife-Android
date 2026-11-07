@@ -656,11 +656,10 @@ internal fun VexStreamFullPlayerSheet(
                         handler = handler,
                         enabled =
                             queueState
-                                ?.get(
+                                ?.isAvailable(
                                     VexStreamQueueFamily.Control
                                         .Previous,
-                                )
-                                ?.isAvailable == true,
+                                ) == true,
                         semanticRef =
                             VexStreamPresentationRefs
                                 .fullPlayerAction(
