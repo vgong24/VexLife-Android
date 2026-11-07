@@ -67,7 +67,7 @@ internal class InsulinPartnerLab(
                     value =
                         "pen.synthetic.connection",
                 ),
-            decoder =
+            conversion =
                 ConnectedPenPartner.Connection.Decoder(),
             receiver =
                 ConnectedPenPartner.Connection.Receiver(
@@ -83,7 +83,7 @@ internal class InsulinPartnerLab(
                     value =
                         "pump.synthetic.connection",
                 ),
-            decoder =
+            conversion =
                 InsulinPumpPartner.Connection.Decoder(),
             receiver =
                 InsulinPumpPartner.Connection.Receiver(
