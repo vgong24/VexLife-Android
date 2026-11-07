@@ -15,10 +15,11 @@ package com.vextreme.vexlife.android.behavior
  * recursive Partner coordinate lets a concrete domain keep that relationship source-readable:
  *
  *     <Domain>Partner
+ *     -> Source
  *     -> Signal
  *     -> Connection
  *        -> Id
- *        -> Decoder
+ *        -> Conversion<Input -> Signal(s)>
  *        -> Observation
  *        -> Receiver
  *
@@ -30,6 +31,17 @@ interface VexPartner<
     Partner,
 > where
     Partner : VexPartner<Partner> {
+
+    /**
+     * Partner-owned origin coordinate carried by externally-owned statements when origin matters.
+     *
+     * Source is not a global/root identity and does not imply transport. It answers "which external
+     * origin does this Partner statement belong to?" inside one exact Partner vocabulary.
+     */
+    interface Source<
+        Partner,
+    > where
+        Partner : VexPartner<Partner>
 
     /** What one exact Partner can communicate in its own domain vocabulary. */
     interface Signal<
@@ -61,20 +73,26 @@ interface VexPartner<
             Partner : VexPartner<Partner>
 
         /**
-         * Provider representation -> zero or more Partner Signals.
+         * One provider representation -> zero or more Partner Signals.
          *
-         * Zero-to-many is intentional: one transport unit may contain several independent semantic
-         * statements. Meaningful collection Signals remain one Signal when the collection itself
-         * carries domain meaning; Decoder must not flatten that relationship merely because it can.
+         * This is intentionally named Conversion rather than Mapper: it is the typed boundary where
+         * an externally-owned representation becomes the Partner's semantic Signal vocabulary.
+         *
+         * A concrete realization may still be naturally named BleDecoder, HttpDecoder, MediaParser,
+         * etc. The reusable relationship only requires Input -> Partner Signal(s).
+         *
+         * Zero-to-many is intentional: one provider delivery may contain several independent
+         * semantic statements. A meaningful collection remains one Signal when collection meaning
+         * itself is part of the Partner contract.
          */
-        fun interface Decoder<
+        fun interface Conversion<
             Input,
             Partner,
             PartnerSignal,
         > where
             Partner : VexPartner<Partner>,
             PartnerSignal : Signal<Partner> {
-            fun decode(
+            fun convert(
                 input: Input,
             ): List<PartnerSignal>
         }
