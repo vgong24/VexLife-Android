@@ -11,35 +11,53 @@ import org.junit.Test
 
 class InsulinPartnerCircuitTest {
     @Test
-    fun familyCarriesTheSameInsulinAmountFromControlIntoEffect() {
-        val family =
-            InsulinFamily()
-        val amount =
-            InsulinFamily.Parameter.InsulinAmount(
-                unitsHundredths =
-                    100,
+    fun familyCarriesTheSameInsulinAmountFromControlThroughEffectIntoBoundMethod() {
+        val lab =
+            InsulinPartnerLab()
+
+        try {
+            val family =
+                lab.family
+            val amount =
+                InsulinFamily.Parameter.InsulinAmount(
+                    unitsHundredths =
+                        100,
+                )
+
+            val act =
+                family.activate(
+                    InsulinFamily.Control.RequestPumpDelivery(
+                        amount =
+                            amount,
+                    ),
+                )
+
+            val effect =
+                act?.effect as
+                    InsulinFamily.Effect.RequestPumpDelivery
+            val method =
+                InsulinFamily.Act.Method.RequestPumpDelivery(
+                    connection =
+                        lab.pumpConnection,
+                    parameter =
+                        effect.amount,
+                )
+
+            assertSame(
+                amount,
+                effect.amount,
             )
-
-        val act =
-            family.activate(
-                InsulinFamily.Control.RequestPumpDelivery(
-                    amount =
-                        amount,
-                ),
+            assertSame(
+                amount,
+                method.parameter,
             )
-
-        val effect =
-            act?.effect as
-                InsulinFamily.Effect.RequestPumpDelivery
-
-        assertSame(
-            amount,
-            effect.amount,
-        )
-        assertEquals(
-            InsulinFamily.State.Empty,
-            family.currentState,
-        )
+            assertEquals(
+                InsulinFamily.State.Empty,
+                family.currentState,
+            )
+        } finally {
+            lab.close()
+        }
     }
 
     @Test
