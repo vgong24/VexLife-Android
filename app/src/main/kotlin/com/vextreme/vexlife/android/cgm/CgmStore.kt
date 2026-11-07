@@ -1,30 +1,31 @@
 package com.vextreme.vexlife.android.cgm
 
+import com.vextreme.vexlife.android.behavior.VexPartner
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+internal typealias CgmObservation =
+    VexPartner.Connection.Observation<
+        CgmPartner,
+        CgmPartner.Signal
+    >
+
 /**
- * Durable-domain boundary for the CGM patient zero.
+ * Durable-domain boundary for admitted CGM Partner observations.
  *
- * This first realization is intentionally in-memory so the PR can prove the Partner -> Store ->
- * Family relationship without simultaneously deciding Room schema/migrations. The observable
- * contract is deliberately Flow-shaped so a later Room-backed realization can replace the substrate
- * without turning Room Entity/DAO types into Family semantics.
+ * Store owns what survives disconnect/restart; it does not own Partner transport or Family meaning.
+ * Physical persistence is a realization beneath this contract.
  *
  * STORE != FAMILY STATE
  * STORE != PARTNER
  * STORE != DAO / ROOM ENTITY
+ * ENTITY_RESTORED != PARTNER_SIGNAL_RECEIVED
  */
-internal class CgmStore {
+internal interface CgmStore {
     data class Snapshot(
         val observations:
-            List<
-                com.vextreme.vexlife.android.behavior.VexPartner.Connection.Observation<
-                    CgmPartner,
-                    CgmPartner.Signal
-                >
-            > =
+            List<CgmObservation> =
             emptyList(),
     ) {
         val latestObservedGlucose:
@@ -48,47 +49,67 @@ internal class CgmStore {
                     }
     }
 
+    /**
+     * Current durable truth as an observable source.
+     *
+     * A Room realization emits restored rows here after process restart. Restoration does not call
+     * Decoder or Receiver again; it reconstructs historical Observation values already admitted.
+     */
+    val snapshots:
+        Flow<Snapshot>
+
+    /**
+     * Admit one historical Partner Observation durably.
+     *
+     * Completion means this Store realization has completed its own admission effect. Callers must
+     * not treat an earlier Connection callback as equivalent to this completion.
+     */
+    suspend fun commit(
+        observation:
+            CgmObservation,
+    )
+
+    /** Read the current durable Store truth without manufacturing a new Partner receipt. */
+    suspend fun readCurrent():
+        Snapshot
+}
+
+/** Preview/unit realization of [CgmStore]. */
+internal class InMemoryCgmStore :
+    CgmStore {
     private val lock =
         Any()
 
     private val mutableSnapshots =
         MutableStateFlow(
-            Snapshot(),
+            CgmStore.Snapshot(),
         )
 
-    val snapshots:
-        StateFlow<Snapshot> =
+    override val snapshots =
         mutableSnapshots
             .asStateFlow()
 
-    val current:
-        Snapshot
-        get() =
-            snapshots.value
-
-    internal fun commit(
+    override suspend fun commit(
         observation:
-            com.vextreme.vexlife.android.behavior.VexPartner.Connection.Observation<
-                CgmPartner,
-                CgmPartner.Signal
-            >,
-    ):
-        Snapshot =
+            CgmObservation,
+    ) {
         synchronized(
             lock,
         ) {
-            val next =
-                Snapshot(
+            mutableSnapshots.value =
+                CgmStore.Snapshot(
                     observations =
                         mutableSnapshots
                             .value
                             .observations +
                             observation,
                 )
-            mutableSnapshots.value =
-                next
-            next
         }
+    }
+
+    override suspend fun readCurrent():
+        CgmStore.Snapshot =
+        mutableSnapshots.value
 }
 
 // [VXG RealForever][VEX-CGM-LABS][STORE-PATIENT-ZERO]
