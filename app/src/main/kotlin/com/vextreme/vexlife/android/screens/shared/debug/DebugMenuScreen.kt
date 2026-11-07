@@ -19,7 +19,7 @@ import com.vextreme.vexlife.android.data.loghistory.LogHistoryFixture
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
 import com.vextreme.vexlife.android.screens.AppScreenBlueprint
 import com.vextreme.vexlife.android.screens.ScreenActionContext
-import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
+import com.vextreme.vexlife.android.screens.primary.home.HomeScreen\nimport com.vextreme.vexlife.android.screens.shared.cgm.CgmPartnerLabScreen
 import com.vextreme.vexlife.android.screens.shared.debug.loghistory.LogHistorySheet
 import com.vextreme.vexlife.android.shell.AppShell
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
@@ -120,7 +120,15 @@ object DebugMenuScreen : AppScreenBlueprint(
         intent = invoke(AppActions.UseRandomAttentionLab),
     )
 
-    val NextAttentionLabScenario = buttonRef(
+
+    val OpenCgmPartnerLab = buttonRef(
+        id = "body.cgm-partner.actions.open",
+        labelRes = R.string.cgm_partner_lab_open,
+        style = VexElementStyles.Navigation,
+        icon = ElementIcon.Add,
+        intent = navigateTo(CgmPartnerLabScreen),
+    )
+\n    val NextAttentionLabScenario = buttonRef(
         id = "body.events-simulator.actions.next-scenario",
         labelRes = R.string.events_simulator_next_scenario,
         style = VexElementStyles.SecondaryAction,
@@ -148,7 +156,21 @@ object DebugMenuScreen : AppScreenBlueprint(
                 )
             }
 
-            card("events-simulator") {
+
+            card("cgm-partner") {
+                text(
+                    id = "title",
+                    textRes = R.string.cgm_partner_lab_title,
+                    role = TextRole.Title,
+                )
+                button(OpenCgmPartnerLab)
+                text(
+                    id = "helper",
+                    textRes = R.string.cgm_partner_lab_debug_helper,
+                    role = TextRole.Supporting,
+                )
+            }
+\n            card("events-simulator") {
                 text(
                     id = "title",
                     textRes = R.string.events_simulator_title,
