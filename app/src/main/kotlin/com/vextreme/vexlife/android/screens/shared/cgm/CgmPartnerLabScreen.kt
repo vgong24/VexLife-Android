@@ -34,9 +34,10 @@ import com.vextreme.vexlife.android.screens.AppScreenBlueprint
  * The button controls the synthetic Lab source rather than pretending outside data is a
  * [CgmFamily.Control]. Each click runs the real example path:
  *
- *     bytes
- *     -> CgmPartner.Connection.Decoder
- *     -> CgmPartner.Signal
+ *     BLE-like bytes / HTTP-like body
+ *     -> CgmPartner.Connection.Conversion
+ *        -> BleDecoder / HttpDecoder
+ *     -> the same CgmPartner.Signal vocabulary
  *     -> Connection.Observation
  *     -> Connection.Receiver
  *     -> CgmStore
@@ -79,6 +80,18 @@ object CgmPartnerLabScreen : AppScreenBlueprint(
                 localEffect(),
         )
 
+    val ReceiveHttpResponse =
+        buttonRef(
+            id =
+                "body.actions.receive-http",
+            labelRes =
+                R.string.cgm_partner_lab_receive_http,
+            icon =
+                ElementIcon.Download,
+            intent =
+                localEffect(),
+        )
+
     override val content =
         layout {
             scrollableColumn(
@@ -89,6 +102,9 @@ object CgmPartnerLabScreen : AppScreenBlueprint(
                 )
                 button(
                     ReceivePacket,
+                )
+                button(
+                    ReceiveHttpResponse,
                 )
             }
         }
@@ -166,11 +182,17 @@ internal fun CgmPartnerLabScreenContent(
                     element,
                 )
 
-                if (
-                    element ===
-                        CgmPartnerLabScreen.ReceivePacket
+                when (
+                    element
                 ) {
-                    lab.receiveSyntheticPacket()
+                    CgmPartnerLabScreen.ReceivePacket ->
+                        lab.receiveSyntheticBlePacket()
+
+                    CgmPartnerLabScreen.ReceiveHttpResponse ->
+                        lab.receiveSyntheticHttpResponse()
+
+                    else ->
+                        Unit
                 }
             }
         }
@@ -187,6 +209,12 @@ internal fun CgmPartnerLabScreenContent(
         VexButton(
             element =
                 CgmPartnerLabScreen.ReceivePacket,
+            handler =
+                handler,
+        )
+        VexButton(
+            element =
+                CgmPartnerLabScreen.ReceiveHttpResponse,
             handler =
                 handler,
         )
@@ -226,7 +254,7 @@ internal fun CgmPartnerLabScreenContent(
                             (
                                 latestObservation
                                     ?.connectionId
-                                    ?.toString()
+                                    ?.value
                                     ?: "waiting"
                             ),
                 )
