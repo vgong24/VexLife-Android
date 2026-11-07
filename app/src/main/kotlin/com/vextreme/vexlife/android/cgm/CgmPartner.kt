@@ -392,8 +392,25 @@ internal object CgmPartner :
         mgDl: Int,
         trend: String,
     ):
-        Signal.Glucose? =
-        Signal.Glucose(
+        Signal.Glucose? {
+        val reportedTrend =
+            when (
+                trend.lowercase()
+            ) {
+                "falling" ->
+                    Trend.Falling
+
+                "steady" ->
+                    Trend.Steady
+
+                "rising" ->
+                    Trend.Rising
+
+                else ->
+                    return null
+            }
+
+        return Signal.Glucose(
             source =
                 Source(
                     deviceRef =
@@ -408,22 +425,9 @@ internal object CgmPartner :
             mgDl =
                 mgDl,
             reportedTrend =
-                when (
-                    trend.lowercase()
-                ) {
-                    "falling" ->
-                        Trend.Falling
-
-                    "steady" ->
-                        Trend.Steady
-
-                    "rising" ->
-                        Trend.Rising
-
-                    else ->
-                        return null
-                },
+                reportedTrend,
         )
+    }
 
     private fun temperature(
         deviceRef: String,
