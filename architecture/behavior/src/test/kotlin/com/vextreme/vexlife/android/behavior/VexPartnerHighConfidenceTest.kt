@@ -60,14 +60,12 @@ class VexPartnerHighConfidenceTest {
             fun interface Receiver :
                 VexPartner.Connection.Receiver<
                     SensorPartner,
-                    Signal
+                    Signal,
+                    Observation
                 > {
                 override suspend fun receive(
                     observation:
-                        VexPartner.Connection.Observation<
-                            SensorPartner,
-                            Signal
-                        >,
+                        Observation,
                 )
             }
 
