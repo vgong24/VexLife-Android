@@ -56,7 +56,7 @@ import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackTrace
 import com.vextreme.vexlife.android.vexstream.playback.toVexStreamCurrentPlaybackObservation
 import com.vextreme.vexlife.android.vexstream.queue.Media3VexStreamQueueConnection
-import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueFamily
 import com.vextreme.vexlife.android.widget.VexGlanceAppWidget
 import com.vextreme.vexlife.android.widget.VexWidgetActionCallback
 import com.vextreme.vexlife.android.widget.VexWidgetActionRef
@@ -255,7 +255,7 @@ internal sealed interface VexStreamPlaybackWidgetCommand {
     ) : VexStreamPlaybackWidgetCommand
 
     data class Queue(
-        val control: VexStreamQueueControl,
+        val control: VexStreamQueueFamily.Control,
     ) : VexStreamPlaybackWidgetCommand
 }
 
@@ -267,7 +267,7 @@ internal fun vexStreamPlaybackWidgetCommand(
     ) {
         VexStreamPlaybackWidgetActions.Previous ->
             VexStreamPlaybackWidgetCommand.Queue(
-                VexStreamQueueControl.Previous,
+                VexStreamQueueFamily.Control.Previous,
             )
 
         VexStreamPlaybackWidgetActions.PlayPause ->
@@ -277,7 +277,7 @@ internal fun vexStreamPlaybackWidgetCommand(
 
         VexStreamPlaybackWidgetActions.Next ->
             VexStreamPlaybackWidgetCommand.Queue(
-                VexStreamQueueControl.Next,
+                VexStreamQueueFamily.Control.Next,
             )
 
         else ->
@@ -327,9 +327,10 @@ internal suspend fun vexStreamPlaybackWidgetSurfaceState(
             artworkAvailable,
         previousEnabled =
             observation
-                .queueProjection[
-                    VexStreamQueueControl.Previous
-                ].isAvailable,
+                .queueState
+                .isAvailable(
+                    VexStreamQueueFamily.Control.Previous,
+                ),
         playPauseEnabled =
             playPause.isAvailable,
         showPause =
@@ -337,9 +338,10 @@ internal suspend fun vexStreamPlaybackWidgetSurfaceState(
                 VexStreamPlaybackAct.Pause,
         nextEnabled =
             observation
-                .queueProjection[
-                    VexStreamQueueControl.Next
-                ].isAvailable,
+                .queueState
+                .isAvailable(
+                    VexStreamQueueFamily.Control.Next,
+                ),
     )
 }
 
