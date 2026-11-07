@@ -34,6 +34,80 @@ class VexStableLazyListTest {
     }
 
     @Test
+    fun headerOffsetsLazyPositionWithoutEnteringFeatureItemIdentity() {
+        assertEquals(
+            0,
+            stableLazyItemIndex(
+                itemIndex = 0,
+                hasHeader = false,
+            ),
+        )
+        assertEquals(
+            1,
+            stableLazyItemIndex(
+                itemIndex = 0,
+                hasHeader = true,
+            ),
+        )
+        assertEquals(
+            7,
+            stableLazyItemIndex(
+                itemIndex = 6,
+                hasHeader = true,
+            ),
+        )
+        assertEquals(
+            "element.screen.body.list.header",
+            stableListHeaderKey(
+                listRef = "element.screen.body.list",
+                itemRefs =
+                    setOf(
+                        "item.a",
+                        "item.b",
+                    ),
+            ),
+        )
+    }
+
+    @Test
+    fun headerKeyCollisionWithFeatureItemFailsClosed() {
+        val failure =
+            runCatching {
+                stableListHeaderKey(
+                    listRef =
+                        "element.screen.body.list",
+                    itemRefs =
+                        setOf(
+                            "element.screen.body.list.header",
+                        ),
+                )
+            }.exceptionOrNull()
+
+        requireNotNull(failure)
+        assertTrue(
+            failure.message.orEmpty()
+                .contains("collides"),
+        )
+    }
+
+    @Test
+    fun negativeStableLazyItemIndexFailsClosed() {
+        val failure =
+            runCatching {
+                stableLazyItemIndex(
+                    itemIndex = -1,
+                    hasHeader = true,
+                )
+            }.exceptionOrNull()
+
+        requireNotNull(failure)
+        assertTrue(
+            failure.message.orEmpty()
+                .contains(">= 0"),
+        )
+    }
+
+    @Test
     fun duplicateStableRefsFailClosed() {
         val failure =
             runCatching {
