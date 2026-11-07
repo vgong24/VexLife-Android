@@ -108,9 +108,11 @@ internal object CgmPartner :
                         Charsets.UTF_8,
                     )
                     .split(';')
-                    .mapNotNull(
-                        ::decodeBleRecord,
-                    )
+                    .mapNotNull { record ->
+                        CgmPartner.decodeBleRecord(
+                            record,
+                        )
+                    }
         }
 
         /**
@@ -141,9 +143,11 @@ internal object CgmPartner :
                     .filter(
                         String::isNotEmpty,
                     )
-                    .mapNotNull(
-                        ::decodeHttpLine,
-                    )
+                    .mapNotNull { line ->
+                        CgmPartner.decodeHttpLine(
+                            line,
+                        )
+                    }
                     .toList()
         }
 
