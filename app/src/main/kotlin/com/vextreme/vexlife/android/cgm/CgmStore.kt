@@ -1,15 +1,11 @@
 package com.vextreme.vexlife.android.cgm
 
-import com.vextreme.vexlife.android.behavior.VexPartner
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 internal typealias CgmObservation =
-    VexPartner.Connection.Observation<
-        CgmPartner,
-        CgmPartner.Signal
-    >
+    CgmPartner.Connection.Observation
 
 /**
  * Durable-domain boundary for admitted CGM Partner observations.
