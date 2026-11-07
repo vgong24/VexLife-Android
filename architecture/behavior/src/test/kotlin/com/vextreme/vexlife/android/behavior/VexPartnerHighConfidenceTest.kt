@@ -8,6 +8,11 @@ import org.junit.Test
 class VexPartnerHighConfidenceTest {
     private object SensorPartner :
         VexPartner<SensorPartner> {
+        data class Source(
+            val sensorRef: String,
+        ) :
+            VexPartner.Source<SensorPartner>
+
         sealed interface Signal :
             VexPartner.Signal<SensorPartner> {
             data class Value(
@@ -18,7 +23,12 @@ class VexPartnerHighConfidenceTest {
 
         class Connection(
             override val id: Id,
-            private val decoder: Decoder,
+            private val conversion:
+                VexPartner.Connection.Conversion<
+                    ByteArray,
+                    SensorPartner,
+                    Signal
+                >,
             private val receiver: Receiver,
         ) :
             VexPartner.Connection<
@@ -31,12 +41,12 @@ class VexPartnerHighConfidenceTest {
                 VexPartner.Connection.Id<SensorPartner>
 
             class Decoder :
-                VexPartner.Connection.Decoder<
+                VexPartner.Connection.Conversion<
                     ByteArray,
                     SensorPartner,
                     Signal
                 > {
-                override fun decode(
+                override fun convert(
                     input: ByteArray,
                 ): List<Signal> =
                     input.map { value ->
@@ -73,8 +83,8 @@ class VexPartnerHighConfidenceTest {
                 input: ByteArray,
                 observedAtEpochMillis: Long,
             ): List<Observation> =
-                decoder
-                    .decode(
+                conversion
+                    .convert(
                         input,
                     )
                     .map { signal ->
@@ -113,7 +123,7 @@ class VexPartnerHighConfidenceTest {
             SensorPartner.Connection(
                 id =
                     id,
-                decoder =
+                conversion =
                     SensorPartner.Connection.Decoder(),
                 receiver =
                     SensorPartner.Connection.Receiver { observation ->
