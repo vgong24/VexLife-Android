@@ -20,7 +20,10 @@ internal class CgmStore {
     data class Snapshot(
         val observations:
             List<
-                CgmPartner.Connection.Observation
+                com.vextreme.vexlife.android.behavior.VexPartner.Connection.Observation<
+                    CgmPartner,
+                    CgmPartner.Signal
+                >
             > =
             emptyList(),
     ) {
@@ -65,7 +68,10 @@ internal class CgmStore {
 
     internal fun commit(
         observation:
-            CgmPartner.Connection.Observation,
+            com.vextreme.vexlife.android.behavior.VexPartner.Connection.Observation<
+                CgmPartner,
+                CgmPartner.Signal
+            >,
     ):
         Snapshot =
         synchronized(
