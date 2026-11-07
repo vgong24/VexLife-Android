@@ -5,16 +5,8 @@ import androidx.media3.session.MediaController
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Media3 provider boundary for the VexStream Repeat Family.
- *
- * Family owns Repeat meaning. Media3 owns provider truth. This Connection owns only the concrete
- * relationship between them:
- *
- * provider observation -> semantic Family State
- * accepted Family Effect -> synchronous Media3 request
- *
- * No VexExecution Job is created because assigning Media3 repeatMode is immediate and there is no
- * unfinished work for execution custody to maintain.
+ * Media3 provider bridge for Repeat.
+ * Observation enters Family State; accepted Family Effects become immediate repeatMode requests.
  */
 internal class Media3VexStreamRepeatConnection(
     private val controller:
@@ -34,11 +26,6 @@ internal class Media3VexStreamRepeatConnection(
         >
         get() =
             family.states
-
-    val currentState:
-        VexStreamRepeatFamily.State
-        get() =
-            family.currentState
 
     private val listener =
         object :
@@ -61,12 +48,7 @@ internal class Media3VexStreamRepeatConnection(
         )
     }
 
-    /**
-     * Re-read exact provider truth before resolving the incoming semantic Control.
-     *
-     * The accepted Effect is realized synchronously. The request does not claim a new semantic
-     * Repeat State; only a later Media3 observation enters Family.observe(...).
-     */
+    /** Re-read provider truth, resolve Toggle, then realize its Effect synchronously. */
     fun activate(
         control:
             VexStreamRepeatFamily.Control,
