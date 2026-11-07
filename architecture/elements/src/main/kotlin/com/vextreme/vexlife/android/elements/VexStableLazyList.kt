@@ -99,6 +99,7 @@ fun <Item> VexStableLazyColumn(
         listState,
         requestedVisibleItemRef,
         refs,
+        headerKey,
     ) {
         val requested =
             requestedVisibleItemRef
