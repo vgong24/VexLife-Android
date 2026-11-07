@@ -249,7 +249,7 @@ internal class InsulinFamily :
                 ) {
                     is Control.RequestPumpDelivery ->
                         stay(
-                            begin(
+                            beginQueued(
                                 Effect.RequestPumpDelivery(
                                     amount =
                                         control.amount,
@@ -264,7 +264,7 @@ internal class InsulinFamily :
                 ) {
                     is Control.RequestPumpDelivery ->
                         stay(
-                            begin(
+                            beginQueued(
                                 Effect.RequestPumpDelivery(
                                     amount =
                                         control.amount,
