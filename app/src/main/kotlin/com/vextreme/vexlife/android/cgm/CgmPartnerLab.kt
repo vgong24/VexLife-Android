@@ -2,6 +2,9 @@
 
 package com.vextreme.vexlife.android.cgm
 
+import android.content.Context
+import com.vextreme.vexlife.android.data.cgm.CgmStoreFactory
+
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import kotlinx.coroutines.Job
@@ -286,6 +289,20 @@ internal class CgmPartnerLab(
         executionRoot.forceStopAll(
             "CGM Partner Lab disposed",
         )
+    }
+
+    companion object {
+        fun production(
+            context:
+                Context,
+        ):
+            CgmPartnerLab =
+            CgmPartnerLab(
+                store =
+                    CgmStoreFactory.production(
+                        context,
+                    ),
+            )
     }
 }
 
