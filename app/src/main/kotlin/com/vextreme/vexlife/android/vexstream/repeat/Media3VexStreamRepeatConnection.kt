@@ -2,70 +2,122 @@ package com.vextreme.vexlife.android.vexstream.repeat
 
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
+import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Media3 realization of the current VexStream Repeat question.
+ * Media3 provider boundary for the VexStream Repeat Family.
  *
- * Activation re-reads provider truth before resolving Toggle. The relationship uses stay(): asking
- * Media3 to change repeat mode does not itself certify the next provider State.
+ * Family owns Repeat meaning. Media3 owns provider truth. This Connection owns only the concrete
+ * relationship between them:
+ *
+ * provider observation -> semantic Family State
+ * accepted Family Effect -> synchronous Media3 request
+ *
+ * No VexExecution Job is created because assigning Media3 repeatMode is immediate and there is no
+ * unfinished work for execution custody to maintain.
  */
 internal class Media3VexStreamRepeatConnection(
-    private val controller: MediaController,
+    private val controller:
+        MediaController,
 ) :
-    VexStreamRepeatConnection {
-    private val behavior =
-        vexStreamRepeatBehavior()
-
-    private val controls =
-        behavior.vexStreamRepeatControls()
-
-    override val currentProjection:
-        VexStreamRepeatProjection
-        get() =
-            controls.projection(
+    AutoCloseable {
+    private val family =
+        VexStreamRepeatFamily(
+            initialState =
                 controller
                     .toVexStreamRepeatState(),
-            )
+        )
 
-    override fun activate(
-        control: VexStreamRepeatControl,
+    val states:
+        StateFlow<
+            VexStreamRepeatFamily.State
+        >
+        get() =
+            family.states
+
+    val currentState:
+        VexStreamRepeatFamily.State
+        get() =
+            family.currentState
+
+    private val listener =
+        object :
+            Player.Listener {
+            override fun onEvents(
+                player:
+                    Player,
+                events:
+                    Player.Events,
+            ) {
+                observe(
+                    player,
+                )
+            }
+        }
+
+    init {
+        controller.addListener(
+            listener,
+        )
+    }
+
+    /**
+     * Re-read exact provider truth before resolving the incoming semantic Control.
+     *
+     * The accepted Effect is realized synchronously. The request does not claim a new semantic
+     * Repeat State; only a later Media3 observation enters Family.observe(...).
+     */
+    fun activate(
+        control:
+            VexStreamRepeatFamily.Control,
     ) {
-        val current =
-            controller
-                .toVexStreamRepeatState()
+        observe(
+            controller,
+        )
 
-        val act =
-            controls.resolve(
-                current = current,
-                control = control,
-            )?.act
-                ?: return
-
-        val relationship =
-            behavior.resolve(
-                current = current,
-                act = act,
-            )
+        val effect =
+            family
+                .activate(
+                    control,
+                )
+                ?.effect
                 ?: return
 
         when (
-            relationship.effect
+            effect
         ) {
-            VexStreamRepeatEffect.RequestEnableAll ->
+            VexStreamRepeatFamily.Effect.RequestEnableAll ->
                 controller.repeatMode =
                     Player.REPEAT_MODE_ALL
 
-            VexStreamRepeatEffect.RequestDisable ->
+            VexStreamRepeatFamily.Effect.RequestDisable ->
                 controller.repeatMode =
                     Player.REPEAT_MODE_OFF
         }
     }
+
+    override fun close() {
+        controller.removeListener(
+            listener,
+        )
+    }
+
+    private fun observe(
+        player:
+            Player,
+    ) {
+        family.observe(
+            player
+                .toVexStreamRepeatState(),
+        )
+    }
 }
 
 private fun Player.toVexStreamRepeatState():
-    VexStreamRepeatState =
+    VexStreamRepeatFamily.State =
     vexStreamRepeatState(
-        repeatMode = repeatMode,
+        repeatMode =
+            repeatMode,
         toggleAvailable =
             isCommandAvailable(
                 Player.COMMAND_SET_REPEAT_MODE,
@@ -73,19 +125,25 @@ private fun Player.toVexStreamRepeatState():
     )
 
 internal fun vexStreamRepeatState(
-    repeatMode: Int,
-    toggleAvailable: Boolean,
-): VexStreamRepeatState =
-    when (repeatMode) {
+    repeatMode:
+        Int,
+    toggleAvailable:
+        Boolean,
+):
+    VexStreamRepeatFamily.State =
+    when (
+        repeatMode
+    ) {
         Player.REPEAT_MODE_OFF ->
-            VexStreamRepeatState.Disabled(
+            VexStreamRepeatFamily.State.Disabled(
                 toggleAvailable =
                     toggleAvailable,
             )
 
         Player.REPEAT_MODE_ONE,
-        Player.REPEAT_MODE_ALL ->
-            VexStreamRepeatState.Enabled(
+        Player.REPEAT_MODE_ALL,
+        ->
+            VexStreamRepeatFamily.State.Enabled(
                 toggleAvailable =
                     toggleAvailable,
             )
@@ -97,4 +155,4 @@ internal fun vexStreamRepeatState(
             )
     }
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][REPEAT][MEDIA3-CONNECTION]
