@@ -67,10 +67,7 @@ Result != Observation.
 Result != Cancellation.
 
 Effect != automatic VexExecution Job.
-
-An accepted Act may expose an Effect to a rightful realization boundary that can complete it
-synchronously. VexExecution is required only when realization creates unfinished asynchronous work
-whose lifetime, overlap, or cancellation actually needs custody.
+Immediate Effects may realize directly; unfinished asynchronous work may use VexExecution custody.
 
 
 The older exposition below is retained as lineage/background. Where it conflicts with
@@ -106,10 +103,8 @@ Direct `VexFamily` did **not** wholesale replace the existing Behavior/SCAE impl
 Migration/evolution remains consumer-driven. A fresh worker should not delete or rewrite older
 Behavior source merely because the Direct Family foundation exists.
 
-Current convergence pressure demonstrates the same rule in the other direction: a compatibility
-consumer should migrate only when the current source becomes smaller or clearer without transferring
-provider truth, execution custody, Relay ownership, or lived behavior. Compatibility source is not
-debt merely by existing.
+Migrate a compatibility consumer only when current source becomes smaller or clearer without moving
+provider, execution, Relay, or product ownership. Compatibility source is not debt merely by existing.
 
 PR #193 is the acceptance/origin reference for the Direct Family identity/custody refinement:
 https://github.com/vgong24/VexLife-Android/pull/193
