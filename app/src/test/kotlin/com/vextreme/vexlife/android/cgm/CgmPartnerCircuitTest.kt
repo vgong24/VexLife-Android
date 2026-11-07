@@ -10,6 +10,143 @@ import org.junit.Test
 
 class CgmPartnerCircuitTest {
     @Test
+    fun bleAndHttpConversionsProduceTheSamePartnerSignalsForEquivalentFacts() {
+        val lab =
+            CgmPartnerLab()
+
+        try {
+            val (
+                ble,
+                http,
+            ) =
+                lab.equivalentSyntheticConversions(
+                    sequence =
+                        42L,
+                    capturedAtEpochMillis =
+                        4_200L,
+                    mgDl =
+                        137,
+                    trend =
+                        "rising",
+                    celsiusHundredths =
+                        3_222,
+                )
+
+            assertEquals(
+                ble,
+                http,
+            )
+            assertEquals(
+                listOf(
+                    CgmPartner.Signal.Glucose(
+                        source =
+                            CgmPartner.Source(
+                                deviceRef =
+                                    "cgm-synthetic",
+                                acquisitionEpoch =
+                                    "epoch-a",
+                            ),
+                        sequence =
+                            42L,
+                        capturedAtEpochMillis =
+                            4_200L,
+                        mgDl =
+                            137,
+                        reportedTrend =
+                            CgmPartner.Trend.Rising,
+                    ),
+                    CgmPartner.Signal.Temperature(
+                        source =
+                            CgmPartner.Source(
+                                deviceRef =
+                                    "cgm-synthetic",
+                                acquisitionEpoch =
+                                    "epoch-a",
+                            ),
+                        sequence =
+                            42L,
+                        capturedAtEpochMillis =
+                            4_200L,
+                        celsiusHundredths =
+                            3_222,
+                    ),
+                ),
+                ble,
+            )
+        } finally {
+            lab.close()
+        }
+    }
+
+    @Test
+    fun bleAndHttpConnectionsShareStoreAndFamilyWhileKeepingOccurrenceProvenance() =
+        runBlocking {
+            val lab =
+                CgmPartnerLab(
+                    nowEpochMillis = {
+                        8_000L
+                    },
+                )
+
+            try {
+                lab.receiveSyntheticBlePacket()
+                    .join()
+                lab.receiveSyntheticHttpResponse()
+                    .join()
+
+                val snapshot =
+                    lab.store
+                        .readCurrent()
+
+                assertEquals(
+                    4,
+                    snapshot
+                        .observations
+                        .size,
+                )
+                assertEquals(
+                    listOf(
+                        "cgm.synthetic.ble",
+                        "cgm.synthetic.ble",
+                        "cgm.synthetic.http",
+                        "cgm.synthetic.http",
+                    ),
+                    snapshot
+                        .observations
+                        .map {
+                            it.connectionId.value
+                        },
+                )
+
+                val latest =
+                    withTimeout(
+                        2_000L,
+                    ) {
+                        lab.family
+                            .states
+                            .first { state ->
+                                state is
+                                    CgmFamily.State.LatestAdmitted &&
+                                    state.glucose.sequence ==
+                                    2L
+                            }
+                    } as
+                        CgmFamily.State.LatestAdmitted
+
+                assertEquals(
+                    2L,
+                    latest.glucose.sequence,
+                )
+                assertEquals(
+                    4,
+                    latest.storedObservationCount,
+                )
+            } finally {
+                lab.close()
+            }
+        }
+
+    @Test
     fun oneSyntheticPacketDecodesQueuesStoresAndReachesFamilyProjection() =
         runBlocking {
             val lab =
