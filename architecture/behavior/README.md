@@ -84,7 +84,8 @@ CURRENT State + incoming Control
 
 ## Partner circuit patient-zero candidate
 
-The CGM / connected-pen / insulin-pump walk is now pressuring a second independent reusable root:
+The CGM / connected-pen / insulin-pump walk now pressures a second independent reusable root through
+transport, execution ordering, persistence and process-restart evidence:
 
 ~~~text
 VexPartner<Partner>
@@ -93,7 +94,7 @@ VexPartner<Partner>
    -> Id<Partner>
    -> Decoder<Input, Partner, Signal>
    -> Observation<Partner, Signal>
-   -> Receiver<Partner, Signal>
+   -> Receiver<Partner, Signal, PartnerObservation>
 ~~~
 
 The question remains narrower than "mirror VexFamily":
@@ -101,13 +102,12 @@ The question remains narrower than "mirror VexFamily":
 > Can Kotlin keep the external participant / Signal / Connection relationship source-readable while
 > Family continues to own semantic State / Control / Act / Effect meaning?
 
-### What survived three different examples
+### What survived CGM / Pen / Pump
 
 ~~~text
 CGM Partner
     glucose + temperature Signals
     one transport packet -> multiple semantic Signals
-    Partner receipt -> Store -> CgmFamily -> DisplayState
 
 Connected Pen Partner
     sparse DoseRecorded + CartridgeObserved Signals
@@ -118,83 +118,132 @@ Insulin Pump Partner
     DeliveryObserved + ReservoirObserved Signals
     same inbound Partner/Connection tree
 
-    and the reverse path:
+    reverse path:
     InsulinFamily.Parameter
     -> Control
-    -> Effect
+    -> Begin(Queued · Effect)
     -> Act.Method
     -> Pump Partner Connection
 ~~~
 
-Two independently-owned insulin Partners also converge into one domain Store without a universal
-event envelope:
+Pen + Pump remain distinct Partners while converging into one InsulinStore; no universal event
+envelope was required.
+
+### Receiver now awaits admission
+
+Room pressure proved that Receiver cannot honestly be a fire-and-forget synchronous callback:
 
 ~~~text
-ConnectedPenPartner ----\
-                         +-> InsulinStore -> InsulinFamily
-InsulinPumpPartner -----/
+Connection.receive(...)
+-> Observation
+-> suspend Receiver.receive(Observation)
+-> Store.commit(...)
+-> durable admission complete
 ~~~
 
-Provider acknowledgement remains outside durable truth:
+PartnerObservation is a concrete generic coordinate. A Store does not down-cast a generic
+Observation merely to recover the exact Connection identity or occurrence shape.
+
+### Execution sequencing stays source-bound
+
+Two execution relationships intentionally coexist:
 
 ~~~text
-EFFECT_REQUESTED
-!= PARTNER_ACKNOWLEDGED
-!= PHYSICAL_OUTCOME
-!= DURABLE_DOMAIN_TRUTH
+PARTNER INBOUND ADMISSION
+
+live Connection owner
++ private runtime RelationshipId
++ Queued
+-> receipt/admission Jobs preserve delivery order
+
+Connection.Id
+    = Partner relationship / observation provenance
+    != VexExecution.RelationshipId
+    != persisted runtime coordination identity
 ~~~
 
-The pump Method success updates only lab/provider acknowledgement. Family State changes only after a
-later Partner Signal crosses Observation / Receiver into Store and Family interprets the new Store
-snapshot.
-
-### Current root refinements earned by the examples
-
-Connection now requires one exact typed Id<Partner>. The reusable root deliberately does NOT
-prescribe a String/primitive representation for that identity. Concrete examples retain their exact
-typed identity objects.
-
-Receiver consumes the reusable Partner Observation contract directly; the CGM, Pen, and Pump
-examples do not down-cast Observation back to their concrete occurrence merely to reach Store.
-
-Important held boundaries remain:
+and:
 
 ~~~text
-Partner != Family
-Signal != Family State
-Store != Partner
-Store != Family
-Store != DAO / Room Entity
+STORE -> FAMILY OBSERVATION
 
-Source / Target = directional roles of Partner
-Partnership = relationship language unless relationship-owned truth earns a first-class owner
+exact Store Flow source
++ live Family owner
+-> VexExecution.observe(store::snapshots)
 ~~~
 
-### What this still does NOT prove
+The first relationship coordinates finite work that belongs together. The second answers the local
+question "is this exact Flow source already observed?". Do not mint a Family ResourceId merely to
+keep a Store listener alive.
 
-The current Stores are intentionally in-memory and Flow-shaped. The examples prove relationship
-ordering and ownership, not Room schema or process-death durability.
+The Pump Family now authors beginQueued(Effect.RequestPumpDelivery) because every accepted request
+remains meaningful and order must be preserved. The accepted Act binds the Family-derived
+RelationshipId; launchWith(...).method(...) consumes that already-authored Approach/identity without
+re-deciding sequencing downstream.
 
-Still held:
+### Room / restart patient zero
+
+CGM now has one durable Store contract with two realizations:
 
 ~~~text
-exact Room representation
-restart reconstruction
-meaningful history Signal shape
-CGM continuity / gap reconciliation depth
-real BLE / HTTP realization
-whether every Partner needs Receiver as a Connection child
+CgmStore
+├─ InMemoryCgmStore
+└─ RoomCgmStore
+   -> CgmObservationDao
+   -> cgm_partner_observation
+~~~
+
+The Room row uses explicit SQL columns for Connection occurrence, Partner source/acquisition epoch,
+Signal kind/sequence/captured-at, glucose/trend or temperature, and observed-at. There is no
+@Embedded domain object and no Entity implementing Signal/Partner contracts.
+
+Restore traverses:
+
+~~~text
+Room rows
+-> reconstructed historical Observation / Signal values
+-> CgmStore Snapshot
+-> VexExecution.observe(store::snapshots)
+-> CgmFamily State
+~~~
+
+not:
+
+~~~text
+Room Entity
+-> Decoder
+-> Receiver
+-> new Partner Signal
+~~~
+
+Permanent:
+
+~~~text
+ENTITY_RESTORED != PARTNER_SIGNAL_RECEIVED
+PROCESS_RESTART != NEW_SOURCE_HISTORY
+~~~
+
+The synthetic source resumes its sequence from durable Store truth inside the queued Connection
+admission lane, so restart cannot silently create a second sequence-1 history in the same acquisition
+epoch.
+
+### What is still held
+
+~~~text
+generated Room v6 schema / identity hash until KSP runs
+5 -> 6 migration execution proof
+real Local HTTP / BLE realization
+CGM gap / continuity depth
+meaningful History Signal shape
 whether a first-class Partnership owner is ever earned
-migration of ThemeMode / VexStream onto Partner vocabulary
+ThemeMode / VexStream migration
 ~~~
 
-ThemeMode and VexStream remain comparison evidence. Do not refactor them merely to make this candidate
-appear more established than it is.
+ThemeMode and VexStream remain comparison evidence. Do not refactor them merely to make Partner appear
+more established than it is.
 
-The next foundation pressure should come from durable/restart and concrete transport realization.
-If those pressures preserve the same tree, Partner has substantially stronger grounds to become
-accepted architecture; if they force relationship-owned truth elsewhere, refine the root instead of
-adding parallel glue.
+The next proof boundary is repository-owned Gradle/KSP + Room instrumentation/migration proof on the
+exact candidate head, followed by concrete transport realization.
 
 ## Current foundation state
 
