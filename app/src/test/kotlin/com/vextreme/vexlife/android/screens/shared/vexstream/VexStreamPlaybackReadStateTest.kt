@@ -12,9 +12,7 @@ import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackTrace
 import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackBehavior
 import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackControls
 import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackState
-import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
-import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueBehavior
-import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueControls
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueFamily
 import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -84,7 +82,7 @@ class VexStreamPlaybackReadStateTest {
     }
 
     @Test
-    fun currentPlaybackObservationCarriesProviderReadAndExistingSemanticProjectionsTogether() {
+    fun currentPlaybackObservationCarriesProviderReadPlaybackProjectionAndQueueStateTogether() {
         val readState =
             VexStreamPlaybackReadState(
                 currentMediaId =
@@ -112,18 +110,14 @@ class VexStreamPlaybackReadStateTest {
                                 restartAvailable = true,
                             ),
                         ),
-                queueProjection =
-                    vexStreamQueueBehavior()
-                        .vexStreamQueueControls()
-                        .projection(
-                            vexStreamQueueState(
-                                mediaItemCount = 1,
-                                previousAvailable = false,
-                                nextAvailable = false,
-                                shuffleAvailable = false,
-                                clearAvailable = true,
-                            ),
-                        ),
+                queueState =
+                    vexStreamQueueState(
+                        mediaItemCount = 1,
+                        previousAvailable = false,
+                        nextAvailable = false,
+                        shuffleAvailable = false,
+                        clearAvailable = true,
+                    ),
             )
 
         assertSame(
@@ -140,23 +134,24 @@ class VexStreamPlaybackReadStateTest {
         assertEquals(
             false,
             observation
-                .queueProjection[
-                    VexStreamQueueControl.Next
-                ].isAvailable,
+                .queueState
+                .isAvailable(
+                    VexStreamQueueFamily.Control.Next,
+                ),
         )
     }
 
     @Test
     fun fullPlayerSwipeMapsOnlyBroadHorizontalGesturesToQueueControls() {
         assertEquals(
-            VexStreamQueueControl.Previous,
+            VexStreamQueueFamily.Control.Previous,
             vexStreamFullPlayerSwipeControl(
                 dragDistancePx = 120f,
                 thresholdPx = 72f,
             ),
         )
         assertEquals(
-            VexStreamQueueControl.Next,
+            VexStreamQueueFamily.Control.Next,
             vexStreamFullPlayerSwipeControl(
                 dragDistancePx = -120f,
                 thresholdPx = 72f,
@@ -202,13 +197,13 @@ class VexStreamPlaybackReadStateTest {
         assertEquals(
             "presentation.vexstream.full-player.swipe.previous",
             VexStreamPresentationRefs.fullPlayerSwipe(
-                VexStreamQueueControl.Previous,
+                VexStreamQueueFamily.Control.Previous,
             ),
         )
         assertEquals(
             "presentation.vexstream.full-player.swipe.next",
             VexStreamPresentationRefs.fullPlayerSwipe(
-                VexStreamQueueControl.Next,
+                VexStreamQueueFamily.Control.Next,
             ),
         )
     }
