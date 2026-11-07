@@ -12,6 +12,7 @@ class PartnersCircuitLabScreenSemanticRegistrationTest {
         listOf(
             PartnersCircuitLabScreen.Automation,
             PartnersCircuitLabScreen.ReceiveCgm,
+            PartnersCircuitLabScreen.ReceiveCgmHttp,
             PartnersCircuitLabScreen.ReceivePen,
             PartnersCircuitLabScreen.RequestPump,
             PartnersCircuitLabScreen.ReceivePumpOutcome,
