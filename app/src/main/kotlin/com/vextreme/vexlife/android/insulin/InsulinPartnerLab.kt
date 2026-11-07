@@ -3,6 +3,7 @@
 package com.vextreme.vexlife.android.insulin
 
 import com.vextreme.vexlife.android.behavior.VexMethod
+import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -105,9 +106,22 @@ internal class InsulinPartnerLab(
             .asStateFlow()
 
     init {
-        family.observeStore(
-            store.current,
-        )
+        /*
+         * The Store Flow itself is the exact local source address for this maintained listener.
+         * ResourceId remains Family-Control relationship identity and is not reused as listener ID.
+         */
+        VexExecution.observe(
+            executionRoot =
+                executionRoot,
+            owner =
+                family,
+            source =
+                store::snapshots,
+        ) { snapshot ->
+            family.observeStore(
+                snapshot,
+            )
+        }
     }
 
     fun receiveSyntheticPenPacket():
@@ -155,10 +169,6 @@ internal class InsulinPartnerLab(
                 observedAtEpochMillis =
                     nowEpochMillis(),
             )
-
-        family.observeStore(
-            store.current,
-        )
 
         return observations
     }
@@ -310,10 +320,6 @@ internal class InsulinPartnerLab(
                 observedAtEpochMillis =
                     nowEpochMillis(),
             )
-
-        family.observeStore(
-            store.current,
-        )
 
         mutablePumpRequestStatus.value =
             PumpRequestStatus.DeliveryObserved(
