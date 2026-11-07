@@ -6,10 +6,12 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.cgm.CgmFamily
 import com.vextreme.vexlife.android.cgm.CgmPartnerLab
+import com.vextreme.vexlife.android.cgm.CgmStore
 import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.ElementIcon
@@ -42,8 +44,9 @@ import com.vextreme.vexlife.android.screens.AppScreenBlueprint
  *     -> DisplayState
  *     -> this Vex Compose projection
  *
- * This Screen is intentionally diagnostic/educational. It does not claim clinical currentness,
- * real BLE behavior, durable Room persistence, or glucose treatment meaning.
+ * This Screen is intentionally diagnostic/educational. Live Debug uses the Room-backed CgmStore
+ * realization so accepted synthetic observations survive Screen/process reconstruction. It does not
+ * claim real BLE behavior, clinical currentness, or glucose treatment meaning.
  */
 object CgmPartnerLabScreen : AppScreenBlueprint(
     screenKey = "cgm-partner-lab",
@@ -105,10 +108,28 @@ object CgmPartnerLabScreen : AppScreenBlueprint(
 @Composable
 internal fun CgmPartnerLabScreenContent(
     runtime: VexRuntime,
+    durableStore:
+        Boolean =
+        true,
 ) {
+    val context =
+        LocalContext
+            .current
+            .applicationContext
     val lab =
-        remember {
-            CgmPartnerLab()
+        remember(
+            context,
+            durableStore,
+        ) {
+            if (
+                durableStore
+            ) {
+                CgmPartnerLab.production(
+                    context,
+                )
+            } else {
+                CgmPartnerLab()
+            }
         }
     DisposableEffect(
         lab,
@@ -125,7 +146,10 @@ internal fun CgmPartnerLabScreenContent(
     val storeSnapshot by
         lab.store
             .snapshots
-            .collectAsState()
+            .collectAsState(
+                initial =
+                    CgmStore.Snapshot(),
+            )
     val displayState =
         lab.family
             .displayStateFor(
@@ -315,6 +339,8 @@ private fun CgmPartnerLabScreenPreview() {
         CgmPartnerLabScreenContent(
             runtime =
                 context.runtime,
+            durableStore =
+                false,
         )
     }
 }
