@@ -84,7 +84,7 @@ CURRENT State + incoming Control
 
 ## Partner circuit patient-zero candidate
 
-The current CGM lab branch is pressuring a second, independent reusable root:
+The CGM / connected-pen / insulin-pump walk is now pressuring a second independent reusable root:
 
 ~~~text
 VexPartner<Partner>
@@ -96,26 +96,68 @@ VexPartner<Partner>
    -> Receiver<Partner, Signal>
 ~~~
 
-The question is narrower than "mirror VexFamily":
+The question remains narrower than "mirror VexFamily":
 
 > Can Kotlin keep the external participant / Signal / Connection relationship source-readable while
 > Family continues to own semantic State / Control / Act / Effect meaning?
 
-Current patient-zero circuit:
+### What survived three different examples
 
 ~~~text
-CgmPartner
--> CgmPartner.Connection.Decoder
--> CgmPartner.Signal
--> CgmPartner.Connection.Observation
--> CgmPartner.Connection.Receiver
--> CgmStore
--> CgmFamily
--> CgmFamily.DisplayState
--> custom Vex Compose Screen
+CGM Partner
+    glucose + temperature Signals
+    one transport packet -> multiple semantic Signals
+    Partner receipt -> Store -> CgmFamily -> DisplayState
+
+Connected Pen Partner
+    sparse DoseRecorded + CartridgeObserved Signals
+    same Partner/Connection tree
+    NO imported CGM continuity/gap assumption
+
+Insulin Pump Partner
+    DeliveryObserved + ReservoirObserved Signals
+    same inbound Partner/Connection tree
+
+    and the reverse path:
+    InsulinFamily.Parameter
+    -> Control
+    -> Effect
+    -> Act.Method
+    -> Pump Partner Connection
 ~~~
 
-Important held boundaries:
+Two independently-owned insulin Partners also converge into one domain Store without a universal
+event envelope:
+
+~~~text
+ConnectedPenPartner ----\
+                         +-> InsulinStore -> InsulinFamily
+InsulinPumpPartner -----/
+~~~
+
+Provider acknowledgement remains outside durable truth:
+
+~~~text
+EFFECT_REQUESTED
+!= PARTNER_ACKNOWLEDGED
+!= PHYSICAL_OUTCOME
+!= DURABLE_DOMAIN_TRUTH
+~~~
+
+The pump Method success updates only lab/provider acknowledgement. Family State changes only after a
+later Partner Signal crosses Observation / Receiver into Store and Family interprets the new Store
+snapshot.
+
+### Current root refinements earned by the examples
+
+Connection now requires one exact typed Id<Partner>. The reusable root deliberately does NOT
+prescribe a String/primitive representation for that identity. Concrete examples retain their exact
+typed identity objects.
+
+Receiver consumes the reusable Partner Observation contract directly; the CGM, Pen, and Pump
+examples do not down-cast Observation back to their concrete occurrence merely to reach Store.
+
+Important held boundaries remain:
 
 ~~~text
 Partner != Family
@@ -123,16 +165,36 @@ Signal != Family State
 Store != Partner
 Store != Family
 Store != DAO / Room Entity
+
+Source / Target = directional roles of Partner
 Partnership = relationship language unless relationship-owned truth earns a first-class owner
 ~~~
 
-The first CgmStore is intentionally in-memory and Flow-shaped. It proves ordering/ownership before a
-Room schema is introduced. ThemeMode and VexStream remain comparison evidence; do not refactor them to
-make this candidate appear more established than it is.
+### What this still does NOT prove
 
-This candidate is not yet a claim that every Partner requires every child above. Connected-pen and
-insulin-pump examples are intended to falsify or refine the shape before additional SDK vocabulary is
-promoted.
+The current Stores are intentionally in-memory and Flow-shaped. The examples prove relationship
+ordering and ownership, not Room schema or process-death durability.
+
+Still held:
+
+~~~text
+exact Room representation
+restart reconstruction
+meaningful history Signal shape
+CGM continuity / gap reconciliation depth
+real BLE / HTTP realization
+whether every Partner needs Receiver as a Connection child
+whether a first-class Partnership owner is ever earned
+migration of ThemeMode / VexStream onto Partner vocabulary
+~~~
+
+ThemeMode and VexStream remain comparison evidence. Do not refactor them merely to make this candidate
+appear more established than it is.
+
+The next foundation pressure should come from durable/restart and concrete transport realization.
+If those pressures preserve the same tree, Partner has substantially stronger grounds to become
+accepted architecture; if they force relationship-owned truth elsewhere, refine the root instead of
+adding parallel glue.
 
 ## Current foundation state
 
