@@ -4,25 +4,28 @@ package com.vextreme.vexlife.android.cgm
 
 import android.content.Context
 import com.vextreme.vexlife.android.data.cgm.CgmStoreFactory
-
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import kotlinx.coroutines.Job
 
 /**
- * Lab-only composition owner for the first complete Partner circuit.
+ * Lab composition for one CGM Partner vocabulary realized through two provider representations.
  *
- * This is intentionally NOT a generic Partnership abstraction. It wires one concrete example so we
- * can inspect the repeated relationship before promoting more SDK nouns.
+ * Both paths intentionally converge before Observation:
  *
- *     synthetic bytes
- *     -> CgmPartner.Connection.Decoder
- *     -> CgmPartner.Signal(s)
- *     -> Connection.Observation
- *     -> Connection.Receiver
- *     -> CgmStore
- *     -> CgmFamily
- *     -> DisplayState / custom Vex Compose
+ *     BLE-like ByteArray -> BleDecoder ----\
+ *                                       +-> CgmPartner.Signal(s)
+ *     HTTP-like body    -> HttpDecoder ---/
+ *                                             ↓
+ *                                      Connection.Observation
+ *                                             ↓
+ *                                      Connection.Receiver
+ *                                             ↓
+ *                                          CgmStore
+ *                                             ↓
+ *                                          CgmFamily
+ *
+ * This is not a generic Partnership owner. It is a pressure fixture proving what repeats.
  */
 internal class CgmPartnerLab(
     private val nowEpochMillis:
@@ -41,21 +44,42 @@ internal class CgmPartnerLab(
     private object InboundAdmission :
         VexExecution.RelationshipId
 
+    private data class SyntheticSample(
+        val sequence: Long,
+        val capturedAtEpochMillis: Long,
+        val mgDl: Int,
+        val trend: String,
+        val celsiusHundredths: Int,
+    )
+
     private val receiver =
         CgmPartner.Connection.Receiver(
             store =
                 store,
         )
 
-    private val connection =
+    private val bleConnection =
         CgmPartner.Connection(
             id =
                 CgmPartner.Connection.Id(
                     value =
-                        "cgm.synthetic.connection",
+                        "cgm.synthetic.ble",
                 ),
-            decoder =
-                CgmPartner.Connection.Decoder(),
+            conversion =
+                CgmPartner.Connection.BleDecoder(),
+            receiver =
+                receiver,
+        )
+
+    private val httpConnection =
+        CgmPartner.Connection(
+            id =
+                CgmPartner.Connection.Id(
+                    value =
+                        "cgm.synthetic.http",
+                ),
+            conversion =
+                CgmPartner.Connection.HttpDecoder(),
             receiver =
                 receiver,
         )
@@ -65,14 +89,6 @@ internal class CgmPartnerLab(
         null
 
     init {
-        /*
-         * Sustained Store observation is source-addressed execution custody:
-         *
-         *     exact Flow source -> one maintained Job
-         *
-         * It intentionally does NOT mint a Family ResourceId/RelationshipId merely to keep a
-         * listener alive.
-         */
         VexExecution.observe(
             executionRoot =
                 executionRoot,
@@ -87,35 +103,42 @@ internal class CgmPartnerLab(
         }
     }
 
-    /**
-     * Simulate one transport packet containing two independent Partner statements.
-     *
-     * The button that calls this method is a Lab control over the synthetic source. It deliberately
-     * does not enter CgmFamily.Control because receiving outside truth is not a Family-authored
-     * product Effect.
-     */
+    /** Existing/default synthetic ingress remains the BLE-like provider path. */
     fun receiveSyntheticPacket():
+        Job =
+        receiveSyntheticBlePacket()
+
+    fun receiveSyntheticBlePacket():
         Job =
         VexExecution.beginQueued(
             executionRoot =
                 executionRoot,
             owner =
-                connection,
+                bleConnection,
             relationshipId =
                 InboundAdmission,
             operation =
-                ::receiveSyntheticPacketAndAwait,
+                ::receiveSyntheticBlePacketAndAwait,
             argument =
                 Unit,
         )
 
-    /**
-     * Awaitable form used by durability/restart proof.
-     *
-     * Returning from this function means every decoded Observation has completed Receiver -> Store
-     * admission. It does not mean Family has already interpreted the Store Flow emission.
-     */
-    internal suspend fun receiveSyntheticPacketAndAwait(
+    fun receiveSyntheticHttpResponse():
+        Job =
+        VexExecution.beginQueued(
+            executionRoot =
+                executionRoot,
+            owner =
+                httpConnection,
+            relationshipId =
+                InboundAdmission,
+            operation =
+                ::receiveSyntheticHttpResponseAndAwait,
+            argument =
+                Unit,
+        )
+
+    internal suspend fun receiveSyntheticBlePacketAndAwait(
         @Suppress("UNUSED_PARAMETER")
         unit:
             Unit,
@@ -123,6 +146,92 @@ internal class CgmPartnerLab(
         List<
             CgmPartner.Connection.Observation
         > {
+        val sample =
+            nextSyntheticSample()
+
+        return bleConnection.receive(
+            input =
+                blePacket(
+                    sample,
+                ),
+            observedAtEpochMillis =
+                nowEpochMillis(),
+        )
+    }
+
+    internal suspend fun receiveSyntheticHttpResponseAndAwait(
+        @Suppress("UNUSED_PARAMETER")
+        unit:
+            Unit,
+    ):
+        List<
+            CgmPartner.Connection.Observation
+        > {
+        val sample =
+            nextSyntheticSample()
+
+        return httpConnection.receive(
+            input =
+                httpResponse(
+                    sample,
+                ),
+            observedAtEpochMillis =
+                nowEpochMillis(),
+        )
+    }
+
+    /**
+     * Equivalent-source conversion fixture used by focused tests.
+     *
+     * This does not admit either representation to Store. It proves provider representation may
+     * change while Partner semantic vocabulary remains equal.
+     */
+    internal fun equivalentSyntheticConversions(
+        sequence: Long,
+        capturedAtEpochMillis: Long,
+        mgDl: Int,
+        trend: String,
+        celsiusHundredths: Int,
+    ):
+        Pair<
+            List<CgmPartner.Signal>,
+            List<CgmPartner.Signal>
+        > {
+        val sample =
+            SyntheticSample(
+                sequence =
+                    sequence,
+                capturedAtEpochMillis =
+                    capturedAtEpochMillis,
+                mgDl =
+                    mgDl,
+                trend =
+                    trend,
+                celsiusHundredths =
+                    celsiusHundredths,
+            )
+
+        val ble =
+            CgmPartner.Connection.BleDecoder()
+                .convert(
+                    blePacket(
+                        sample,
+                    ),
+                )
+        val http =
+            CgmPartner.Connection.HttpDecoder()
+                .convert(
+                    httpResponse(
+                        sample,
+                    ),
+                )
+
+        return ble to
+            http
+    }
+
+    private suspend fun nextSyntheticSample():
+        SyntheticSample {
         val sequence =
             nextSyntheticSequence()
         val capturedAt =
@@ -159,53 +268,119 @@ internal class CgmPartnerLab(
                     )
                     .toInt()
 
-        val packet =
-            buildString {
-                append(
-                    "g|cgm-synthetic|epoch-a|",
-                )
-                append(
-                    sequence,
-                )
-                append('|')
-                append(
-                    capturedAt,
-                )
-                append('|')
-                append(
-                    mgDl,
-                )
-                append('|')
-                append(
-                    trend,
-                )
-                append(';')
-                append(
-                    "t|cgm-synthetic|epoch-a|",
-                )
-                append(
-                    sequence,
-                )
-                append('|')
-                append(
-                    capturedAt,
-                )
-                append('|')
-                append(
-                    celsiusHundredths,
-                )
-            }
-                .toByteArray(
-                    Charsets.UTF_8,
-                )
-
-        return connection.receive(
-            bytes =
-                packet,
-            observedAtEpochMillis =
-                nowEpochMillis(),
+        return SyntheticSample(
+            sequence =
+                sequence,
+            capturedAtEpochMillis =
+                capturedAt,
+            mgDl =
+                mgDl,
+            trend =
+                trend,
+            celsiusHundredths =
+                celsiusHundredths,
         )
     }
+
+    private fun blePacket(
+        sample:
+            SyntheticSample,
+    ):
+        ByteArray =
+        buildString {
+            append(
+                "g|cgm-synthetic|epoch-a|",
+            )
+            append(
+                sample.sequence,
+            )
+            append('|')
+            append(
+                sample.capturedAtEpochMillis,
+            )
+            append('|')
+            append(
+                sample.mgDl,
+            )
+            append('|')
+            append(
+                sample.trend,
+            )
+            append(';')
+            append(
+                "t|cgm-synthetic|epoch-a|",
+            )
+            append(
+                sample.sequence,
+            )
+            append('|')
+            append(
+                sample.capturedAtEpochMillis,
+            )
+            append('|')
+            append(
+                sample.celsiusHundredths,
+            )
+        }
+            .toByteArray(
+                Charsets.UTF_8,
+            )
+
+    private fun httpResponse(
+        sample:
+            SyntheticSample,
+    ):
+        CgmPartner.Connection.HttpResponse =
+        CgmPartner.Connection.HttpResponse(
+            body =
+                buildString {
+                    append(
+                        "glucose?device=cgm-synthetic&epoch=epoch-a&sequence=",
+                    )
+                    append(
+                        sample.sequence,
+                    )
+                    append(
+                        "&capturedAt=",
+                    )
+                    append(
+                        sample.capturedAtEpochMillis,
+                    )
+                    append(
+                        "&mgDl=",
+                    )
+                    append(
+                        sample.mgDl,
+                    )
+                    append(
+                        "&trend=",
+                    )
+                    append(
+                        sample.trend,
+                    )
+                    append(
+                        '\n',
+                    )
+                    append(
+                        "temperature?device=cgm-synthetic&epoch=epoch-a&sequence=",
+                    )
+                    append(
+                        sample.sequence,
+                    )
+                    append(
+                        "&capturedAt=",
+                    )
+                    append(
+                        sample.capturedAtEpochMillis,
+                    )
+                    append(
+                        "&celsiusHundredths=",
+                    )
+                    append(
+                        sample.celsiusHundredths,
+                    )
+                },
+        )
 
     private suspend fun nextSyntheticSequence():
         Long {
@@ -222,12 +397,17 @@ internal class CgmPartnerLab(
             return current
         }
 
+        val source =
+            CgmPartner.Source(
+                deviceRef =
+                    "cgm-synthetic",
+                acquisitionEpoch =
+                    "epoch-a",
+            )
+
         /*
-         * Restart does not create a new acquisition history. Resume the synthetic source sequence
-         * from durable Store truth for this exact source/epoch.
-         *
-         * This lookup happens inside the queued inbound Connection relationship, so two rapid
-         * synthetic packets cannot race the initialization.
+         * Restart does not create a new acquisition history. Resume the synthetic Source sequence
+         * from durable Store truth inside the queued live-Connection admission lane.
          */
         val restoredMax =
             store
@@ -243,21 +423,11 @@ internal class CgmPartnerLab(
                     ) {
                         is CgmPartner.Signal.Glucose ->
                             signal.source ==
-                                CgmPartner.Source(
-                                    deviceRef =
-                                        "cgm-synthetic",
-                                    acquisitionEpoch =
-                                        "epoch-a",
-                                )
+                                source
 
                         is CgmPartner.Signal.Temperature ->
                             signal.source ==
-                                CgmPartner.Source(
-                                    deviceRef =
-                                        "cgm-synthetic",
-                                    acquisitionEpoch =
-                                        "epoch-a",
-                                )
+                                source
                     }
                 }
                 .map { signal ->
@@ -306,4 +476,4 @@ internal class CgmPartnerLab(
     }
 }
 
-// [VXG RealForever][VEX-CGM-LABS][PARTNER-CIRCUIT-PATIENT-ZERO]
+// [VXG RealForever][VEX-CGM-LABS][MULTI-REALIZATION-PARTNER-CIRCUIT]
