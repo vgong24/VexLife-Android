@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.screens.shared.cgm
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -109,6 +110,14 @@ internal fun CgmPartnerLabScreenContent(
         remember {
             CgmPartnerLab()
         }
+    DisposableEffect(
+        lab,
+    ) {
+        onDispose {
+            lab.close()
+        }
+    }
+
     val familyState by
         lab.family
             .states
