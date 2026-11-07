@@ -7,7 +7,8 @@ import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.screens.primary.events.EventsScreen
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.primary.settings.SettingsScreen
-import com.vextreme.vexlife.android.screens.shared.cgm.CgmPartnerLabScreen\nimport com.vextreme.vexlife.android.screens.shared.conversation.VexFamilyConversationScreen
+import com.vextreme.vexlife.android.screens.shared.cgm.CgmPartnerLabScreen
+import com.vextreme.vexlife.android.screens.shared.conversation.VexFamilyConversationScreen
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
 import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
@@ -36,6 +37,7 @@ object AppScreens {
 
     val shared: List<AppScreenBlueprint> = listOf(
         DebugMenuScreen,
+        CgmPartnerLabScreen,
         GalleryScreen,
         UserProfileScreen,
         VexFamilyConversationScreen,
