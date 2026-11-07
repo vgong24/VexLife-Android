@@ -2,84 +2,105 @@ package com.vextreme.vexlife.android.vexstream.queue
 
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
+import kotlinx.coroutines.flow.StateFlow
 
-/**
- * Media3 realization of the admitted VexStream Queue behavior.
- *
- * Activation always re-reads current Media3 truth before resolving the Control. UI projection is
- * therefore informative, not execution authority.
- */
+/** Media3 provider bridge for the finite Queue Family. */
 internal class Media3VexStreamQueueConnection(
-    private val controller: MediaController,
+    private val controller:
+        MediaController,
 ) :
-    VexStreamQueueConnection {
-    private val behavior =
-        vexStreamQueueBehavior()
-
-    private val controls =
-        behavior.vexStreamQueueControls()
-
-    override val currentProjection:
-        VexStreamQueueProjection
-        get() =
-            controls.projection(
+    AutoCloseable {
+    private val family =
+        VexStreamQueueFamily(
+            initialState =
                 controller
                     .toVexStreamQueueState(),
-            )
+        )
 
-    override fun activate(
-        control: VexStreamQueueControl,
+    val states:
+        StateFlow<
+            VexStreamQueueFamily.State
+        >
+        get() =
+            family.states
+
+    private val listener =
+        object :
+            Player.Listener {
+            override fun onEvents(
+                player:
+                    Player,
+                events:
+                    Player.Events,
+            ) {
+                observe(
+                    player,
+                )
+            }
+        }
+
+    init {
+        controller.addListener(
+            listener,
+        )
+    }
+
+    fun activate(
+        control:
+            VexStreamQueueFamily.Control,
     ) {
-        val current =
-            controller
-                .toVexStreamQueueState()
+        observe(
+            controller,
+        )
 
-        val act =
-            controls.resolve(
-                current = current,
-                control = control,
-            )?.act
-                ?: return
-
-        val relationship =
-            behavior.resolve(
-                current = current,
-                act = act,
-            )
+        val effect =
+            family
+                .activate(
+                    control,
+                )
+                ?.effect
                 ?: return
 
         when (
-            relationship.effect
+            effect
         ) {
-            VexStreamQueueEffect.SeekPrevious ->
+            VexStreamQueueFamily.Effect.SeekPrevious ->
                 controller
                     .seekToPreviousMediaItem()
 
-            VexStreamQueueEffect.SeekNext ->
+            VexStreamQueueFamily.Effect.SeekNext ->
                 controller
                     .seekToNextMediaItem()
 
-            VexStreamQueueEffect.ShuffleFuture ->
+            VexStreamQueueFamily.Effect.ShuffleFuture ->
                 controller
                     .shuffleVexStreamFutureQueue()
 
-            VexStreamQueueEffect.ClearQueue ->
+            VexStreamQueueFamily.Effect.ClearQueue ->
                 controller
                     .clearMediaItems()
         }
     }
+
+    override fun close() {
+        controller.removeListener(
+            listener,
+        )
+    }
+
+    private fun observe(
+        player:
+            Player,
+    ) {
+        family.observe(
+            player
+                .toVexStreamQueueState(),
+        )
+    }
 }
 
-internal fun Player.toVexStreamQueueProjection():
-    VexStreamQueueProjection =
-    vexStreamQueueBehavior()
-        .vexStreamQueueControls()
-        .projection(
-            toVexStreamQueueState(),
-        )
-
-private fun Player.toVexStreamQueueState():
-    VexStreamQueueState =
+internal fun Player.toVexStreamQueueState():
+    VexStreamQueueFamily.State =
     vexStreamQueueState(
         mediaItemCount =
             mediaItemCount,
@@ -115,25 +136,33 @@ private fun Player.toVexStreamQueueState():
     )
 
 internal fun vexStreamQueueState(
-    mediaItemCount: Int,
-    previousAvailable: Boolean,
-    nextAvailable: Boolean,
-    shuffleAvailable: Boolean,
-    clearAvailable: Boolean,
-): VexStreamQueueState {
+    mediaItemCount:
+        Int,
+    previousAvailable:
+        Boolean,
+    nextAvailable:
+        Boolean,
+    shuffleAvailable:
+        Boolean,
+    clearAvailable:
+        Boolean,
+):
+    VexStreamQueueFamily.State {
     require(
-        mediaItemCount >= 0,
+        mediaItemCount >=
+            0,
     ) {
         "mediaItemCount must not be negative"
     }
 
     if (
-        mediaItemCount == 0
+        mediaItemCount ==
+        0
     ) {
-        return VexStreamQueueState.Empty
+        return VexStreamQueueFamily.State.Empty
     }
 
-    return VexStreamQueueState.NonEmpty(
+    return VexStreamQueueFamily.State.NonEmpty(
         previousAvailable =
             previousAvailable,
         nextAvailable =
@@ -145,4 +174,4 @@ internal fun vexStreamQueueState(
     )
 }
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][QUEUE][MEDIA3-CONNECTION]
