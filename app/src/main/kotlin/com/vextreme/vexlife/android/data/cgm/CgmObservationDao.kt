@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 
 /** Room plumbing for historical CGM Partner observations. */
 @Dao
-internal interface CgmObservationDao {
+interface CgmObservationDao {
     @Query(
         """
         SELECT * FROM cgm_partner_observation
