@@ -5,17 +5,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/**
- * One durable-domain convergence boundary fed by two different Partners.
- *
- * The in-memory realization is deliberate. This example pressures ownership first:
- *
- *     ConnectedPenPartner ----\
- *                              +-> InsulinStore -> InsulinFamily
- *     InsulinPumpPartner -----/
- *
- * Store keeps Partner provenance instead of flattening every fact into one generic event/value.
- */
 internal typealias InsulinPenObservation =
     VexPartner.Connection.Observation<
         ConnectedPenPartner,
@@ -28,6 +17,17 @@ internal typealias InsulinPumpObservation =
         InsulinPumpPartner.Signal
     >
 
+/**
+ * One durable-domain convergence boundary fed by two different Partners.
+ *
+ * The in-memory realization is deliberate. This example pressures ownership first:
+ *
+ *     ConnectedPenPartner ----\\
+ *                              +-> InsulinStore -> InsulinFamily
+ *     InsulinPumpPartner -----/
+ *
+ * Store keeps Partner provenance instead of flattening every fact into one generic event/value.
+ */
 internal class InsulinStore {
     data class Snapshot(
         val penObservations:
