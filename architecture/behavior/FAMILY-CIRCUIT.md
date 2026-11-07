@@ -24,14 +24,20 @@ caller
 -> Act returned
 
 later realization boundary
--> Act.Begin + Act.relationshipId
--> bound Act.Method
-   -> specializes VexMethod
--> VexExecution
--> concrete realization
--> VexMethod.Result
-   -> Success / Failure / Error
--> rightful result interpretation
+-> accepted Act.effect?
+   ├─ immediate provider/platform transformation
+   │  -> realize directly
+   │  -> no Job invented
+   │
+   └─ unfinished asynchronous work
+      -> Act.Begin + Act.relationshipId
+      -> bound Act.Method
+         -> specializes VexMethod
+      -> VexExecution
+      -> concrete realization
+      -> VexMethod.Result
+         -> Success / Failure / Error
+      -> rightful result interpretation
 
 outside/provider truth
 -> rightful observation / reconciliation
@@ -56,8 +62,9 @@ Act
     lawful result of exact CURRENT State + Control
 
 Act.Begin
-    inert authored execution consequence
+    inert authored runtime consequence
     Effect + overlap Approach
+    != automatic Job admission
 
 Effect
     requested runtime transformation
@@ -184,7 +191,9 @@ Begin
 ~~~
 
 Approach is authored here because overlap is part of the consequence relationship, not because
-Family owns coroutine execution.
+Family owns coroutine execution. Effect existence alone does not require VexExecution. The rightful
+realization boundary decides whether the requested transformation is immediate or creates unfinished
+work whose lifetime/overlap/cancellation actually needs Job custody.
 
 Approach is not inferred from whether the Act stays in the same State or admits a new State:
 
@@ -199,6 +208,30 @@ Execution overlap question
 
 These are independent axes.
 ~~~
+
+A third distinction is equally important:
+
+~~~text
+Effect question
+    what runtime/provider transformation is requested?
+
+Execution-custody question
+    does realizing that transformation create unfinished work
+    whose lifetime / overlap / cancellation must be maintained?
+
+immediate provider command
+    -> consume Act.effect directly
+    -> no VexExecution Job
+
+asynchronous work
+    -> bind Act.Method
+    -> Act.launchWith(VexExecutionRoot)
+    -> VexExecution Job custody
+~~~
+
+`begin(effect)` therefore authors an Independent runtime consequence; it does not force the
+realization boundary to launch a coroutine. `beginEarliest`, `beginLatest`, and `beginQueued`
+matter when unfinished work actually has a maintained overlap relationship.
 
 ThemeMode happens to use admit(...) + Latest when changing Light/Dark and stay(...) + Latest when
 re-selecting the already-current mode. That is evidence that Latest belongs to the Select/Save
@@ -381,9 +414,12 @@ VexExecution owns only active Job custody and overlap mechanics:
 RelationshipId -> actual Job(s)
 ~~~
 
+No unfinished Job means there is no custody for VexExecution to own. A synchronous provider
+assignment can realize an accepted Family Effect directly at the rightful provider boundary.
+
 Do not insert another owner merely to translate a feature verb into launch/begin. If an existing
 Session, Family realization boundary, or lifecycle owner already knows the work, keep that meaning
-there and use VexExecution as the execution connective tissue.
+there and use VexExecution only when execution connective tissue is actually required.
 
 ## Store boundary
 
