@@ -159,8 +159,10 @@ private fun ConversationGolden(
         Surface {
             VexConversationRoom(
                 projection = projection,
+                // The golden renders the production subject in an example state. Sharing the
+                // production semantic root lets reference evidence attach to the same coordinate.
                 semanticRootRef =
-                    "golden.conversation.family-room",
+                    VexFamilyConversationScreen.screenId,
                 roomTitle = "Family",
                 participantLabel = { participantRef ->
                     VexConversationLabFixture
@@ -176,7 +178,7 @@ private fun ConversationGolden(
                 composerContent = {
                     PreviewConversationComposer(
                         semanticRootRef =
-                            "golden.conversation.family-room",
+                            VexFamilyConversationScreen.screenId,
                         label = "Type a message",
                         sendLabel = "Send",
                         draft = draft,
