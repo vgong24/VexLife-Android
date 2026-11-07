@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.vexstream.repeat
 
 import androidx.media3.common.Player
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
@@ -9,136 +10,74 @@ import org.junit.Test
 
 class VexStreamRepeatFamilyTest {
     @Test
-    fun providerRepeatOffMapsToDisabledAndToggleRequestsEnableAll() {
-        val state =
+    fun providerModesMapToCurrentRepeatTruthAndAvailability() {
+        assertEquals(
+            VexStreamRepeatFamily.State.Disabled(
+                toggleAvailable = true,
+            ),
             vexStreamRepeatState(
-                repeatMode =
-                    Player.REPEAT_MODE_OFF,
-                toggleAvailable =
-                    true,
-            )
-        val family =
-            VexStreamRepeatFamily(
-                initialState =
-                    state,
-            )
-
-        assertTrue(
-            state is
-                VexStreamRepeatFamily.State.Disabled,
+                Player.REPEAT_MODE_OFF,
+                toggleAvailable = true,
+            ),
         )
-        assertTrue(
-            family.isAvailable(
-                VexStreamRepeatFamily.Control.Toggle,
+        assertEquals(
+            VexStreamRepeatFamily.State.Enabled(
+                toggleAvailable = true,
+            ),
+            vexStreamRepeatState(
+                Player.REPEAT_MODE_ONE,
+                toggleAvailable = true,
+            ),
+        )
+        assertEquals(
+            VexStreamRepeatFamily.State.Enabled(
+                toggleAvailable = true,
+            ),
+            vexStreamRepeatState(
+                Player.REPEAT_MODE_ALL,
+                toggleAvailable = true,
             ),
         )
 
-        val act =
-            family.activate(
-                VexStreamRepeatFamily.Control.Toggle,
-            )
-
-        assertSame(
-            VexStreamRepeatFamily.Effect.RequestEnableAll,
-            act?.effect,
-        )
-        assertNull(
-            act?.relationshipId,
-        )
-        assertSame(
-            state,
-            family.currentState,
-        )
-    }
-
-    @Test
-    fun providerRepeatOneAndAllBothMapToEnabled() {
-        val repeatOne =
-            vexStreamRepeatState(
-                repeatMode =
-                    Player.REPEAT_MODE_ONE,
-                toggleAvailable =
-                    true,
-            )
-        val repeatAll =
-            vexStreamRepeatState(
-                repeatMode =
-                    Player.REPEAT_MODE_ALL,
-                toggleAvailable =
-                    true,
-            )
-
-        assertTrue(
-            repeatOne is
-                VexStreamRepeatFamily.State.Enabled,
-        )
-        assertTrue(
-            repeatAll is
-                VexStreamRepeatFamily.State.Enabled,
-        )
-
-        val family =
+        val blocked =
             VexStreamRepeatFamily(
-                initialState =
-                    repeatOne,
-            )
-        val act =
-            family.activate(
-                VexStreamRepeatFamily.Control.Toggle,
-            )
-
-        assertSame(
-            VexStreamRepeatFamily.Effect.RequestDisable,
-            act?.effect,
-        )
-        assertSame(
-            repeatOne,
-            family.currentState,
-        )
-    }
-
-    @Test
-    fun providerCommandAvailabilityOwnsToggleAvailability() {
-        val family =
-            VexStreamRepeatFamily(
-                initialState =
-                    VexStreamRepeatFamily.State.Disabled(
-                        toggleAvailable =
-                            false,
-                    ),
+                VexStreamRepeatFamily.State.Disabled(
+                    toggleAvailable = false,
+                ),
             )
 
         assertFalse(
-            family.isAvailable(
+            blocked.isAvailable(
                 VexStreamRepeatFamily.Control.Toggle,
             ),
         )
         assertNull(
-            family.activate(
+            blocked.activate(
                 VexStreamRepeatFamily.Control.Toggle,
             ),
         )
     }
 
     @Test
-    fun providerObservationChangesStateSeparatelyFromRequestedEffect() {
+    fun toggleAuthorsProviderEffectWhileObservationOwnsResultingState() {
         val family =
             VexStreamRepeatFamily(
-                initialState =
-                    VexStreamRepeatFamily.State.Disabled(
-                        toggleAvailable =
-                            true,
-                    ),
+                VexStreamRepeatFamily.State.Disabled(
+                    toggleAvailable = true,
+                ),
             )
 
-        val requested =
+        val enable =
             family.activate(
                 VexStreamRepeatFamily.Control.Toggle,
             )
 
         assertSame(
             VexStreamRepeatFamily.Effect.RequestEnableAll,
-            requested?.effect,
+            enable?.effect,
+        )
+        assertNull(
+            enable?.relationshipId,
         )
         assertTrue(
             family.currentState is
@@ -147,11 +86,19 @@ class VexStreamRepeatFamilyTest {
 
         family.observe(
             VexStreamRepeatFamily.State.Enabled(
-                toggleAvailable =
-                    true,
+                toggleAvailable = true,
             ),
         )
 
+        val disable =
+            family.activate(
+                VexStreamRepeatFamily.Control.Toggle,
+            )
+
+        assertSame(
+            VexStreamRepeatFamily.Effect.RequestDisable,
+            disable?.effect,
+        )
         assertTrue(
             family.currentState is
                 VexStreamRepeatFamily.State.Enabled,
