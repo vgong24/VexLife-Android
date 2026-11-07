@@ -209,29 +209,20 @@ Execution overlap question
 These are independent axes.
 ~~~
 
-A third distinction is equally important:
+Effect and execution custody are separate questions:
 
 ~~~text
-Effect question
-    what runtime/provider transformation is requested?
-
-Execution-custody question
-    does realizing that transformation create unfinished work
-    whose lifetime / overlap / cancellation must be maintained?
-
-immediate provider command
+immediate Effect
     -> consume Act.effect directly
-    -> no VexExecution Job
+    -> no Job
 
-asynchronous work
-    -> bind Act.Method
+unfinished asynchronous Effect
+    -> bound Act.Method
     -> Act.launchWith(VexExecutionRoot)
-    -> VexExecution Job custody
+    -> VexExecution custody
 ~~~
 
-`begin(effect)` therefore authors an Independent runtime consequence; it does not force the
-realization boundary to launch a coroutine. `beginEarliest`, `beginLatest`, and `beginQueued`
-matter when unfinished work actually has a maintained overlap relationship.
+`begin(effect)` does not force a coroutine; the realization boundary decides whether custody exists.
 
 ThemeMode happens to use admit(...) + Latest when changing Light/Dark and stay(...) + Latest when
 re-selecting the already-current mode. That is evidence that Latest belongs to the Select/Save
