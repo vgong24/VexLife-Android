@@ -211,14 +211,12 @@ internal object InsulinPumpPartner :
         ) :
             VexPartner.Connection.Receiver<
                 InsulinPumpPartner,
-                Signal
+                Signal,
+                Observation
             > {
-            override fun receive(
+            override suspend fun receive(
                 observation:
-                    VexPartner.Connection.Observation<
-                        InsulinPumpPartner,
-                        Signal
-                    >,
+                    Observation,
             ) {
                 store.commitPump(
                     observation,
@@ -226,7 +224,7 @@ internal object InsulinPumpPartner :
             }
         }
 
-        fun receive(
+        suspend fun receive(
             bytes: ByteArray,
             observedAtEpochMillis: Long,
         ):
@@ -243,9 +241,11 @@ internal object InsulinPumpPartner :
                             signal,
                         observedAtEpochMillis =
                             observedAtEpochMillis,
-                    ).also(
-                        receiver::receive,
-                    )
+                    ).also { observation ->
+                        receiver.receive(
+                            observation,
+                        )
+                    }
                 }
     }
 }
