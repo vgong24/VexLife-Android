@@ -29,6 +29,9 @@ internal class InsulinPartnerLab(
         VexExecutionRoot =
         VexExecutionRoot(),
 ) {
+    private object InboundAdmission :
+        VexExecution.RelationshipId
+
     sealed interface PumpRequestStatus {
         data object Idle :
             PumpRequestStatus
@@ -126,11 +129,13 @@ internal class InsulinPartnerLab(
 
     fun receiveSyntheticPenPacket():
         Job =
-        VexExecution.begin(
+        VexExecution.beginQueued(
             executionRoot =
                 executionRoot,
             owner =
-                this,
+                penConnection,
+            relationshipId =
+                InboundAdmission,
             operation =
                 ::receiveSyntheticPenPacketAndAwait,
             argument =
@@ -295,11 +300,13 @@ internal class InsulinPartnerLab(
                 PumpRequestStatus.Acknowledged
                 ?: return null
 
-        return VexExecution.begin(
+        return VexExecution.beginQueued(
             executionRoot =
                 executionRoot,
             owner =
-                this,
+                pumpConnection,
+            relationshipId =
+                InboundAdmission,
             operation =
                 ::receiveSyntheticPumpDeliveryAndAwait,
             argument =
