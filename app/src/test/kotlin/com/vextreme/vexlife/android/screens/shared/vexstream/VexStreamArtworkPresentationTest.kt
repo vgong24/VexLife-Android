@@ -84,6 +84,19 @@ class VexStreamArtworkPresentationTest {
 
 
     @Test
+    fun unavailableLocalFilesSourceFallsBackToRemoteArtwork() {
+        val state =
+            downloadedState()
+
+        assertEquals(
+            state.track.artworkUrl,
+            state.vexStreamArtworkModel(
+                contextFilesDir = null,
+            ),
+        )
+    }
+
+    @Test
     fun streamedTrackUsesPreparedEmbeddedArtworkWithoutDownloadState() {
         val filesDir =
             Files.createTempDirectory(
