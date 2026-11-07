@@ -139,8 +139,8 @@ fun <Item> VexStableLazyColumn(
         state = listState,
         modifier =
             modifier.vex(
-listRef,
-),
+                listRef,
+            ),
         contentPadding = contentPadding,
         verticalArrangement = verticalArrangement,
         userScrollEnabled = userScrollEnabled,
