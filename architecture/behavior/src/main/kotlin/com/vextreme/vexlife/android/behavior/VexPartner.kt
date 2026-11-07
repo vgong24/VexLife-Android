@@ -111,15 +111,17 @@ interface VexPartner<
         fun interface Receiver<
             Partner,
             PartnerSignal,
+            PartnerObservation,
         > where
             Partner : VexPartner<Partner>,
-            PartnerSignal : Signal<Partner> {
+            PartnerSignal : Signal<Partner>,
+            PartnerObservation : Observation<
+                Partner,
+                PartnerSignal
+            > {
             suspend fun receive(
                 observation:
-                    Observation<
-                        Partner,
-                        PartnerSignal
-                    >,
+                    PartnerObservation,
             )
         }
     }
