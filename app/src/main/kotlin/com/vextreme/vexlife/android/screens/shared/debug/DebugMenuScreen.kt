@@ -13,13 +13,15 @@ import com.vextreme.vexlife.android.elements.TextRole
 import com.vextreme.vexlife.android.elements.VexElementStyles
 import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.elements.invoke
+import com.vextreme.vexlife.android.elements.navigateTo
 import com.vextreme.vexlife.android.elements.open
 import com.vextreme.vexlife.android.data.events.SyntheticExternalEventController
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryFixture
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
 import com.vextreme.vexlife.android.screens.AppScreenBlueprint
 import com.vextreme.vexlife.android.screens.ScreenActionContext
-import com.vextreme.vexlife.android.screens.primary.home.HomeScreen\nimport com.vextreme.vexlife.android.screens.shared.cgm.CgmPartnerLabScreen
+import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
+import com.vextreme.vexlife.android.screens.shared.cgm.CgmPartnerLabScreen
 import com.vextreme.vexlife.android.screens.shared.debug.loghistory.LogHistorySheet
 import com.vextreme.vexlife.android.shell.AppShell
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
@@ -128,7 +130,8 @@ object DebugMenuScreen : AppScreenBlueprint(
         icon = ElementIcon.Add,
         intent = navigateTo(CgmPartnerLabScreen),
     )
-\n    val NextAttentionLabScenario = buttonRef(
+
+    val NextAttentionLabScenario = buttonRef(
         id = "body.events-simulator.actions.next-scenario",
         labelRes = R.string.events_simulator_next_scenario,
         style = VexElementStyles.SecondaryAction,
@@ -170,7 +173,8 @@ object DebugMenuScreen : AppScreenBlueprint(
                     role = TextRole.Supporting,
                 )
             }
-\n            card("events-simulator") {
+
+            card("events-simulator") {
                 text(
                     id = "title",
                     textRes = R.string.events_simulator_title,
