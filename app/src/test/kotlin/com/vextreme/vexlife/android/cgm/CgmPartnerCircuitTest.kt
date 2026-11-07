@@ -147,6 +147,69 @@ class CgmPartnerCircuitTest {
         }
 
     @Test
+    fun bleAndHttpFirstUseCannotReuseTheSameSyntheticSourceSequence() =
+        runBlocking {
+            val lab =
+                CgmPartnerLab(
+                    nowEpochMillis = {
+                        6_000L
+                    },
+                )
+
+            try {
+                val ble =
+                    lab.receiveSyntheticBlePacket()
+                val http =
+                    lab.receiveSyntheticHttpResponse()
+
+                ble.join()
+                http.join()
+
+                val snapshot =
+                    lab.store
+                        .readCurrent()
+
+                assertEquals(
+                    listOf(
+                        1L,
+                        1L,
+                        2L,
+                        2L,
+                    ),
+                    snapshot
+                        .observations
+                        .map { observation ->
+                            when (
+                                val signal =
+                                    observation.signal
+                            ) {
+                                is CgmPartner.Signal.Glucose ->
+                                    signal.sequence
+
+                                is CgmPartner.Signal.Temperature ->
+                                    signal.sequence
+                            }
+                        }
+                        .sorted(),
+                )
+                assertEquals(
+                    setOf(
+                        "cgm.synthetic.ble",
+                        "cgm.synthetic.http",
+                    ),
+                    snapshot
+                        .observations
+                        .map {
+                            it.connectionId.value
+                        }
+                        .toSet(),
+                )
+            } finally {
+                lab.close()
+            }
+        }
+
+    @Test
     fun oneSyntheticPacketDecodesQueuesStoresAndReachesFamilyProjection() =
         runBlocking {
             val lab =
