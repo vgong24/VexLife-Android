@@ -10,7 +10,7 @@ import org.junit.Test
 
 class CgmPartnerCircuitTest {
     @Test
-    fun oneSyntheticPacketDecodesObservesStoresAndReachesFamilyProjection() =
+    fun oneSyntheticPacketDecodesQueuesStoresAndReachesFamilyProjection() =
         runBlocking {
             val lab =
                 CgmPartnerLab(
@@ -20,19 +20,21 @@ class CgmPartnerCircuitTest {
                 )
 
             try {
-                val observations =
+                val receipt =
                     lab.receiveSyntheticPacket()
+
+                receipt.join()
+
+                val snapshot =
+                    lab.store
+                        .readCurrent()
+                val observations =
+                    snapshot
+                        .observations
 
                 assertEquals(
                     2,
                     observations.size,
-                )
-                assertEquals(
-                    2,
-                    lab.store
-                        .current
-                        .observations
-                        .size,
                 )
 
                 val glucose =
@@ -79,8 +81,7 @@ class CgmPartnerCircuitTest {
                         CgmFamily.State.LatestAdmitted
 
                 /*
-                 * The exact Partner statement remains recognizable; Family does not reconstruct a
-                 * second glucose object merely to express semantic State.
+                 * In-memory Store keeps the exact admitted Partner statement recognizable.
                  */
                 assertSame(
                     glucose,
@@ -118,7 +119,7 @@ class CgmPartnerCircuitTest {
         }
 
     @Test
-    fun laterPartnerReceiptFlowsThroughObservedStoreBeforeFamilyInterpretsNewState() =
+    fun queuedInboundAdmissionsPreserveConnectionOrderBeforeFamilyInterpretsLatestTruth() =
         runBlocking {
             val lab =
                 CgmPartnerLab(
@@ -128,15 +129,45 @@ class CgmPartnerCircuitTest {
                 )
 
             try {
-                lab.receiveSyntheticPacket()
-                lab.receiveSyntheticPacket()
+                val first =
+                    lab.receiveSyntheticPacket()
+                val second =
+                    lab.receiveSyntheticPacket()
+
+                first.join()
+                second.join()
+
+                val snapshot =
+                    lab.store
+                        .readCurrent()
 
                 assertEquals(
                     4,
-                    lab.store
-                        .current
+                    snapshot
                         .observations
                         .size,
+                )
+                assertEquals(
+                    listOf(
+                        1L,
+                        1L,
+                        2L,
+                        2L,
+                    ),
+                    snapshot
+                        .observations
+                        .map { observation ->
+                            when (
+                                val signal =
+                                    observation.signal
+                            ) {
+                                is CgmPartner.Signal.Glucose ->
+                                    signal.sequence
+
+                                is CgmPartner.Signal.Temperature ->
+                                    signal.sequence
+                            }
+                        },
                 )
 
                 val state =
@@ -164,8 +195,7 @@ class CgmPartnerCircuitTest {
                     state.storedObservationCount,
                 )
                 assertTrue(
-                    lab.store
-                        .current
+                    snapshot
                         .latestObservedTemperature !=
                         null,
                 )
