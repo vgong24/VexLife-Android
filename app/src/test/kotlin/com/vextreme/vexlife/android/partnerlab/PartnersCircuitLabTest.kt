@@ -142,9 +142,19 @@ class PartnersCircuitLabTest {
                         .latestPumpDelivery
                         ?.unitsHundredths,
                 )
+                val automationStatus =
+                    withTimeout(
+                        2_000L,
+                    ) {
+                        lab.automationStatus
+                            .first { status ->
+                                status is
+                                    PartnersCircuitLab.AutomationStatus.PumpOutcomeObserved
+                            }
+                    }
+
                 assertTrue(
-                    lab.automationStatus
-                        .value is
+                    automationStatus is
                         PartnersCircuitLab.AutomationStatus.PumpOutcomeObserved,
                 )
             } finally {
