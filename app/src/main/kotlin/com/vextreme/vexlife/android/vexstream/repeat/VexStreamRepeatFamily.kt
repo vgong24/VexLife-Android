@@ -3,13 +3,8 @@ package com.vextreme.vexlife.android.vexstream.repeat
 import com.vextreme.vexlife.android.behavior.VexFamily
 
 /**
- * Semantic owner for the VexStream Repeat question.
- *
- * Question:
- *     Is Repeat active for the current playback context, and can the listener toggle it?
- *
- * Media3 remains the provider truth owner. This Family owns only the product meaning projected from
- * that truth and the requested runtime transformation produced by a lawful Toggle.
+ * Semantic owner for: "Is Repeat active here, and can the listener toggle it?"
+ * Media3 remains provider truth; this Family owns Repeat meaning only.
  */
 internal class VexStreamRepeatFamily(
     initialState:
@@ -24,13 +19,7 @@ internal class VexStreamRepeatFamily(
         initialState =
             initialState,
     ) {
-    /**
-     * Provider-derived Repeat truth used by the current one-toggle product experience.
-     *
-     * Media3 REPEAT_MODE_ONE and REPEAT_MODE_ALL both mean Enabled because the current product asks
-     * only whether Repeat is active. Provider command availability remains visible as semantic
-     * availability evidence for Toggle.
-     */
+    /** Provider-derived truth. Media3 Repeat-One and Repeat-All both mean Enabled here. */
     sealed interface State :
         VexFamily.State<
             VexStreamRepeatFamily
@@ -58,12 +47,7 @@ internal class VexStreamRepeatFamily(
         Toggle,
     }
 
-    /**
-     * Requested provider transformation, not resulting Repeat truth.
-     *
-     * The Media3 Connection realizes this synchronously. Family State remains provider-derived and
-     * changes only when Media3 observation is reconciled back through [observe].
-     */
+    /** Requested Media3 transformation; resulting State still comes back through observation. */
     sealed interface Effect :
         VexFamily.Effect<
             VexStreamRepeatFamily
