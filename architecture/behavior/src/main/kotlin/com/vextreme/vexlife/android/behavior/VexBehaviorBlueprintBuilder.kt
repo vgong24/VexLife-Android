@@ -3,7 +3,14 @@ package com.vextreme.vexlife.android.behavior
 import kotlin.reflect.KClass
 
 /**
- * Construction scope whose source shape resembles one exact family's behavior graph.
+ * Compatibility construction scope for existing [VexBehaviorBlueprint] consumers.
+ *
+ * The chained `on(...).stay()` / `on(...).admit<State>()` grammar records an admitted State
+ * **kind**. It is intentionally not the common authoring route for new semantic families.
+ *
+ * Direct [VexFamily] is the common route: exact CURRENT State + Control is interpreted inside
+ * `act(...)`, which authors the actual admitted State value and optional Begin/Effect relationship
+ * at the semantic decision point.
  */
 class VexBehaviorBlueprintBuilder<
     Family : VexBehaviorFamily<Family>,
@@ -233,10 +240,14 @@ class VexBehaviorStateScope<
 }
 
 /**
- * Completes one authored relationship with its immediate admitted State KIND.
+ * Completes one compatibility Blueprint relationship with its immediate admitted State KIND.
  *
  * Every [VexBehaviorStateScope.on] must terminate in exactly one [stay] or [admit]. Construction
  * fails if a relationship is silently left unfinished.
+ *
+ * This terminal shape belongs to the compatibility Blueprint grammar. Do not infer from it that
+ * State-kind admission is the common VexArchitecture ownership law: Direct [VexFamily] authors the
+ * actual admitted State value inside `act(...)`.
  */
 class VexBehaviorDestination<
     Family : VexBehaviorFamily<Family>,

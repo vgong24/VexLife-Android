@@ -3,7 +3,16 @@ package com.vextreme.vexlife.android.behavior
 import kotlin.reflect.KClass
 
 /**
- * Immutable relational blueprint for one exact Behavior family.
+ * Compatibility relational blueprint for one exact pre-convergence SCAE Behavior family.
+ *
+ * Existing VexStream / VexMaps consumers may continue to use this source until a consumer-driven
+ * migration preserves their earned requirements. New or materially evolving semantic families
+ * should start from Direct [VexFamily], where exact CURRENT State + Control is resolved inside
+ * `act(...)` and the actual admitted State value is authored there through `stay(...)` or
+ * `admit(actualState, ...)`.
+ *
+ * This type remains source truth for its current consumers; "compatibility" does not mean their
+ * semantics may be guessed, flattened, or silently rewritten by a downstream projector.
  */
 class VexBehaviorBlueprint<
     Family : VexBehaviorFamily<Family>,
@@ -246,6 +255,12 @@ class VexBehaviorBlueprint<
         }.trimEnd()
 }
 
+/**
+ * Build one compatibility [VexBehaviorBlueprint] for an existing SCAE consumer.
+ *
+ * Do not use this as a second canonical authoring route for a new semantic family. Prefer Direct
+ * [VexFamily] and author the actual admitted State value inside the family's `act(...)` logic.
+ */
 fun <
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,

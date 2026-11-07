@@ -1,15 +1,29 @@
 
-# Vex Behavior Family Package Blueprint
+# Vex Behavior Family Package Blueprint — compatibility surface
 
 [VXG RealForever]
 
-This is the canonical construction pattern for one durable **local SCAE Behavior family**.
+> **COMPATIBILITY AUTHORING SURFACE — EXISTING CONSUMERS ONLY**
+>
+> The common authoring route for new or materially evolving semantic families is the Direct
+> `VexFamily` body in `FAMILY-CIRCUIT.md`: exact CURRENT State + Control -> `act(...)` -> an
+> accepted Act whose `stay(...)` / `admit(actualState, ...)` consequence is authored inside that
+> semantic logic.
+>
+> This document remains the compatibility construction guide for accepted
+> `VexBehaviorFamily` / `VexBehaviorBlueprint` consumers that have not yet earned migration.
+> Do not start a new family by choosing the chained `.stay()` / `.admit<State>()` DSL as a
+> peer canonical alternative.
 
-The canonical SCAE definition lives in [Vex Behavior](README.md#scae-architecture). This blueprint
-constructs the local State / Control / Act / Effect family; Convergence Relay is SCAE's fractal
-cross-State composition pattern, not a fifth family role.
+The SCAE vocabulary preserved here remains useful evidence: State / Control / Act / Effect,
+provider Connection boundaries, exact-current predicates, pending intent and reconciliation.
+Those requirements must survive any consumer migration. The chained Blueprint grammar itself is
+not the common future authoring pattern merely because existing production code still uses it.
 
-It exists so a new feature does not have to reverse-engineer VexStream Playback to discover what the architecture expects.
+This compatibility guide exists so a worker maintaining one of those consumers does not have to
+reverse-engineer VexStream Playback. When a consumer is being materially redesigned, begin at
+`FAMILY-CIRCUIT.md` and ask whether Direct `VexFamily` can preserve the consumer's earned
+requirements before adding new Blueprint relationships.
 
 VexStream Playback remains the prime worked implementation, but the example does not own the pattern.
 
