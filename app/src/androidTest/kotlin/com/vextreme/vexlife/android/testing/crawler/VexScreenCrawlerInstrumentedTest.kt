@@ -104,8 +104,9 @@ import org.junit.runners.Parameterized
  *
  *      tag:VexScreenCrawler
  *
- *    Each screenshot is accompanied by JSONL evidence metadata including source/case/shard/journey,
- *    locale/font, Screen/step, device model/SDK, filename and screenshot SHA-256.
+ *    Delivery is intentionally screenshot-only (no per-case manifest; see
+ *    docs/foundation/SCREEN-CRAWLER-EVIDENCE.md). Each CAPTURE line in Logcat carries scenarioRef,
+ *    evidenceRef, configurationRef, output path, byte count and screenshot SHA-256.
  *
  * IMPORTANT:
  *
@@ -172,7 +173,7 @@ class VexScreenCrawlerInstrumentedTest(
         // ---------------------------------------------------------------------
 
         /**
-         * Evidence coordinate stored in the screenshot manifest.
+         * Evidence coordinate carried in each CAPTURE Logcat line and the delivery folder name.
          *
          * "manual" is fine for exploratory local runs.
          * Use an exact commit/build/release reference for formal evidence.

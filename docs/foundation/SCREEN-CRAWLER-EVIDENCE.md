@@ -333,14 +333,20 @@ Filename invariant:
 Example family:
 
 ~~~text
-shared.user-profile_form-submit__screen.user-profile__step-002__tap__...__en__normal-1x.png
-shared.user-profile_form-submit__screen.user-profile__step-002__tap__...__zh__normal-1x.png
-shared.user-profile_form-submit__screen.user-profile__step-002__tap__...__en__large-1-45x.png
-shared.user-profile_form-submit__screen.user-profile__step-002__tap__...__zh__large-1-45x.png
+shared.user-profile_form-submit_screen.user-profile_step-002_tap_...__en__normal-1x.png
+shared.user-profile_form-submit_screen.user-profile_step-002_tap_...__zh__normal-1x.png
+shared.user-profile_form-submit_screen.user-profile_step-002_tap_...__en__large-1-45x.png
+shared.user-profile_form-submit_screen.user-profile_step-002_tap_...__zh__large-1-45x.png
 ~~~
 
 The common prefix is the referenceable map. Reviewers can identify equivalent frames before opening
 the screenshots.
+
+The filename is a readable projection of `evidenceRef`, not a reversible coordinate: path-unsafe
+characters, including the `::` separators inside `evidenceRef`, collapse to a single `_`, while
+`__` separates only the evidence prefix from locale and font. A consumer that needs the exact
+`evidenceRef` should match against source-known scenario refs and Screen ids, or read the CAPTURE
+Logcat line, rather than splitting the filename.
 
 There are intentionally no per-case manifests in the delivery tree. Live diagnostic/integrity detail
 is available through:
