@@ -10,8 +10,8 @@ import androidx.compose.runtime.remember
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
-import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueProjection
-import com.vextreme.vexlife.android.vexstream.queue.toVexStreamQueueProjection
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueFamily
+import com.vextreme.vexlife.android.vexstream.queue.toVexStreamQueueState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -87,15 +87,16 @@ internal data class VexStreamPlaybackReadState(
  * One provider-observed playback snapshot.
  *
  * Media3 Player / MediaSession remains canonical truth. This value only composes the read facts and
- * existing Playback / Queue projections that remote or in-app surfaces need to render one moment.
+ * existing Playback projection plus Queue semantic State that remote or in-app surfaces need to
+ * render one moment.
  */
 internal data class VexStreamCurrentPlaybackObservation(
     val readState:
         VexStreamPlaybackReadState,
     val playbackProjection:
         VexStreamPlaybackProjection,
-    val queueProjection:
-        VexStreamQueueProjection,
+    val queueState:
+        VexStreamQueueFamily.State,
 )
 
 /**
@@ -407,8 +408,8 @@ internal fun Player.toVexStreamCurrentPlaybackObservation():
             toVexStreamPlaybackReadState(),
         playbackProjection =
             toVexStreamPlaybackProjection(),
-        queueProjection =
-            toVexStreamQueueProjection(),
+        queueState =
+            toVexStreamQueueState(),
     )
 
 @Composable
