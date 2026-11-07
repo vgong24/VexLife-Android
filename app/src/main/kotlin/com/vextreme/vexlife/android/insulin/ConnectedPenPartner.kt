@@ -15,7 +15,8 @@ internal object ConnectedPenPartner :
     data class Source(
         val penRef: String,
         val cartridgeRef: String,
-    )
+    ) :
+        VexPartner.Source<ConnectedPenPartner>
 
     sealed interface Signal :
         VexPartner.Signal<ConnectedPenPartner> {
@@ -37,7 +38,12 @@ internal object ConnectedPenPartner :
 
     internal class Connection(
         override val id: Id,
-        private val decoder: Decoder,
+        private val conversion:
+            VexPartner.Connection.Conversion<
+                ByteArray,
+                ConnectedPenPartner,
+                Signal
+            >,
         private val receiver: Receiver,
     ) :
         VexPartner.Connection<
@@ -59,12 +65,12 @@ internal object ConnectedPenPartner :
          * ';' separates records so one transport delivery may carry several independent Signals.
          */
         class Decoder :
-            VexPartner.Connection.Decoder<
+            VexPartner.Connection.Conversion<
                 ByteArray,
                 ConnectedPenPartner,
                 Signal
             > {
-            override fun decode(
+            override fun convert(
                 input: ByteArray,
             ): List<Signal> =
                 input
@@ -173,8 +179,8 @@ internal object ConnectedPenPartner :
             observedAtEpochMillis: Long,
         ):
             List<Observation> =
-            decoder
-                .decode(
+            conversion
+                .convert(
                     bytes,
                 )
                 .map { signal ->
