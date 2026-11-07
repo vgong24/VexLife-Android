@@ -59,7 +59,7 @@ internal object CgmPartner :
      * this same Partner vocabulary without changing what Signal means.
      */
     internal class Connection(
-        val id: Id,
+        override val id: Id,
         private val decoder: Decoder,
         private val receiver: Receiver,
     ) :
@@ -69,7 +69,7 @@ internal object CgmPartner :
         > {
 
         data class Id(
-            override val value: String,
+            val value: String,
         ) :
             VexPartner.Connection.Id<CgmPartner>
 
