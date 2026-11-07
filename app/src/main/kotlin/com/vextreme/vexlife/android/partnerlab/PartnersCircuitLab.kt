@@ -1,5 +1,7 @@
 package com.vextreme.vexlife.android.partnerlab
 
+import android.content.Context
+
 import com.vextreme.vexlife.android.cgm.CgmFamily
 import com.vextreme.vexlife.android.cgm.CgmPartner
 import com.vextreme.vexlife.android.cgm.CgmPartnerLab
@@ -362,6 +364,20 @@ internal class PartnersCircuitLab(
         )
         cgm.close()
         insulin.close()
+    }
+
+    companion object {
+        fun production(
+            context:
+                Context,
+        ):
+            PartnersCircuitLab =
+            PartnersCircuitLab(
+                cgm =
+                    CgmPartnerLab.production(
+                        context,
+                    ),
+            )
     }
 }
 
