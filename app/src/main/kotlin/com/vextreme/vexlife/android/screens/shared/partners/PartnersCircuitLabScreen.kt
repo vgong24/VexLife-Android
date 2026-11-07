@@ -85,6 +85,18 @@ object PartnersCircuitLabScreen : AppScreenBlueprint(
                 localEffect(),
         )
 
+    val ReceiveCgmHttp =
+        buttonRef(
+            id =
+                "body.cgm.actions.receive-http",
+            labelRes =
+                R.string.partners_circuit_lab_receive_cgm_http,
+            icon =
+                ElementIcon.Download,
+            intent =
+                localEffect(),
+        )
+
     val ReceivePen =
         buttonRef(
             id =
@@ -134,6 +146,9 @@ object PartnersCircuitLabScreen : AppScreenBlueprint(
                 )
                 button(
                     ReceiveCgm,
+                )
+                button(
+                    ReceiveCgmHttp,
                 )
                 button(
                     ReceivePen,
@@ -245,7 +260,10 @@ internal fun PartnersCircuitLabScreenContent(
                         lab.toggleSyntheticRule()
 
                     PartnersCircuitLabScreen.ReceiveCgm ->
-                        lab.receiveSyntheticCgmPacket()
+                        lab.receiveSyntheticCgmBlePacket()
+
+                    PartnersCircuitLabScreen.ReceiveCgmHttp ->
+                        lab.receiveSyntheticCgmHttpResponse()
 
                     PartnersCircuitLabScreen.ReceivePen ->
                         lab.receiveSyntheticPenPacket()
@@ -345,6 +363,12 @@ internal fun PartnersCircuitLabScreenContent(
                 VexButton(
                     element =
                         PartnersCircuitLabScreen.ReceiveCgm,
+                    handler =
+                        handler,
+                )
+                VexButton(
+                    element =
+                        PartnersCircuitLabScreen.ReceiveCgmHttp,
                     handler =
                         handler,
                 )
