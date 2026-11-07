@@ -54,7 +54,7 @@ HOW SHOULD THIS RENDERED COLLECTION START?
 
 WHAT CAN I DO WITH THE CURRENT QUEUE?
     vexstream/queue
-    -> Previous / Next / Shuffle / Clear through Queue State / Control / Act / Effect
+    -> Direct Queue Family State / Control / Effect for Previous / Next / Shuffle / Clear
     -> Play one current occurrence through typed occurrence request
     -> Reorder one current occurrence by adjacent typed request
     -> Media3 Queue / Queue Play / Queue Reorder Connections
@@ -99,8 +99,9 @@ vexstream/playback/
 
 vexstream/queue/
     human questions: finite Queue Controls + play/reorder one current occurrence
-    Behavior family for finite Queue Controls
-    typed current-occurrence Queue Play + adjacent Reorder requests
+    Direct VexFamily for finite Queue Controls
+    + Media3 provider Connection
+    + typed current-occurrence Queue Play / adjacent Reorder requests
 
 vexstream/track/
     human questions: play this rendered track context / place this rendered track next or at queue end
@@ -421,8 +422,9 @@ Queue currently asks:
 Current admitted answers are Previous, Next, Shuffle, and Clear. Clear requests the provider mutation
 but does not claim Empty until Media3 observation reports that truth.
 
-They are near each other in the UI but remain independent Behavior families. Do not cross-multiply
-their States simply because Mini Player displays both.
+They are near each other in the UI but remain independent semantic owners. Queue is Direct
+VexFamily on this candidate; Playback remains on its current compatibility Behavior source. Do not
+cross-multiply their States merely because Mini Player displays both.
 
 ## Current Queue boundary
 
@@ -431,7 +433,7 @@ Shuffle is the same Queue family question and is consumed as a one-shot action b
 Queue presentation; it has no persistent selected state.
 Clear is consumed by Queue presentation through the same current-truth Connection.
 
-Queue-row Play remains outside the finite-Control Behavior family but now has a feature-local typed
+Queue-row Play remains outside the finite-Control Queue Family and keeps its feature-local typed
 request boundary:
 
 ~~~text
@@ -463,11 +465,34 @@ rejected until the provider actually observes that occurrence at the expected in
 adjacent identical media IDs still fails closed because the provider projection cannot distinguish
 which duplicate moved without a stronger durable item identity.
 
-Repeat remains its independent sibling semantic Family. Its Direct VexFamily migration does not
-change Queue's current compatibility ownership and does not imply that provider-backed siblings must
-share one Kotlin shape. The accepted semantic foundations still do not carry arbitrary runtime
-request payloads through finite Controls, so Queue Play/Reorder remain feature-local request
-boundaries rather than a generic payload framework.
+Repeat remains its independent sibling semantic Family. Queue's Direct Family migration still does
+not pull Play/Reorder occurrence payloads into finite Controls or imply that provider-backed siblings
+must share one Kotlin shape. Queue Play/Reorder remain feature-local request boundaries rather than
+a generic payload framework.
+
+## Queue Direct Family convergence
+
+Queue now follows the same provider-backed ownership split without absorbing Play/Reorder payload
+requests:
+
+~~~text
+Media3 observation -> Queue Connection -> Queue Family.observe(State)
+finite Control -> Queue Family.activate -> Effect -> immediate Media3 command
+
+Queue occurrence -> Play/Reorder typed request -> separate provider Connection
+~~~
+
+Permanent:
+
+~~~text
+QUEUE_EFFECT_REQUESTED != PROVIDER_OUTCOME
+QUEUE_FAMILY != MEDIA3_CONNECTION
+FINITE_QUEUE_CONTROL != OCCURRENCE_REQUEST
+SYNCHRONOUS_PROVIDER_EFFECT != VEXEXECUTION_JOB
+~~~
+
+The old Blueprint / Act peer / VexPort projection layer is removed; one Queue State availability
+function is shared by Family resolution, Compose and widget consumers.
 
 ## Repeat Direct Family convergence
 
