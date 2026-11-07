@@ -401,4 +401,13 @@
     <string name="cgm_partner_lab_receive_packet">Receive synthetic CGM packet</string>
     <string name="cgm_partner_lab_debug_helper">Patient-zero architecture lab for Partner → Connection → Store → Family. It uses synthetic bytes only; no clinical or real-device claim.</string>
 
+
+    <string name="insulin_partner_lab_title">Insulin Partner Circuit</string>
+    <string name="insulin_partner_lab_open">Open Insulin Partner Circuit</string>
+    <string name="insulin_partner_lab_intro">Compare two Partners converging into one Store and Family. Pen reports sparse dose truth; Pump exercises Family Effect → Method → Partner acknowledgement, then a separate reported outcome back through Store.</string>
+    <string name="insulin_partner_lab_receive_pen">Receive synthetic pen packet</string>
+    <string name="insulin_partner_lab_request_pump">Request synthetic pump delivery</string>
+    <string name="insulin_partner_lab_receive_pump">Receive synthetic pump outcome</string>
+    <string name="insulin_partner_lab_debug_helper">Pressure Partner symmetry with a sparse connected pen and a bidirectional pump. Synthetic architecture lab only; no treatment or real-device claim.</string>
+
 </resources>
