@@ -1,4 +1,9 @@
+@file:OptIn(com.vextreme.vexlife.android.execution.VexExecution.RelationshipFoundationApi::class)
+
 package com.vextreme.vexlife.android.cgm
+
+import com.vextreme.vexlife.android.execution.VexExecution
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 
 /**
  * Lab-only composition owner for the first complete Partner circuit.
@@ -25,6 +30,9 @@ internal class CgmPartnerLab(
     val family:
         CgmFamily =
         CgmFamily(),
+    private val executionRoot:
+        VexExecutionRoot =
+        VexExecutionRoot(),
 ) {
     private val receiver =
         CgmPartner.Connection.Receiver(
@@ -49,9 +57,26 @@ internal class CgmPartnerLab(
         1L
 
     init {
-        family.observeStore(
-            store.current,
-        )
+        /*
+         * Sustained Store observation is source-addressed execution custody:
+         *
+         *     exact Flow source -> one maintained Job
+         *
+         * It intentionally does NOT mint a Family ResourceId/RelationshipId merely to keep a
+         * listener alive.
+         */
+        VexExecution.observe(
+            executionRoot =
+                executionRoot,
+            owner =
+                family,
+            source =
+                store::snapshots,
+        ) { snapshot ->
+            family.observeStore(
+                snapshot,
+            )
+        }
     }
 
     /**
@@ -149,20 +174,13 @@ internal class CgmPartnerLab(
                     nowEpochMillis(),
             )
 
-        /*
-         * Keep the first patient zero painfully explicit:
-         *
-         * Partner receipt commits Store truth first.
-         * Family then interprets the Store snapshot.
-         *
-         * A Room-backed realization may later drive this from an observable query/Flow, but hiding
-         * the ordering behind another abstraction here would make the relationship harder to inspect.
-         */
-        family.observeStore(
-            store.current,
-        )
-
         return observations
+    }
+
+    fun close() {
+        executionRoot.forceStopAll(
+            "CGM Partner Lab disposed",
+        )
     }
 }
 
