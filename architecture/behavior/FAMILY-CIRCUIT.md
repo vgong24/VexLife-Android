@@ -569,11 +569,18 @@ ThemeMode direct Family
     -> Act authors Latest
     -> VexExecution owns Job custody
 
-VexStream Playback / Queue / Repeat
-    semantic Behavior resolves Effect
+VexStream Repeat
+    Direct Family resolves the requested Effect
+    Media3 provider operation is immediate
+    -> existing Connection realizes Act.effect directly
+    -> later Media3 observation returns through Family.observe(State)
+    -> no async execution machinery is added merely for symmetry
+
+VexStream Playback / Queue
+    current compatibility Behavior still resolves Effect
     provider operation is immediate
     -> existing Connection realizes Effect directly
-    -> no async execution machinery is added merely for symmetry
+    -> separate migration pressure; not rewritten by Repeat merely for symmetry
 
 VexMaps Distribution Session
     existing Session already owns the domain operation and async lifetime
