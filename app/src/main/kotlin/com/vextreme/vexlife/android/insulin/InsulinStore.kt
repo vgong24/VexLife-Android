@@ -16,25 +16,25 @@ import kotlinx.coroutines.flow.asStateFlow
  *
  * Store keeps Partner provenance instead of flattening every fact into one generic event/value.
  */
+internal typealias InsulinPenObservation =
+    VexPartner.Connection.Observation<
+        ConnectedPenPartner,
+        ConnectedPenPartner.Signal
+    >
+
+internal typealias InsulinPumpObservation =
+    VexPartner.Connection.Observation<
+        InsulinPumpPartner,
+        InsulinPumpPartner.Signal
+    >
+
 internal class InsulinStore {
-    typealias PenObservation =
-        VexPartner.Connection.Observation<
-            ConnectedPenPartner,
-            ConnectedPenPartner.Signal
-        >
-
-    typealias PumpObservation =
-        VexPartner.Connection.Observation<
-            InsulinPumpPartner,
-            InsulinPumpPartner.Signal
-        >
-
     data class Snapshot(
         val penObservations:
-            List<PenObservation> =
+            List<InsulinPenObservation> =
             emptyList(),
         val pumpObservations:
-            List<PumpObservation> =
+            List<InsulinPumpObservation> =
             emptyList(),
     ) {
         val latestPenDose:
@@ -104,7 +104,7 @@ internal class InsulinStore {
 
     internal fun commitPen(
         observation:
-            PenObservation,
+            InsulinPenObservation,
     ):
         Snapshot =
         synchronized(
@@ -125,7 +125,7 @@ internal class InsulinStore {
 
     internal fun commitPump(
         observation:
-            PumpObservation,
+            InsulinPumpObservation,
     ):
         Snapshot =
         synchronized(
