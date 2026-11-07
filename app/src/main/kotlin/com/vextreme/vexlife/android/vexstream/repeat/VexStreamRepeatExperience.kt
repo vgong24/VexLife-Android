@@ -3,33 +3,36 @@ package com.vextreme.vexlife.android.vexstream.repeat
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.media3.common.Player
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.session.MediaController
 
-/** Compose-facing membrane for the VexStream Repeat Behavior family. */
+/**
+ * Compose-facing membrane for VexStream Repeat.
+ *
+ * UI consumes the current semantic Family State and sends Family Controls. It does not assemble
+ * provider observation, Effect realization, or another Behavior projection.
+ */
 internal interface VexStreamRepeatExperience {
-    val projection:
-        VexStreamRepeatProjection?
+    val state:
+        VexStreamRepeatFamily.State?
 
     fun activate(
         control:
-            VexStreamRepeatControl,
+            VexStreamRepeatFamily.Control,
     )
 }
 
 private class CurrentVexStreamRepeatExperience(
-    override val projection:
-        VexStreamRepeatProjection?,
+    override val state:
+        VexStreamRepeatFamily.State?,
     private val connection:
-        VexStreamRepeatConnection?,
+        Media3VexStreamRepeatConnection?,
 ) :
     VexStreamRepeatExperience {
     override fun activate(
         control:
-            VexStreamRepeatControl,
+            VexStreamRepeatFamily.Control,
     ) {
         connection?.activate(
             control,
@@ -41,79 +44,49 @@ private class CurrentVexStreamRepeatExperience(
 internal fun rememberVexStreamRepeatExperience(
     controller:
         MediaController?,
-): VexStreamRepeatExperience {
+):
+    VexStreamRepeatExperience {
     val connection =
         remember(
             controller,
         ) {
-            controller?.let {
-                Media3VexStreamRepeatConnection(
-                    it,
-                )
-            }
-        }
-
-    var projection by
-        remember(
-            connection,
-        ) {
-            mutableStateOf(
-                connection
-                    ?.currentProjection,
+            controller?.let(
+                ::Media3VexStreamRepeatConnection,
             )
         }
 
     DisposableEffect(
-        controller,
         connection,
     ) {
-        if (
-            controller == null ||
-            connection == null
-        ) {
-            projection = null
-            return@DisposableEffect onDispose {}
-        }
-
-        val listener =
-            object :
-                Player.Listener {
-                override fun onEvents(
-                    player: Player,
-                    events:
-                        Player.Events,
-                ) {
-                    projection =
-                        connection
-                            .currentProjection
-                }
-            }
-
-        controller.addListener(
-            listener,
-        )
-        projection =
-            connection
-                .currentProjection
-
         onDispose {
-            controller.removeListener(
-                listener,
-            )
+            connection?.close()
         }
     }
 
+    val state:
+        VexStreamRepeatFamily.State? =
+        if (
+            connection == null
+        ) {
+            null
+        } else {
+            val observed by
+                connection.states
+                    .collectAsStateWithLifecycle()
+            observed
+        }
+
     return remember(
         connection,
-        projection,
+        state,
     ) {
         CurrentVexStreamRepeatExperience(
-            projection =
-                projection,
+            state =
+                state,
             connection =
                 connection,
         )
     }
 }
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][REPEAT][EXPERIENCE]
