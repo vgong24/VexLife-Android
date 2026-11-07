@@ -125,6 +125,23 @@ internal class InsulinPartnerLab(
     }
 
     fun receiveSyntheticPenPacket():
+        Job =
+        VexExecution.begin(
+            executionRoot =
+                executionRoot,
+            owner =
+                this,
+            operation =
+                ::receiveSyntheticPenPacketAndAwait,
+            argument =
+                Unit,
+        )
+
+    internal suspend fun receiveSyntheticPenPacketAndAwait(
+        @Suppress("UNUSED_PARAMETER")
+        unit:
+            Unit,
+    ):
         List<
             ConnectedPenPartner.Connection.Observation
         > {
@@ -162,15 +179,12 @@ internal class InsulinPartnerLab(
                     Charsets.UTF_8,
                 )
 
-        val observations =
-            penConnection.receive(
-                bytes =
-                    packet,
-                observedAtEpochMillis =
-                    nowEpochMillis(),
-            )
-
-        return observations
+        return penConnection.receive(
+            bytes =
+                packet,
+            observedAtEpochMillis =
+                nowEpochMillis(),
+        )
     }
 
     /**
@@ -274,15 +288,32 @@ internal class InsulinPartnerLab(
      *     != DURABLE_DOMAIN_TRUTH
      */
     fun receiveSyntheticPumpDelivery():
-        List<
-            InsulinPumpPartner.Connection.Observation
-        > {
+        Job? {
         val acknowledged =
             pumpRequestStatus
                 .value as?
                 PumpRequestStatus.Acknowledged
-                ?: return emptyList()
+                ?: return null
 
+        return VexExecution.begin(
+            executionRoot =
+                executionRoot,
+            owner =
+                this,
+            operation =
+                ::receiveSyntheticPumpDeliveryAndAwait,
+            argument =
+                acknowledged,
+        )
+    }
+
+    internal suspend fun receiveSyntheticPumpDeliveryAndAwait(
+        acknowledged:
+            PumpRequestStatus.Acknowledged,
+    ):
+        List<
+            InsulinPumpPartner.Connection.Observation
+        > {
         val occurrence =
             nextPumpDelivery++
         val occurredAt =
@@ -321,6 +352,9 @@ internal class InsulinPartnerLab(
                     nowEpochMillis(),
             )
 
+        /*
+         * This status is published only after Receiver -> Store admission completed.
+         */
         mutablePumpRequestStatus.value =
             PumpRequestStatus.DeliveryObserved(
                 requestRef =
