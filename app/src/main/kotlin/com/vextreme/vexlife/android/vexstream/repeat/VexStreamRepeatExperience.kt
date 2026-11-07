@@ -7,12 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.session.MediaController
 
-/**
- * Compose-facing membrane for VexStream Repeat.
- *
- * UI consumes the current semantic Family State and sends Family Controls. It does not assemble
- * provider observation, Effect realization, or another Behavior projection.
- */
+/** Compose reads Repeat Family State here and sends Family Controls back to the provider bridge. */
 internal interface VexStreamRepeatExperience {
     val state:
         VexStreamRepeatFamily.State?
