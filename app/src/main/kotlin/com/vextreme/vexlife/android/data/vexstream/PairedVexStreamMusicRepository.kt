@@ -827,10 +827,18 @@ class PairedVexStreamMusicRepository(
             val body =
                 response.body
 
+            val catalogSignal =
+                VexStreamHubPartner.Connection
+                    .CatalogConversion()
+                    .convert(
+                        body,
+                    )
+                    .single() as
+                    VexStreamHubPartner.Signal.Catalog
+
             val catalog =
-                parseCatalog(
-                    body,
-                )
+                catalogSignal
+                    .catalog
             val offlineBeforeRefresh =
                 offlineSnapshot(
                     mutableState.value,
@@ -1860,181 +1868,6 @@ class PairedVexStreamMusicRepository(
                         }
                     },
             )
-    }
-
-    private fun parseCatalog(
-        body: String,
-    ): VexStreamHubCatalogProjection {
-        val root =
-            JSONObject(body)
-        val tracksJson =
-            root.getJSONArray(
-                "tracks",
-            )
-        val tracks =
-            buildList {
-                repeat(
-                    tracksJson.length(),
-                ) { index ->
-                    val track =
-                        tracksJson.getJSONObject(
-                            index,
-                        )
-                    add(
-                        VexStreamHubTrackProjection(
-                            trackRef =
-                                VexStreamTrackRef(
-                                    track.getString(
-                                        "trackRef",
-                                    ),
-                                ),
-                            mediaSha256 =
-                                VexStreamMediaSha256(
-                                    track.getString(
-                                        "mediaSha256",
-                                    ),
-                                ),
-                            mediaByteLength =
-                                track.getLong(
-                                    "mediaByteLength",
-                                ),
-                            title =
-                                track.getString(
-                                    "title",
-                                ),
-                            artist =
-                                track.optString(
-                                    "artist",
-                                ),
-                            artworkUrl =
-                                track.optString(
-                                    "artworkUrl",
-                                )
-                                    .trim()
-                                    .takeIf {
-                                        it.startsWith(
-                                            "https://",
-                                        )
-                                    },
-                            artworkRef =
-                                track.optString(
-                                    "artworkRef",
-                                )
-                                    .trim()
-                                    .takeIf {
-                                        it.isNotBlank() &&
-                                            !it.contains('/') &&
-                                            !it.contains('\\')
-                                    },
-                            album =
-                                track.optString(
-                                    "album",
-                                ),
-                            genre =
-                                track.optString(
-                                    "genre",
-                                ),
-                            year =
-                                track.optString(
-                                    "year",
-                                ),
-                            durationSeconds =
-                                track.optDouble(
-                                    "durationSeconds",
-                                    0.0,
-                                ),
-                            playbackStartSeconds =
-                                track.optDouble(
-                                    "playbackStartSeconds",
-                                    0.0,
-                                ),
-                            playbackEndSeconds =
-                                if (
-                                    track.has(
-                                        "playbackEndSeconds",
-                                    ) &&
-                                    !track.isNull(
-                                        "playbackEndSeconds",
-                                    )
-                                ) {
-                                    track.getDouble(
-                                        "playbackEndSeconds",
-                                    )
-                                } else {
-                                    null
-                                },
-                        ),
-                    )
-                }
-            }
-
-        val playlistsJson =
-            root.optJSONArray(
-                "playlists",
-            )
-        val playlists =
-            buildList {
-                if (playlistsJson != null) {
-                    repeat(
-                        playlistsJson.length(),
-                    ) { index ->
-                        val playlist =
-                            playlistsJson.getJSONObject(
-                                index,
-                            )
-                        val refsJson =
-                            playlist.getJSONArray(
-                                "trackRefs",
-                            )
-                        val refs =
-                            buildList {
-                                repeat(
-                                    refsJson.length(),
-                                ) { refIndex ->
-                                    add(
-                                        VexStreamTrackRef(
-                                            refsJson.getString(
-                                                refIndex,
-                                            ),
-                                        ),
-                                    )
-                                }
-                            }
-                        add(
-                            VexStreamHubPlaylistProjection(
-                                playlistRef =
-                                    VexStreamPlaylistRef(
-                                        playlist.getString(
-                                            "playlistRef",
-                                        ),
-                                    ),
-                                name =
-                                    playlist.getString(
-                                        "name",
-                                    ),
-                                trackRefs = refs,
-                            ),
-                        )
-                    }
-                }
-            }
-
-        return VexStreamHubCatalogProjection(
-            hubRef =
-                root.getString(
-                    "hubRef",
-                ),
-            sourceVersion =
-                root.getString(
-                    "sourceVersion",
-                ),
-            catalogRevision =
-                root.getString(
-                    "catalogRevision",
-                ),
-            tracks = tracks,
-            playlists = playlists,
-        )
     }
 
     private suspend inline fun <Result> withOperation(
