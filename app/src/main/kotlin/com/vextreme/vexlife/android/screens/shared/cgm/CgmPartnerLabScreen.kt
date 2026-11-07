@@ -193,7 +193,7 @@ internal fun CgmPartnerLabScreenContent(
                             (
                                 latestObservation
                                     ?.connectionId
-                                    ?.value
+                                    ?.toString()
                                     ?: "waiting"
                             ),
                 )
