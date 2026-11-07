@@ -8,7 +8,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.cgm.CgmFamily
-import com.vextreme.vexlife.android.cgm.CgmPartner
 import com.vextreme.vexlife.android.cgm.CgmPartnerLab
 import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.elements.ElementActionHandler
