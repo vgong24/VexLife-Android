@@ -471,48 +471,24 @@ boundaries rather than a generic payload framework.
 
 ## Repeat Direct Family convergence
 
-Repeat is the first provider-backed compatibility consumer to pressure Direct VexFamily.
-
-Current relationship:
+Repeat is the first provider-backed Direct Family pressure:
 
 ~~~text
-Media3 repeatMode + COMMAND_SET_REPEAT_MODE
--> Media3VexStreamRepeatConnection
--> VexStreamRepeatFamily.observe(State)
-
-human Toggle
--> VexStreamRepeatFamily.activate(Toggle)
--> accepted Effect
-   RequestEnableAll | RequestDisable
--> Media3VexStreamRepeatConnection
--> synchronous controller.repeatMode assignment
-
-later Media3 observation
--> Family.observe(State)
+Media3 observation -> Connection -> Family.observe(State)
+Toggle -> Family.activate -> Effect -> Connection -> immediate repeatMode request
 ~~~
 
 Permanent:
 
 ~~~text
-REPEAT EFFECT REQUESTED
-!= PROVIDER OUTCOME
-
-REPEAT FAMILY
-!= MEDIA3 CONNECTION
-
-MEDIA3 CONNECTION
-!= VEXPARTNER CONNECTION
-
-SYNCHRONOUS PROVIDER EFFECT
-!= VEXEXECUTION JOB
+EFFECT_REQUESTED != PROVIDER_OUTCOME
+REPEAT_FAMILY != MEDIA3_CONNECTION
+MEDIA3_CONNECTION != VEXPARTNER_CONNECTION
+SYNCHRONOUS_PROVIDER_EFFECT != VEXEXECUTION_JOB
 ~~~
 
-The Connection remains because the provider relationship is real. The compatibility Behavior
-Blueprint / Act peer / VexPort projection layer is unnecessary once semantic meaning belongs to the
-Direct Family.
-
-This migration is evidence for the compatibility-family convergence trajectory. It does not itself
-authorize Playback or Queue migration.
+The real Media3 Connection remains; the compatibility Blueprint / Act peer / VexPort projection
+layer does not. Playback and Queue remain separate migration questions.
 
 ## Dynamic Android presentation identity
 
