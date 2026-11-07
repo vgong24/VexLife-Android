@@ -114,10 +114,7 @@ internal fun CgmObservation.toEntity():
         is CgmPartner.Signal.Glucose ->
             CgmObservationEntity(
                 connectionRef =
-                    (
-                        connectionId as
-                            CgmPartner.Connection.Id
-                    ).value,
+                    connectionId.value,
                 observedAtEpochMillis =
                     observedAtEpochMillis,
                 signalKind =
@@ -141,10 +138,7 @@ internal fun CgmObservation.toEntity():
         is CgmPartner.Signal.Temperature ->
             CgmObservationEntity(
                 connectionRef =
-                    (
-                        connectionId as
-                            CgmPartner.Connection.Id
-                    ).value,
+                    connectionId.value,
                 observedAtEpochMillis =
                     observedAtEpochMillis,
                 signalKind =
