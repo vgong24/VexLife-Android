@@ -9,19 +9,24 @@ import org.junit.Test
 class CgmPartnerLabScreenSemanticRegistrationTest {
     @Test
     fun cgmLabButtonAndScreenAreOwnedByTheRegisteredScreenGraph() {
-        assertSame(
+        listOf(
             CgmPartnerLabScreen.ReceivePacket,
-            AppScreens.registry.element(
-                CgmPartnerLabScreen.ReceivePacket.elementId,
-            ),
-        )
-        assertSame(
-            CgmPartnerLabScreen,
-            AppScreens.registry
-                .ownerScreenOf(
-                    CgmPartnerLabScreen.ReceivePacket,
+            CgmPartnerLabScreen.ReceiveHttpResponse,
+        ).forEach { element ->
+            assertSame(
+                element,
+                AppScreens.registry.element(
+                    element.elementId,
                 ),
-        )
+            )
+            assertSame(
+                CgmPartnerLabScreen,
+                AppScreens.registry
+                    .ownerScreenOf(
+                        element,
+                    ),
+            )
+        }
     }
 
     @Test
