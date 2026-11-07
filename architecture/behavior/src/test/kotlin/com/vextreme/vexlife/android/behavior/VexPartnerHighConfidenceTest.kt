@@ -16,7 +16,7 @@ class VexPartnerHighConfidenceTest {
         }
 
         class Connection(
-            private val id: Id,
+            override val id: Id,
             private val decoder: Decoder,
             private val receiver: Receiver,
         ) :
@@ -25,7 +25,7 @@ class VexPartnerHighConfidenceTest {
                 Signal
             > {
             data class Id(
-                override val value: String,
+                val value: String,
             ) :
                 VexPartner.Connection.Id<SensorPartner>
 
