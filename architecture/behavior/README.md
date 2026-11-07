@@ -82,6 +82,58 @@ CURRENT State + incoming Control
 -> current State / execution
 ~~~
 
+## Partner circuit patient-zero candidate
+
+The current CGM lab branch is pressuring a second, independent reusable root:
+
+~~~text
+VexPartner<Partner>
+-> Signal<Partner>
+-> Connection<Partner, Signal>
+   -> Id<Partner>
+   -> Decoder<Input, Partner, Signal>
+   -> Observation<Partner, Signal>
+   -> Receiver<Partner, Signal>
+~~~
+
+The question is narrower than "mirror VexFamily":
+
+> Can Kotlin keep the external participant / Signal / Connection relationship source-readable while
+> Family continues to own semantic State / Control / Act / Effect meaning?
+
+Current patient-zero circuit:
+
+~~~text
+CgmPartner
+-> CgmPartner.Connection.Decoder
+-> CgmPartner.Signal
+-> CgmPartner.Connection.Observation
+-> CgmPartner.Connection.Receiver
+-> CgmStore
+-> CgmFamily
+-> CgmFamily.DisplayState
+-> custom Vex Compose Screen
+~~~
+
+Important held boundaries:
+
+~~~text
+Partner != Family
+Signal != Family State
+Store != Partner
+Store != Family
+Store != DAO / Room Entity
+Partnership = relationship language unless relationship-owned truth earns a first-class owner
+~~~
+
+The first CgmStore is intentionally in-memory and Flow-shaped. It proves ordering/ownership before a
+Room schema is introduced. ThemeMode and VexStream remain comparison evidence; do not refactor them to
+make this candidate appear more established than it is.
+
+This candidate is not yet a claim that every Partner requires every child above. Connected-pen and
+insulin-pump examples are intended to falsify or refine the shape before additional SDK vocabulary is
+promoted.
+
 ## Current foundation state
 
 Two behavior foundations intentionally coexist today:
