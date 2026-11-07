@@ -462,6 +462,41 @@ private runtime fixture reference
 
 Do not promote Maps query vocabulary, Maps location vocabulary, or one provider's contract.
 
+## First executable consumer — historical outcome
+
+The first implementation pressure was a provider-specific Stadia autocomplete v2 probe.
+
+It reached four successive zero-provider exact-head proofs while Fresh Assurance corrected provider version, redirect, secret and retention semantics. The protected A005 live probe was formed but **not executed**.
+
+The human placement decision changed before any Stadia query:
+
+~~~text
+direct Android / third-party API dependency
+    -> not preferred
+
+VexHome-hosted Maps capability
+    -> preferred connected ownership
+
+Photon + OpenStreetMap
+    -> first self-hostable search-engine candidate
+~~~
+
+Therefore:
+
+~~~text
+Stadia live requests executed = 0
+Stadia runtime adoption = NOT PERFORMED
+provider-probe learnings = PRESERVED
+provider-specific probe source = NOT CURRENT PRODUCT DIRECTION
+~~~
+
+This is not a negative judgment on Stadia's API quality. It is a stronger product/deployment decision: the person's Home should own hosted capability realization and credentials rather than make the Android app depend directly on a commercial provider.
+
+The successor placement record is:
+
+~~~text
+design/records/2026-10-17-006-vexhome-hosted-maps-placement.md
+~~~
 ## Current consequence
 
 [VexMaps Complete] now carries two parallel completion questions:

@@ -5,8 +5,8 @@
 Feature ref: feature.vexmaps  
 Current human name: **VexMaps**  
 Current completion effort: **[VexMaps Complete]**  
-Last meaningfully updated: **2026-10-16**  
-Current design record: records/2026-10-16-005-browse-surface-availability.md
+Last meaningfully updated: **2026-10-17**  
+Current design record: records/2026-10-17-006-vexhome-hosted-maps-placement.md
 
 ## Role of this file
 
@@ -88,6 +88,18 @@ PRIMARY DISCOVERY PATH
 FOUNDATION-CURRENT
 !=
 PRODUCT-COMPLETE
+
+ANDROID EXPERIENCE
+!=
+HOME HOSTED CAPABILITY
+
+CAPABILITY CONTRACT
+!=
+DEPLOYMENT TOPOLOGY
+
+HOSTED CAPABILITY
+!=
+ONE PROVIDER ENGINE
 ~~~
 
 ## Completed-state screen language
@@ -204,10 +216,15 @@ Connected experience:
 
 ~~~text
 query
--> online place-search source
--> current search relationship
+-> VexHome Maps search capability
+-> Home-selected/self-hosted search engine
+-> current Android search relationship
 -> results
 ~~~
+
+Android consumes the semantic capability and owns request/result currentness. It must not know whether the Home realizes that capability in-process, as a sibling service, on another owned machine, or on a cloud host selected by the human.
+
+The first engine candidate is Photon over OpenStreetMap data. Photon is an implementation candidate behind the Home capability, not a VexMaps identity or Android dependency.
 
 Offline experience, when a compatible local pack exists:
 
@@ -434,46 +451,58 @@ Offline preparation
 
 This is a semantic hierarchy, not a pixel specification.
 
-## Online capability direction
+## Connected capability direction
 
 Current online rendering uses OpenFreeMap styles through MapLibre.
 
-That does not provide online search or routing.
+That does not provide connected search or routing.
 
-[VexMaps Complete] requires two new product capabilities:
+[VexMaps Complete] requires two connected product capabilities:
 
 ~~~text
-ONLINE PLACE SEARCH
+MAPS PLACE SEARCH
 
-ONLINE ROUTE PLANNING
+MAPS ROUTE PLANNING
 ~~~
 
-The UI should depend on their semantic results, not one vendor.
-
-### Provider-selection law
-
-Do not choose a public community endpoint merely because it is easy to call.
-
-Provider choice must account for:
+Their preferred ownership is now **VexHome-hosted capability realization**, not direct Android coupling to one paid API.
 
 ~~~text
+VexMaps Android
+    semantic request + currentness + presentation
+
+        -> VexHome Maps capability
+
+VexHome
+    deployment/custody + engine/provider realization
+
+        -> self-hosted/open engine first where useful
+        -> optional external provider fallback when justified
+~~~
+
+### Host/provider-selection law
+
+Do not choose a public community endpoint merely because it is easy to call, and do not expose a third-party API key in the Android app merely because a provider accepts one.
+
+Engine/provider choice must account for:
+
+~~~text
+self-hostability / deployment cost
 usage policy / rate limits
 privacy
 availability / switchability
 attribution / licensing
 request identity/currentness
 failure truth
-VexHome/self-hosted future
+data/index lifecycle
+Home resource cost
 ~~~
 
-A first real online provider may be hosted/self-hosted and still remain replaceable below VexMaps
-semantic meaning.
+A Home capability may initially run all-in-one on the same personal machine. The same semantic capability may later run as a sibling process, another owned server, a human-selected cloud instance, or an optional managed Vextreme host. Deployment topology does not redefine Maps meaning.
 
-The Android system Geocoder is now accepted as a bootstrap/system provider boundary, but the first
-lived business query ("in n out") returned no useful result. It is therefore not assumed to satisfy
-the completed ordinary search promise.
+The Android system Geocoder remains an accepted bootstrap/system fallback. Its first lived business query ("in n out") returned no useful result, so it is not assumed to satisfy the completed ordinary search promise.
 
-The next ordinary provider must be evaluated against the intended product classes:
+The first Home search-engine candidate is **Photon over OpenStreetMap data** because the intended pressure includes partial/business discovery and the engine can be self-hosted. The candidate must still be evaluated against:
 
 ~~~text
 address
@@ -481,12 +510,10 @@ place / landmark
 business / POI
 partial / suggestion
 location-biased ambiguity when supported
+resource/update cost on the Home host
 ~~~
 
-Public OpenStreetMap Nominatim is not assumed to be the production answer: its public usage policy
-forbids client-side autocomplete and imposes strict capacity limits. That policy pressure is evidence
-for keeping provider choice below the VexMaps experience contract.
-
+Public OpenStreetMap Nominatim is not assumed to be the production answer: its public service policy forbids autocomplete and imposes strict capacity limits. A public endpoint is not the architecture.
 ## Reliability proof direction
 
 VexMaps now has observed evidence that deterministic proof and provider usefulness are different:
@@ -550,6 +577,47 @@ See:
 design/records/2026-10-16-004-provider-reliability-and-location-lab.md
 ~~~
 
+## Current host candidate — VexHome Maps capability
+
+The direct Stadia probe work was valuable as a reliability/security exercise, but the product placement changed before its live A005 provider effect ran.
+
+~~~text
+A001-A004
+    exact source/contract proof = PASS
+    live provider requests = 0
+
+A005
+    formed but SUPERSEDED BEFORE EXECUTION
+    provider requests = 0
+~~~
+
+The durable learning remains:
+
+~~~text
+deterministic correctness != provider usefulness
+secret-bearing provider effects need a protected boundary
+provider result-retention terms matter
+live probes stay bounded and explicit
+~~~
+
+The successor question is no longer "which API should Android call?"
+
+It is:
+
+> What semantic Maps capability should VexHome expose so Android can ask for place search while the Home remains free to realize that question through self-hosted, local-network, cloud-hosted or managed engines?
+
+Current first engine candidate:
+
+~~~text
+Photon + OpenStreetMap
+    self-hostable
+    partial/search-as-you-type capable
+    POI/place/address pressure
+    no Android API key
+    large index/runtime cost owned by Home deployment planning
+~~~
+
+No new VexMaps repository is earned by this decision. Keep the module boundary explicit and allow the deployment/repository boundary to be extracted later only if an independently versioned host product actually earns it.
 ## Current architecture pressure from completion work
 
 Do not run a separate cleanup campaign before product work.
@@ -669,7 +737,7 @@ selected destination
 ~~~
 
 This is the likely pressure point for extracting ordinary route-planning currentness and introducing
-the first online route provider.
+the first VexHome-hosted route capability realization.
 
 Navigation remains downstream and independently owned.
 
@@ -784,8 +852,8 @@ human outcome
 ## Current open decisions
 
 ~~~text
-exact online place-search provider
-exact online route provider
+exact VexHome Maps search capability contract + first engine realization
+exact VexHome Maps route capability contract + first engine realization
 search result ranking / debounce behavior
 whether route alternatives are needed in first complete generation
 whether selected-place details deserve their own semantic owner
