@@ -32,7 +32,7 @@ import com.vextreme.vexlife.android.cgm.CgmPartner
         ),
     ],
 )
-internal data class CgmObservationEntity(
+data class CgmObservationEntity(
     @PrimaryKey(
         autoGenerate =
             true,
