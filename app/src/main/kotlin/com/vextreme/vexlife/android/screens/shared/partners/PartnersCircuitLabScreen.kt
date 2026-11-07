@@ -6,9 +6,11 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.cgm.CgmFamily
+import com.vextreme.vexlife.android.cgm.CgmStore
 import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.ElementIcon
@@ -160,10 +162,28 @@ object PartnersCircuitLabScreen : AppScreenBlueprint(
 @Composable
 internal fun PartnersCircuitLabScreenContent(
     runtime: VexRuntime,
+    durableCgmStore:
+        Boolean =
+        true,
 ) {
+    val context =
+        LocalContext
+            .current
+            .applicationContext
     val lab =
-        remember {
-            PartnersCircuitLab()
+        remember(
+            context,
+            durableCgmStore,
+        ) {
+            if (
+                durableCgmStore
+            ) {
+                PartnersCircuitLab.production(
+                    context,
+                )
+            } else {
+                PartnersCircuitLab()
+            }
         }
 
     DisposableEffect(
@@ -189,7 +209,10 @@ internal fun PartnersCircuitLabScreenContent(
         lab.cgm
             .store
             .snapshots
-            .collectAsState()
+            .collectAsState(
+                initial =
+                    CgmStore.Snapshot(),
+            )
     val insulinState by
         lab.insulin
             .family
@@ -555,6 +578,8 @@ private fun PartnersCircuitLabScreenPreview() {
         PartnersCircuitLabScreenContent(
             runtime =
                 context.runtime,
+            durableCgmStore =
+                false,
         )
     }
 }
