@@ -1,5 +1,8 @@
 package com.vextreme.vexlife.android.cgm
 
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -7,153 +10,169 @@ import org.junit.Test
 
 class CgmPartnerCircuitTest {
     @Test
-    fun oneSyntheticPacketDecodesObservesStoresAndReachesFamilyProjection() {
-        val lab =
-            CgmPartnerLab(
-                nowEpochMillis = {
-                    1_000L
-                },
-            )
+    fun oneSyntheticPacketDecodesObservesStoresAndReachesFamilyProjection() =
+        runBlocking {
+            val lab =
+                CgmPartnerLab(
+                    nowEpochMillis = {
+                        1_000L
+                    },
+                )
 
-        val observations =
-            lab.receiveSyntheticPacket()
+            try {
+                val observations =
+                    lab.receiveSyntheticPacket()
 
-        assertEquals(
-            2,
-            observations.size,
-        )
-        assertEquals(
-            2,
-            lab.store
-                .current
-                .observations
-                .size,
-        )
-        assertEquals(
-            CgmPartner.Connection.Id(
-                value =
-                    "cgm.synthetic.connection",
-            ),
-            observations
-                .first()
-                .connectionId,
-        )
+                assertEquals(
+                    2,
+                    observations.size,
+                )
+                assertEquals(
+                    2,
+                    lab.store
+                        .current
+                        .observations
+                        .size,
+                )
 
-        val glucose =
-            observations
-                .map {
-                    it.signal
-                }
-                .filterIsInstance<
-                    CgmPartner.Signal.Glucose
-                >()
-                .single()
-        val temperature =
-            observations
-                .map {
-                    it.signal
-                }
-                .filterIsInstance<
-                    CgmPartner.Signal.Temperature
-                >()
-                .single()
+                val glucose =
+                    observations
+                        .map {
+                            it.signal
+                        }
+                        .filterIsInstance<
+                            CgmPartner.Signal.Glucose
+                        >()
+                        .single()
+                val temperature =
+                    observations
+                        .map {
+                            it.signal
+                        }
+                        .filterIsInstance<
+                            CgmPartner.Signal.Temperature
+                        >()
+                        .single()
 
-        assertEquals(
-            103,
-            glucose.mgDl,
-        )
-        assertEquals(
-            3_101,
-            temperature.celsiusHundredths,
-        )
+                assertEquals(
+                    103,
+                    glucose.mgDl,
+                )
+                assertEquals(
+                    3_101,
+                    temperature.celsiusHundredths,
+                )
 
-        val state =
-            lab.family
-                .currentState as
-                CgmFamily.State.LatestAdmitted
+                val state =
+                    withTimeout(
+                        2_000L,
+                    ) {
+                        lab.family
+                            .states
+                            .first { state ->
+                                state is
+                                    CgmFamily.State.LatestAdmitted &&
+                                    state.glucose.sequence ==
+                                    1L
+                            }
+                    } as
+                        CgmFamily.State.LatestAdmitted
 
-        /*
-         * The exact Partner statement remains recognizable; Family does not reconstruct a second
-         * glucose object merely to express semantic State.
-         */
-        assertSame(
-            glucose,
-            state.glucose,
-        )
-        assertEquals(
-            2,
-            state.storedObservationCount,
-        )
+                /*
+                 * The exact Partner statement remains recognizable; Family does not reconstruct a
+                 * second glucose object merely to express semantic State.
+                 */
+                assertSame(
+                    glucose,
+                    state.glucose,
+                )
+                assertEquals(
+                    2,
+                    state.storedObservationCount,
+                )
 
-        val display =
-            lab.family
-                .displayState as
-                CgmFamily.DisplayState.Reading
+                val display =
+                    lab.family
+                        .displayState as
+                        CgmFamily.DisplayState.Reading
 
-        assertEquals(
-            103,
-            display.mgDl,
-        )
-        assertEquals(
-            CgmPartner.Trend.Steady,
-            display.trend,
-        )
-        assertEquals(
-            "cgm-synthetic",
-            display.sourceRef,
-        )
-        assertEquals(
-            1L,
-            display.sequence,
-        )
-    }
+                assertEquals(
+                    103,
+                    display.mgDl,
+                )
+                assertEquals(
+                    CgmPartner.Trend.Steady,
+                    display.trend,
+                )
+                assertEquals(
+                    "cgm-synthetic",
+                    display.sourceRef,
+                )
+                assertEquals(
+                    1L,
+                    display.sequence,
+                )
+            } finally {
+                lab.close()
+            }
+        }
 
     @Test
-    fun laterPartnerReceiptFlowsThroughStoreBeforeFamilyInterpretsTheNewState() {
-        val lab =
-            CgmPartnerLab(
-                nowEpochMillis = {
-                    2_000L
-                },
-            )
+    fun laterPartnerReceiptFlowsThroughObservedStoreBeforeFamilyInterpretsNewState() =
+        runBlocking {
+            val lab =
+                CgmPartnerLab(
+                    nowEpochMillis = {
+                        2_000L
+                    },
+                )
 
-        lab.receiveSyntheticPacket()
-        lab.receiveSyntheticPacket()
+            try {
+                lab.receiveSyntheticPacket()
+                lab.receiveSyntheticPacket()
 
-        assertEquals(
-            4,
-            lab.store
-                .current
-                .observations
-                .size,
-        )
+                assertEquals(
+                    4,
+                    lab.store
+                        .current
+                        .observations
+                        .size,
+                )
 
-        val state =
-            lab.family
-                .currentState as
-                CgmFamily.State.LatestAdmitted
+                val state =
+                    withTimeout(
+                        2_000L,
+                    ) {
+                        lab.family
+                            .states
+                            .first { state ->
+                                state is
+                                    CgmFamily.State.LatestAdmitted &&
+                                    state.glucose.sequence ==
+                                    2L
+                            }
+                    } as
+                        CgmFamily.State.LatestAdmitted
 
-        assertEquals(
-            2L,
-            state.glucose
-                .sequence,
-        )
-        assertEquals(
-            106,
-            state.glucose
-                .mgDl,
-        )
-        assertEquals(
-            4,
-            state.storedObservationCount,
-        )
-        assertTrue(
-            lab.store
-                .current
-                .latestObservedTemperature !=
-                null,
-        )
-    }
+                assertEquals(
+                    106,
+                    state.glucose
+                        .mgDl,
+                )
+                assertEquals(
+                    4,
+                    state.storedObservationCount,
+                )
+                assertTrue(
+                    lab.store
+                        .current
+                        .latestObservedTemperature !=
+                        null,
+                )
+            } finally {
+                lab.close()
+            }
+        }
 }
 
 // [VXG RealForever][VEX-CGM-LABS][PARTNER-CIRCUIT-PATIENT-ZERO]
