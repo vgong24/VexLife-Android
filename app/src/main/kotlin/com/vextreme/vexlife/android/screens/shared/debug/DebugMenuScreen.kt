@@ -24,6 +24,7 @@ import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.shared.cgm.CgmPartnerLabScreen
 import com.vextreme.vexlife.android.screens.shared.debug.loghistory.LogHistorySheet
 import com.vextreme.vexlife.android.screens.shared.insulin.InsulinPartnerLabScreen
+import com.vextreme.vexlife.android.screens.shared.partners.PartnersCircuitLabScreen
 import com.vextreme.vexlife.android.shell.AppShell
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.AppActions
@@ -141,6 +142,15 @@ object DebugMenuScreen : AppScreenBlueprint(
         intent = navigateTo(InsulinPartnerLabScreen),
     )
 
+
+    val OpenPartnersCircuitLab = buttonRef(
+        id = "body.partners-circuit.actions.open",
+        labelRes = R.string.partners_circuit_lab_open,
+        style = VexElementStyles.Navigation,
+        icon = ElementIcon.Add,
+        intent = navigateTo(PartnersCircuitLabScreen),
+    )
+
     val NextAttentionLabScenario = buttonRef(
         id = "body.events-simulator.actions.next-scenario",
         labelRes = R.string.events_simulator_next_scenario,
@@ -195,6 +205,21 @@ object DebugMenuScreen : AppScreenBlueprint(
                 text(
                     id = "helper",
                     textRes = R.string.insulin_partner_lab_debug_helper,
+                    role = TextRole.Supporting,
+                )
+            }
+
+
+            card("partners-circuit") {
+                text(
+                    id = "title",
+                    textRes = R.string.partners_circuit_lab_title,
+                    role = TextRole.Title,
+                )
+                button(OpenPartnersCircuitLab)
+                text(
+                    id = "helper",
+                    textRes = R.string.partners_circuit_lab_debug_helper,
                     role = TextRole.Supporting,
                 )
             }
