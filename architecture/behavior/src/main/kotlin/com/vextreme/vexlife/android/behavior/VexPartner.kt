@@ -101,10 +101,12 @@ interface VexPartner<
         }
 
         /**
-         * Inbound Connection-side handoff before durable/domain admission.
+         * Inbound Connection-side handoff into the consumer's admission boundary.
          *
-         * Receiver intentionally owns no Store or Family contract here. A concrete Partner may bind
-         * its Receiver to the exact domain Store/reconciliation boundary that the consumer earns.
+         * The handoff is suspending because a truthful consumer may need to await transactional
+         * persistence before it can say the Observation was durably admitted. Receiver intentionally
+         * owns no Store or Family contract here; a concrete Partner binds it to the exact
+         * Store/reconciliation boundary that consumer earns.
          */
         fun interface Receiver<
             Partner,
@@ -112,7 +114,7 @@ interface VexPartner<
         > where
             Partner : VexPartner<Partner>,
             PartnerSignal : Signal<Partner> {
-            fun receive(
+            suspend fun receive(
                 observation:
                     Observation<
                         Partner,
