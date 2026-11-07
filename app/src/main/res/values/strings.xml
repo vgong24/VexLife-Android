@@ -397,9 +397,10 @@
 
     <string name="cgm_partner_lab_title">CGM Partner Circuit</string>
     <string name="cgm_partner_lab_open">Open CGM Partner Circuit</string>
-    <string name="cgm_partner_lab_intro">Inject one synthetic packet and watch Partner Signals cross Connection observation, Store admission, Family State, and Projection.</string>
-    <string name="cgm_partner_lab_receive_packet">Receive synthetic CGM packet</string>
-    <string name="cgm_partner_lab_debug_helper">Patient-zero architecture lab for Partner → Connection → Store → Family. It uses synthetic bytes only; no clinical or real-device claim.</string>
+    <string name="cgm_partner_lab_intro">Inject BLE-like bytes or an HTTP-like response and watch both provider representations convert into the same Partner Signals before Observation, Store, Family State, and Projection.</string>
+    <string name="cgm_partner_lab_receive_packet">Receive BLE-like CGM packet</string>
+    <string name="cgm_partner_lab_receive_http">Receive HTTP-like CGM response</string>
+    <string name="cgm_partner_lab_debug_helper">Patient-zero architecture lab for two provider representations → one Partner Signal vocabulary → Store → Family. Synthetic only; no clinical or real-device claim.</string>
 
 
     <string name="insulin_partner_lab_title">Insulin Partner Circuit</string>
@@ -415,7 +416,8 @@
     <string name="partners_circuit_lab_open">Open Partners Circuit Lab</string>
     <string name="partners_circuit_lab_intro">Close the synthetic loop: Partner signals rise through Store and Family, then a lab rule re-enters another Family through Control and reaches the Pump Partner through Effect and Method.</string>
     <string name="partners_circuit_lab_automation_toggle">Enable synthetic CGM → Pump rule</string>
-    <string name="partners_circuit_lab_receive_cgm">Receive synthetic CGM packet</string>
+    <string name="partners_circuit_lab_receive_cgm">Receive BLE-like CGM packet</string>
+    <string name="partners_circuit_lab_receive_cgm_http">Receive HTTP-like CGM response</string>
     <string name="partners_circuit_lab_receive_pen">Receive synthetic pen packet</string>
     <string name="partners_circuit_lab_request_pump">Request synthetic pump delivery manually</string>
     <string name="partners_circuit_lab_receive_pump">Receive synthetic pump outcome</string>
