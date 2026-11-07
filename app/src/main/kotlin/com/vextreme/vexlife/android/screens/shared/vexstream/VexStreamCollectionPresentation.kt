@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -26,6 +25,7 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.ScrollableColumnElement
+import com.vextreme.vexlife.android.elements.TextRole
 import com.vextreme.vexlife.android.elements.VexButton
 import com.vextreme.vexlife.android.elements.VexColumn
 import com.vextreme.vexlife.android.elements.VexComposeScope
@@ -530,60 +530,93 @@ private fun VexStreamCollectionCard(
                 tracks,
             )
         }
+    val rowRef =
+        VexStreamPresentationRefs.collectionRow(
+            collectionKey,
+        )
     val openRef =
         VexStreamPresentationRefs.collectionRowAction(
             collectionKey = collectionKey,
             action = VexStreamMusicScreen.OpenCollection,
         )
-    Card(
-        modifier =
-            VexModifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp)
-                .vex(openRef)
-                .clickable {
-                    runtime.activateDynamic(
-                        element =
-                            VexStreamMusicScreen
-                                .OpenCollection,
-                        subjectRef = openRef,
-                    )
-                    onOpen()
-                },
+
+    /*
+     * Runtime collection identity already exists in VexStreamPresentationRefs. Re-enter that exact
+     * row as the semantic parent and give only the recurring nested presentation roles local IDs.
+     * Product wording, grouping and open behavior remain feature-owned; Vex Compose supplies the
+     * same inherited identity continuity already used by other custom-rendered Vex surfaces.
+     */
+    VexComposeScope(
+        parentRef = rowRef,
     ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+        Card(
+            modifier =
+                VexModifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp)
+                    .vex(openRef)
+                    .clickable {
+                        runtime.activateDynamic(
+                            element =
+                                VexStreamMusicScreen
+                                    .OpenCollection,
+                            subjectRef = openRef,
+                        )
+                        onOpen()
+                    },
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-            )
-            if (subtitle.isNotBlank()) {
-                Text(
-                    text = subtitle,
+            /*
+             * Match the established runtime-track pattern: the existing layout container carries
+             * the exact runtime row ref, while nested Vex cells inherit that ref and add only local
+             * presentation roles. No extra semantic container is invented just for projectability.
+             */
+            Column(
+                modifier =
+                    VexModifier
+                        .padding(14.dp)
+                        .vex(rowRef),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                VexText(
+                    id = "title",
+                    text = title,
+                    role = TextRole.Title,
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                if (subtitle.isNotBlank()) {
+                    VexText(
+                        id = "subtitle",
+                        text = subtitle,
+                        role = TextRole.Supporting,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                VexText(
+                    id = "count",
+                    text =
+                        stringResource(
+                            R.string.vexstream_music_track_count,
+                            tracks.size,
+                        ),
+                    role = TextRole.Label,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                VexText(
+                    id = "offline",
+                    text =
+                        vexStreamOfflineCollectionStatusText(
+                            offlinePlan,
+                        ),
+                    role = TextRole.Label,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Text(
-                text =
-                    stringResource(
-                        R.string.vexstream_music_track_count,
-                        tracks.size,
-                    ),
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text(
-                text =
-                    vexStreamOfflineCollectionStatusText(
-                        offlinePlan,
-                    ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }
+
 
 @Composable
 private fun vexStreamOfflineCollectionStatusText(
