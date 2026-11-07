@@ -187,10 +187,14 @@ class CgmRoomStoreRestartInstrumentedTest {
                     )
 
                     /*
-                     * Family uses the reconstructed Store value itself. It does not ask Partner
-                     * Decoder/Receiver to manufacture another receipt during restoration.
+                     * Family reaches the same reconstructed historical meaning. A separate
+                     * readCurrent() call may materialize another equal process-local object, so
+                     * reference identity across those two reads is deliberately not a contract.
+                     *
+                     * Restoration still never asks Partner Decoder/Receiver to manufacture a new
+                     * receipt.
                      */
-                    assertSame(
+                    assertEquals(
                         restoredSignal,
                         restoredState.glucose,
                     )
