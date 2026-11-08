@@ -22,6 +22,7 @@ kotlin {
 }
 
 dependencies {
+    api(project(":architecture:convergence"))
     api(project(":architecture:execution"))
     implementation(libs.coroutinesAndroid)
     testImplementation(libs.junit)
