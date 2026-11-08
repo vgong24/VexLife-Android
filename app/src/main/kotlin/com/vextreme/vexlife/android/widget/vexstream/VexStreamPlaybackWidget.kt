@@ -45,14 +45,16 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.vextreme.vexlife.android.MainActivity
 import com.vextreme.vexlife.android.R
+import com.vextreme.vexlife.android.VexApplication
 import com.vextreme.vexlife.android.data.vexstream.VexStreamArtworkStore
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackService
 import com.vextreme.vexlife.android.vexstream.playback.Media3VexStreamPlaybackConnection
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamCurrentPlaybackObservation
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackAct
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackTrace
 import com.vextreme.vexlife.android.vexstream.playback.toVexStreamCurrentPlaybackObservation
 import com.vextreme.vexlife.android.vexstream.queue.Media3VexStreamQueueConnection
@@ -292,11 +294,9 @@ internal suspend fun vexStreamPlaybackWidgetSurfaceState(
 ): VexStreamPlaybackWidgetSurfaceState {
     val readState =
         observation.readState
-    val playPause =
+    val playbackProjection =
         observation
-            .playbackProjection[
-                VexStreamPlaybackControl.PlayPause
-            ]
+            .playbackProjection
     val artworkUri =
         readState
             .currentArtworkUri
@@ -331,10 +331,18 @@ internal suspend fun vexStreamPlaybackWidgetSurfaceState(
                     VexStreamQueueControl.Previous
                 ].isAvailable,
         playPauseEnabled =
-            playPause.isAvailable,
+            playbackProjection
+                .playPauseAvailable,
         showPause =
-            playPause.act is
-                VexStreamPlaybackAct.Pause,
+            playbackProjection
+                .playPauseAvailable &&
+                (
+                    playbackProjection
+                        .state as?
+                        VexStreamPlaybackState.Media
+                )
+                    ?.playRequested ==
+                true,
         nextEnabled =
             observation
                 .queueProjection[
@@ -437,12 +445,17 @@ internal object VexStreamPlaybackWidget :
             appContext.getString(
                 R.string.vexstream_music_title,
             )
+        val playbackFamily =
+            appContext
+                .vexStreamPlaybackFamily()
         val observation =
             withVexStreamWidgetController(
                 appContext,
             ) { controller ->
                 controller
-                    .toVexStreamCurrentPlaybackObservation()
+                    .toVexStreamCurrentPlaybackObservation(
+                        playbackFamily,
+                    )
             }
 
         if (
@@ -886,19 +899,17 @@ class VexStreamPlaybackWidgetActionCallback :
             when (
                 command
             ) {
-                is VexStreamPlaybackWidgetCommand.Playback -> {
-                    val connection =
-                        Media3VexStreamPlaybackConnection(
+                is VexStreamPlaybackWidgetCommand.Playback ->
+                    Media3VexStreamPlaybackConnection(
+                        controller =
                             controller,
-                        )
-                    try {
-                        connection.activate(
-                            command.control,
-                        )
-                    } finally {
-                        connection.close()
-                    }
-                }
+                        family =
+                            context
+                                .applicationContext
+                                .vexStreamPlaybackFamily(),
+                    ).activate(
+                        command.control,
+                    )
 
                 is VexStreamPlaybackWidgetCommand.Queue ->
                     Media3VexStreamQueueConnection(
@@ -994,6 +1005,24 @@ internal class VexStreamPlaybackWidgetUpdateExecution(
             VexStreamCurrentPlaybackObservation
         > =
         observations
+}
+
+private fun Context.vexStreamPlaybackFamily():
+    VexStreamPlaybackFamily {
+    val vexApplication =
+        applicationContext as?
+            VexApplication
+            ?: error(
+                "VexStream Widget requires VexApplication as the process composition root",
+            )
+
+    return vexApplication
+        .dependencies
+        .resolve(
+            vexApplication
+                .dependencyModule
+                .playbackFamily,
+        )
 }
 
 private suspend fun <
