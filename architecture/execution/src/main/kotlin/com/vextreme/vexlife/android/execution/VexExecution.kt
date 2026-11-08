@@ -49,22 +49,10 @@ import kotlinx.coroutines.withContext
  * adapter, or semantic decision engine. Callable references are local execution convenience only
  * and must not be generalized into reflection-driven architecture.
  */
-/**
- * Read-only CURRENT execution-custody surface shared by concrete VexExecution owners and direct
- * runtime owners that deliberately expose the same projection.
- *
- * This interface grants no execution control and owns no second runtime truth.
- */
-interface VexExecutionProjectionOwner {
-    val currentExecution:
-        VexExecution.CurrentProjection
-}
-
 abstract class VexExecution protected constructor(
     private val executionRoot:
         VexExecutionRoot,
-) :
-    VexExecutionProjectionOwner {
+) {
     @RequiresOptIn(
         message =
             "Foundation relationship bridge only; use the rightful semantic/runtime owner's typed relationship boundary",
@@ -206,7 +194,7 @@ abstract class VexExecution protected constructor(
      *
      *     SOURCE_LABEL != RELATIONSHIP_IDENTITY != JOB_OCCURRENCE
      */
-    override val currentExecution:
+    val currentExecution:
         CurrentProjection
         get() =
             currentExecution(

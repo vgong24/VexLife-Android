@@ -347,10 +347,8 @@ OPERATION FAILURE
 VexExecution exposes one read-only projection derived directly from its canonical current custody:
 
 ~~~text
-VexExecutionProjectionOwner
-    currentExecution
-        ↓
 VexExecution
+    currentExecution
     ownedJobs
     jobsBySource
     observationBySource
