@@ -56,6 +56,15 @@ internal class VexStreamPlaybackConnectionViewModel(
                     .playbackFamily,
             )
 
+    val executionRoot =
+        vexApplication
+            .dependencies
+            .resolve(
+                vexApplication
+                    .dependencyModule
+                    .processExecutionRoot,
+            )
+
     val playerStore:
         VexStreamPlayerStore =
         vexApplication
@@ -81,6 +90,14 @@ internal class VexStreamPlaybackConnectionViewModel(
     var controller by
         mutableStateOf<
             MediaController?
+        >(
+            null,
+        )
+        private set
+
+    var playerRequestConnection by
+        mutableStateOf<
+            VexStreamPlayerPartner.Connection.Request?
         >(
             null,
         )
@@ -156,6 +173,8 @@ internal class VexStreamPlaybackConnectionViewModel(
                                 connected,
                             )
 
+                        playerRequestConnection =
+                            playerConnection
                         connection =
                             PartnerVexStreamPlaybackConnection(
                                 family =
@@ -198,6 +217,7 @@ internal class VexStreamPlaybackConnectionViewModel(
 
     override fun onCleared() {
         cleared = true
+        playerRequestConnection = null
         connection = null
         queueConnection = null
         queuePlayConnection = null

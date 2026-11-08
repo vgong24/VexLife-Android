@@ -198,8 +198,8 @@ internal fun VexStreamLibraryFabActions(
 ) {
     val connection =
         rememberVexStreamCollectionPlaybackConnection(
-            controller = controller,
-            resolver = resolver,
+            resolver =
+                resolver,
         )
     val playRequest =
         remember(
@@ -286,8 +286,8 @@ internal fun VexStreamSongsPane(
 ) {
     val trackPlaybackConnection =
         rememberVexStreamTrackPlaybackConnection(
-            controller = controller,
-            resolver = resolver,
+            resolver =
+                resolver,
         )
     VexStableLazyColumn(
         listRef =
@@ -350,8 +350,8 @@ internal fun VexStreamDownloadsPane(
 ) {
     val trackPlaybackConnection =
         rememberVexStreamTrackPlaybackConnection(
-            controller = controller,
-            resolver = resolver,
+            resolver =
+                resolver,
         )
     val downloaded =
         remember(tracks) {

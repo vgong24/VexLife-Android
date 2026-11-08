@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.vexstream.player
 
 import com.vextreme.vexlife.android.behavior.VexPartner
+import com.vextreme.vexlife.android.vexstream.collection.VexStreamCollectionPlaybackRealization
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackEffectConnection
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackProgressConnection
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackSeekConnection
@@ -8,6 +9,7 @@ import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueEffectConnecti
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueuePlayConnection
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueReorderConnection
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatEffectConnection
+import com.vextreme.vexlife.android.vexstream.track.VexStreamTrackPlaybackRealization
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -26,6 +28,54 @@ internal object VexStreamPlayerPartner :
         Buffering,
         Ready,
         Ended,
+    }
+
+    /**
+     * Vex-owned description of one playable item offered to the outside Player.
+     *
+     * Media3 MediaItem is a concrete Connection representation of this value.
+     */
+    data class Media(
+        val mediaId:
+            String,
+        val sourceRef:
+            String,
+        val mimeType:
+            String,
+        val title:
+            String,
+        val artist:
+            String,
+        val album:
+            String?,
+        val artworkRef:
+            String?,
+        val playbackStartMs:
+            Long,
+        val playbackEndMs:
+            Long?,
+    ) {
+        init {
+            require(
+                mediaId.isNotBlank(),
+            )
+            require(
+                sourceRef.isNotBlank(),
+            )
+            require(
+                mimeType.isNotBlank(),
+            )
+            require(
+                playbackStartMs >=
+                    0L,
+            )
+            require(
+                playbackEndMs ==
+                    null ||
+                    playbackEndMs >
+                    playbackStartMs,
+            )
+        }
     }
 
     sealed interface Signal :
@@ -206,6 +256,8 @@ internal object VexStreamPlayerPartner :
             VexStreamRepeatEffectConnection,
             VexStreamQueuePlayConnection,
             VexStreamQueueReorderConnection,
+            VexStreamTrackPlaybackRealization,
+            VexStreamCollectionPlaybackRealization,
             VexStreamPlaybackSeekConnection
 
         /**

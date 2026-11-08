@@ -2,12 +2,17 @@ package com.vextreme.vexlife.android.vexstream.player
 
 import android.content.ComponentName
 import android.content.Context
+import android.net.Uri
 import android.os.Handler
 
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackService
+import com.vextreme.vexlife.android.vexstream.collection.ResolvedCollectionPlayback
+import com.vextreme.vexlife.android.vexstream.collection.VexStreamCollectionPlaybackRealization
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackEffect
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackEffectConnection
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackSeekConnection
@@ -26,6 +31,12 @@ import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueReorderTargetI
 import com.vextreme.vexlife.android.vexstream.queue.shuffleVexStreamFutureQueue
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatEffect
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatEffectConnection
+import com.vextreme.vexlife.android.vexstream.track.ResolvedTrackPlay
+import com.vextreme.vexlife.android.vexstream.track.VexStreamTrackPlaybackRealization
+import com.vextreme.vexlife.android.vexstream.track.VexStreamTrackQueueRequest
+import com.vextreme.vexlife.android.vexstream.track.VexStreamTrackQueueTarget
+import com.vextreme.vexlife.android.vexstream.track.vexStreamTrackPlayCommandsAvailable
+import com.vextreme.vexlife.android.vexstream.track.vexStreamTrackQueueTarget
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -49,6 +60,220 @@ internal class Media3VexStreamPlayerControlConnection(
             .next(
                 "media3-controller",
             )
+
+    private val providerDispatcher =
+        Handler(
+            controller.applicationLooper,
+        ).asCoroutineDispatcher(
+            "VexStream Player Partner Media3 persistent",
+        )
+
+    override val isTrackPlayAvailable:
+        Boolean
+        get() =
+            playCommandsAvailable()
+
+    override fun isTrackQueueAvailable(
+        request:
+            VexStreamTrackQueueRequest,
+    ):
+        Boolean =
+        queueTarget(
+            request,
+        ) !=
+            null
+
+    override suspend fun realizeTrackPlay(
+        resolved:
+            ResolvedTrackPlay,
+    ):
+        Boolean =
+        withContext(
+            providerDispatcher,
+        ) {
+            if (
+                !playCommandsAvailable()
+            ) {
+                return@withContext false
+            }
+
+            controller.setMediaItems(
+                resolved.items.map {
+                    it.toMedia3Item()
+                },
+                resolved.selectedIndex,
+                0L,
+            )
+
+            if (
+                controller.shuffleModeEnabled
+            ) {
+                controller.shuffleModeEnabled =
+                    false
+            }
+
+            controller.prepare()
+            controller.play()
+            true
+        }
+
+    override suspend fun realizeTrackQueue(
+        request:
+            VexStreamTrackQueueRequest,
+        media:
+            VexStreamPlayerPartner.Media,
+    ):
+        Boolean =
+        withContext(
+            providerDispatcher,
+        ) {
+            when (
+                val target =
+                    queueTarget(
+                        request,
+                    )
+                        ?: return@withContext false
+            ) {
+                VexStreamTrackQueueTarget.StartPlayback -> {
+                    controller.setMediaItem(
+                        media.toMedia3Item(),
+                    )
+                    controller.prepare()
+                    controller.play()
+                    true
+                }
+
+                is VexStreamTrackQueueTarget.Insert -> {
+                    controller.addMediaItem(
+                        target.index,
+                        media.toMedia3Item(),
+                    )
+                    true
+                }
+
+                VexStreamTrackQueueTarget.Append -> {
+                    controller.addMediaItem(
+                        media.toMedia3Item(),
+                    )
+                    true
+                }
+            }
+        }
+
+    override val isCollectionPlaybackAvailable:
+        Boolean
+        get() =
+            playCommandsAvailable()
+
+    override suspend fun realizeCollectionPlayback(
+        resolved:
+            ResolvedCollectionPlayback,
+    ):
+        Boolean =
+        withContext(
+            providerDispatcher,
+        ) {
+            if (
+                resolved.items.isEmpty() ||
+                !playCommandsAvailable()
+            ) {
+                return@withContext false
+            }
+
+            controller.setMediaItems(
+                resolved.items.map {
+                    it.toMedia3Item()
+                },
+            )
+            if (
+                controller.shuffleModeEnabled
+            ) {
+                controller.shuffleModeEnabled =
+                    false
+            }
+            controller.prepare()
+            controller.play()
+            true
+        }
+
+    private fun playCommandsAvailable():
+        Boolean =
+        vexStreamTrackPlayCommandsAvailable(
+            changeMediaItemsAvailable =
+                controller.isCommandAvailable(
+                    Player.COMMAND_CHANGE_MEDIA_ITEMS,
+                ),
+            prepareAvailable =
+                controller.isCommandAvailable(
+                    Player.COMMAND_PREPARE,
+                ),
+            playAvailable =
+                controller.isCommandAvailable(
+                    Player.COMMAND_PLAY_PAUSE,
+                ),
+            shuffleEnabled =
+                controller.shuffleModeEnabled,
+            setShuffleModeAvailable =
+                controller.isCommandAvailable(
+                    Player.COMMAND_SET_SHUFFLE_MODE,
+                ),
+        )
+
+    private fun queueTarget(
+        request:
+            VexStreamTrackQueueRequest,
+    ):
+        VexStreamTrackQueueTarget? {
+        val timelineAvailable =
+            controller.isCommandAvailable(
+                Player.COMMAND_GET_TIMELINE,
+            )
+        val needsTimeline =
+            request.placement ==
+                com.vextreme.vexlife.android.vexstream.track
+                    .VexStreamTrackQueuePlacement.Next
+
+        return vexStreamTrackQueueTarget(
+            placement =
+                request.placement,
+            mediaItemCount =
+                if (
+                    needsTimeline &&
+                    timelineAvailable
+                ) {
+                    controller.mediaItemCount
+                } else {
+                    null
+                },
+            currentMediaItemIndex =
+                if (
+                    needsTimeline &&
+                    timelineAvailable
+                ) {
+                    controller.currentMediaItemIndex
+                } else {
+                    null
+                },
+            timelineAvailable =
+                timelineAvailable,
+            setMediaItemAvailable =
+                controller.isCommandAvailable(
+                    Player.COMMAND_SET_MEDIA_ITEM,
+                ),
+            changeMediaItemsAvailable =
+                controller.isCommandAvailable(
+                    Player.COMMAND_CHANGE_MEDIA_ITEMS,
+                ),
+            prepareAvailable =
+                controller.isCommandAvailable(
+                    Player.COMMAND_PREPARE,
+                ),
+            playAvailable =
+                controller.isCommandAvailable(
+                    Player.COMMAND_PLAY_PAUSE,
+                ),
+        )
+    }
 
     override fun realize(
         effect:
@@ -390,3 +615,61 @@ internal suspend fun <
 
 private const val PLAYER_CONTROLLER_CONNECT_TIMEOUT_MS =
     2_000L
+
+
+private fun VexStreamPlayerPartner.Media.toMedia3Item():
+    MediaItem {
+    val clipping =
+        MediaItem.ClippingConfiguration.Builder()
+            .setStartPositionMs(
+                playbackStartMs,
+            )
+            .apply {
+                playbackEndMs
+                    ?.let(
+                        ::setEndPositionMs,
+                    )
+            }
+            .build()
+
+    return MediaItem.Builder()
+        .setMediaId(
+            mediaId,
+        )
+        .setUri(
+            Uri.parse(
+                sourceRef,
+            ),
+        )
+        .setMimeType(
+            mimeType,
+        )
+        .setMediaMetadata(
+            MediaMetadata.Builder()
+                .setTitle(
+                    title,
+                )
+                .setArtist(
+                    artist,
+                )
+                .apply {
+                    album
+                        ?.let(
+                            ::setAlbumTitle,
+                        )
+                    artworkRef
+                        ?.let { ref ->
+                            setArtworkUri(
+                                Uri.parse(
+                                    ref,
+                                ),
+                            )
+                        }
+                }
+                .build(),
+        )
+        .setClippingConfiguration(
+            clipping,
+        )
+        .build()
+}
