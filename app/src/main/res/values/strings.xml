@@ -412,15 +412,15 @@
     <string name="insulin_partner_lab_debug_helper">Pressure Partner symmetry with a sparse connected pen and a bidirectional pump. Synthetic architecture lab only; no treatment or real-device claim.</string>
 
 
-    <string name="partners_circuit_lab_title">Partners Circuit Lab</string>
-    <string name="partners_circuit_lab_open">Open Partners Circuit Lab</string>
-    <string name="partners_circuit_lab_intro">Close the synthetic loop: Partner signals rise through Store and Family, then a lab rule re-enters another Family through Control and reaches the Pump Partner through Effect and Method.</string>
+    <string name="partners_circuit_lab_title">Partner Feedback Circuit</string>
+    <string name="partners_circuit_lab_open">Open Partner Feedback Circuit</string>
+    <string name="partners_circuit_lab_intro">Trace the complete synthetic feedback loop: CGM Partner observations rise through Store and Family, then an optional lab rule enters Insulin Family through Control and reaches the Pump Partner through Effect and Method before a later Partner Signal reports the observed outcome.</string>
     <string name="partners_circuit_lab_automation_toggle">Enable synthetic CGM → Pump rule</string>
     <string name="partners_circuit_lab_receive_cgm">Receive BLE-like CGM packet</string>
     <string name="partners_circuit_lab_receive_cgm_http">Receive HTTP-like CGM response</string>
     <string name="partners_circuit_lab_receive_pen">Receive synthetic pen packet</string>
     <string name="partners_circuit_lab_request_pump">Request synthetic pump delivery manually</string>
     <string name="partners_circuit_lab_receive_pump">Receive synthetic pump outcome</string>
-    <string name="partners_circuit_lab_debug_helper">One Screen demonstrates sustained VexExecution listeners, Partner ingress, shared Store convergence, Family semantics, and the reverse Family Effect → Pump Partner path. Synthetic architecture fixture only.</string>
+    <string name="partners_circuit_lab_debug_helper">Start here for the end-to-end Partner feedback path: provider representation → Partner → Store → Family → optional cross-Family rule → Control/Effect/Method → Pump Partner → later observed outcome. Synthetic architecture fixture only.</string>
 
 </resources>
