@@ -1,7 +1,11 @@
 package com.vextreme.vexlife.android.vexstream.track
 
-import androidx.media3.common.MediaItem
+import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
+import com.vextreme.vexlife.android.data.vexstream.VexStreamTrack
+import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
+import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -10,10 +14,6 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
-import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
-import com.vextreme.vexlife.android.data.vexstream.VexStreamTrack
-import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
-import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -22,66 +22,47 @@ import org.junit.Test
 
 class VexStreamTrackPlaybackTest {
     @Test
-    fun trackExecutionResolvesOnWorkerAndCommitsOnProviderDispatcher(): Unit =
+    fun executionResolvesVexMediaThenHandsItToPlayerRealization() =
         runBlocking {
-            val workerExecutor =
+            val executor =
                 Executors.newSingleThreadExecutor { runnable ->
                     Thread(
                         runnable,
                         "vex-track-worker",
                     )
                 }
-            val providerExecutor =
-                Executors.newSingleThreadExecutor { runnable ->
-                    Thread(
-                        runnable,
-                        "vex-media-provider",
-                    )
-                }
-            val workerDispatcher =
-                workerExecutor.asCoroutineDispatcher()
-            val providerDispatcher =
-                providerExecutor.asCoroutineDispatcher()
+            val dispatcher =
+                executor.asCoroutineDispatcher()
             val root =
                 VexExecutionRoot(
                     dispatcher =
-                        workerDispatcher,
+                        dispatcher,
                 )
             val resolverThreads =
                 CopyOnWriteArrayList<String>()
-            val committedMediaIds =
-                CopyOnWriteArrayList<String>()
-            val commitThreads =
+            val realized =
                 CopyOnWriteArrayList<String>()
             val execution =
                 VexStreamTrackPlaybackExecution(
-                    root = root,
-                    providerDispatcher =
-                        providerDispatcher,
+                    root =
+                        root,
                     resolver =
-                        VexStreamTrackMediaItemResolver { state ->
+                        VexStreamTrackPlaybackResolver { state ->
                             resolverThreads +=
                                 Thread.currentThread().name
-                            MediaItem.Builder()
-                                .setMediaId(
-                                    state.track
-                                        .trackRef
-                                        .value,
-                                )
-                                .build()
+                            media(
+                                state,
+                            )
                         },
-                    commitPlay = { resolved ->
-                        commitThreads +=
-                            Thread.currentThread().name
-                        committedMediaIds +=
-                            resolved.items.map {
-                                it.mediaId
-                            }
-                        true
-                    },
-                    commitQueue = { _, _ ->
-                        true
-                    },
+                    realization =
+                        realization(
+                            onPlay = { resolved ->
+                                realized +=
+                                    resolved.items.map {
+                                        it.mediaId
+                                    }
+                            },
+                        ),
                 )
             val alpha =
                 track(
@@ -96,7 +77,8 @@ class VexStreamTrackPlaybackTest {
                 assertTrue(
                     execution.play(
                         VexStreamTrackPlayRequest(
-                            selected = beta,
+                            selected =
+                                beta,
                             contextTracks =
                                 listOf(
                                     alpha,
@@ -105,11 +87,12 @@ class VexStreamTrackPlaybackTest {
                         ),
                     ),
                 )
+
                 withTimeout(
                     2_000L,
                 ) {
                     while (
-                        commitThreads.isEmpty()
+                        realized.isEmpty()
                     ) {
                         yield()
                     }
@@ -127,148 +110,94 @@ class VexStreamTrackPlaybackTest {
                     },
                 )
                 assertEquals(
-                    1,
-                    commitThreads.size,
-                )
-                assertTrue(
-                    commitThreads.all {
-                        it.startsWith(
-                            "vex-media-provider",
-                        )
-                    },
-                )
-                assertFalse(
-                    resolverThreads.any {
-                        workerThread ->
-                            commitThreads.any {
-                                providerThread ->
-                                workerThread ==
-                                    providerThread
-                            }
-                    },
-                )
-                assertEquals(
                     listOf(
                         "track.alpha",
                         "track.beta",
                     ),
-                    committedMediaIds.toList(),
+                    realized.toList(),
                 )
             } finally {
+                execution.shutdown()
                 root.joinStopAll(
                     "test complete",
                 )
-                workerDispatcher.close()
-                providerDispatcher.close()
-                workerExecutor.shutdownNow()
-                providerExecutor.shutdownNow()
+                dispatcher.close()
+                executor.shutdownNow()
             }
         }
 
     @Test
-    fun selectedTrackArtworkPreparesOnWorkerBeforeProviderCommit(): Unit =
+    fun selectedArtworkPreparationPrecedesPlayerRealization() =
         runBlocking {
-            val workerExecutor =
-                Executors.newSingleThreadExecutor { runnable ->
-                    Thread(
-                        runnable,
-                        "vex-artwork-worker",
-                    )
-                }
-            val providerExecutor =
-                Executors.newSingleThreadExecutor { runnable ->
-                    Thread(
-                        runnable,
-                        "vex-artwork-provider",
-                    )
-                }
-            val workerDispatcher =
-                workerExecutor.asCoroutineDispatcher()
-            val providerDispatcher =
-                providerExecutor.asCoroutineDispatcher()
+            val executor =
+                Executors.newSingleThreadExecutor()
+            val dispatcher =
+                executor.asCoroutineDispatcher()
             val root =
                 VexExecutionRoot(
                     dispatcher =
-                        workerDispatcher,
+                        dispatcher,
                 )
             val events =
                 CopyOnWriteArrayList<String>()
             val execution =
                 VexStreamTrackPlaybackExecution(
-                    root = root,
-                    providerDispatcher =
-                        providerDispatcher,
+                    root =
+                        root,
                     resolver =
                         object :
-                            VexStreamTrackMediaItemResolver {
-                            override fun mediaItem(
-                                state: VexStreamTrackState,
-                            ): MediaItem {
+                            VexStreamTrackPlaybackResolver {
+                            override fun media(
+                                state:
+                                    VexStreamTrackState,
+                            ):
+                                VexStreamPlayerPartner.Media {
                                 events +=
                                     "resolve:" +
                                         state.track
                                             .trackRef
-                                            .value +
-                                        ":" +
-                                        Thread.currentThread()
-                                            .name
-                                return MediaItem.Builder()
-                                    .setMediaId(
-                                        state.track
-                                            .trackRef
-                                            .value,
-                                    )
-                                    .build()
+                                            .value
+                                return media(
+                                    state,
+                                )
                             }
 
                             override suspend fun prepareArtwork(
-                                state: VexStreamTrackState,
+                                state:
+                                    VexStreamTrackState,
                             ) {
                                 events +=
                                     "prepare:" +
                                         state.track
                                             .trackRef
-                                            .value +
-                                        ":" +
-                                        Thread.currentThread()
-                                            .name
+                                            .value
                             }
                         },
-                    commitPlay = { resolved ->
-                        events +=
-                            "commit:" +
-                                resolved.items[
-                                    resolved.selectedIndex
-                                ].mediaId +
-                                ":" +
-                                Thread.currentThread()
-                                    .name
-                        true
-                    },
-                    commitQueue = { _, _ ->
-                        true
-                    },
+                    realization =
+                        realization(
+                            onPlay = { resolved ->
+                                events +=
+                                    "realize:" +
+                                        resolved.items[
+                                            resolved.selectedIndex
+                                        ].mediaId
+                            },
+                        ),
                 )
-            val alpha =
+            val selected =
                 track(
-                    "track.alpha",
-                )
-            val beta =
-                track(
-                    "track.beta",
+                    "track.selected",
                 )
 
             try {
-                assertTrue(
-                    execution.play(
-                        VexStreamTrackPlayRequest(
-                            selected = beta,
-                            contextTracks =
-                                listOf(
-                                    alpha,
-                                    beta,
-                                ),
-                        ),
+                execution.play(
+                    VexStreamTrackPlayRequest(
+                        selected =
+                            selected,
+                        contextTracks =
+                            listOf(
+                                selected,
+                            ),
                     ),
                 )
 
@@ -278,7 +207,7 @@ class VexStreamTrackPlaybackTest {
                     while (
                         events.none {
                             it.startsWith(
-                                "commit:",
+                                "realize:",
                             )
                         }
                     ) {
@@ -286,74 +215,35 @@ class VexStreamTrackPlaybackTest {
                     }
                 }
 
-                val prepareEvents =
-                    events.filter {
-                        it.startsWith(
-                            "prepare:",
-                        )
-                    }
-                assertEquals(
-                    1,
-                    prepareEvents.size,
-                )
                 assertTrue(
-                    prepareEvents.single()
-                        .startsWith(
-                            "prepare:track.beta:vex-artwork-worker",
+                    events.indexOf(
+                        "prepare:track.selected",
+                    ) <
+                        events.indexOf(
+                            "realize:track.selected",
                         ),
-                )
-
-                val commitIndex =
-                    events.indexOfFirst {
-                        it.startsWith(
-                            "commit:",
-                        )
-                    }
-                val prepareIndex =
-                    events.indexOfFirst {
-                        it.startsWith(
-                            "prepare:",
-                        )
-                    }
-                assertTrue(
-                    prepareIndex in
-                        0 until
-                            commitIndex,
-                )
-                assertTrue(
-                    events[
-                        commitIndex
-                    ].startsWith(
-                        "commit:track.beta:vex-artwork-provider",
-                    ),
                 )
             } finally {
                 execution.shutdown()
                 root.joinStopAll(
                     "test complete",
                 )
-                workerDispatcher.close()
-                providerDispatcher.close()
-                workerExecutor.shutdownNow()
-                providerExecutor.shutdownNow()
+                dispatcher.close()
+                executor.shutdownNow()
             }
         }
 
     @Test
-    fun newerPlaySelectionSupersedesPreparedOlderSelection(): Unit =
+    fun newerPlaySelectionSupersedesPreparedOlderSelection() =
         runBlocking {
-            val workerExecutor =
+            val executor =
                 Executors.newSingleThreadExecutor()
-            val providerExecutor =
-                Executors.newSingleThreadExecutor()
-            val workerDispatcher =
-                workerExecutor.asCoroutineDispatcher()
-            val providerDispatcher =
-                providerExecutor.asCoroutineDispatcher()
+            val dispatcher =
+                executor.asCoroutineDispatcher()
             val root =
                 VexExecutionRoot(
                     dispatcher =
-                        workerDispatcher,
+                        dispatcher,
                 )
             val firstResolverEntered =
                 CountDownLatch(
@@ -363,15 +253,14 @@ class VexStreamTrackPlaybackTest {
                 CountDownLatch(
                     1,
                 )
-            val committed =
+            val realized =
                 CopyOnWriteArrayList<String>()
             val execution =
                 VexStreamTrackPlaybackExecution(
-                    root = root,
-                    providerDispatcher =
-                        providerDispatcher,
+                    root =
+                        root,
                     resolver =
-                        VexStreamTrackMediaItemResolver { state ->
+                        VexStreamTrackPlaybackResolver { state ->
                             if (
                                 state.track
                                     .trackRef
@@ -387,44 +276,34 @@ class VexStreamTrackPlaybackTest {
                                     ),
                                 )
                             }
-                            MediaItem.Builder()
-                                .setMediaId(
-                                    state.track
-                                        .trackRef
-                                        .value,
-                                )
-                                .build()
+                            media(
+                                state,
+                            )
                         },
-                    commitPlay = { resolved ->
-                        committed +=
-                            resolved.items[
-                                resolved.selectedIndex
-                            ].mediaId
-                        true
-                    },
-                    commitQueue = { _, _ ->
-                        true
-                    },
-                )
-            val first =
-                track(
-                    "track.first",
-                )
-            val second =
-                track(
-                    "track.second",
+                    realization =
+                        realization(
+                            onPlay = { resolved ->
+                                realized +=
+                                    resolved.items[
+                                        resolved.selectedIndex
+                                    ].mediaId
+                            },
+                        ),
                 )
 
             try {
-                assertTrue(
-                    execution.play(
-                        VexStreamTrackPlayRequest(
-                            selected = first,
-                            contextTracks =
-                                listOf(
-                                    first,
+                execution.play(
+                    VexStreamTrackPlayRequest(
+                        selected =
+                            track(
+                                "track.first",
+                            ),
+                        contextTracks =
+                            listOf(
+                                track(
+                                    "track.first",
                                 ),
-                        ),
+                            ),
                     ),
                 )
                 assertTrue(
@@ -433,16 +312,18 @@ class VexStreamTrackPlaybackTest {
                         TimeUnit.SECONDS,
                     ),
                 )
-
-                assertTrue(
-                    execution.play(
-                        VexStreamTrackPlayRequest(
-                            selected = second,
-                            contextTracks =
-                                listOf(
-                                    second,
+                execution.play(
+                    VexStreamTrackPlayRequest(
+                        selected =
+                            track(
+                                "track.second",
+                            ),
+                        contextTracks =
+                            listOf(
+                                track(
+                                    "track.second",
                                 ),
-                        ),
+                            ),
                     ),
                 )
                 releaseFirstResolver
@@ -452,7 +333,7 @@ class VexStreamTrackPlaybackTest {
                     2_000L,
                 ) {
                     while (
-                        committed.isEmpty()
+                        realized.isEmpty()
                     ) {
                         yield()
                     }
@@ -462,88 +343,61 @@ class VexStreamTrackPlaybackTest {
                     listOf(
                         "track.second",
                     ),
-                    committed.toList(),
+                    realized.toList(),
                 )
             } finally {
                 execution.shutdown()
                 root.joinStopAll(
                     "test complete",
                 )
-                workerDispatcher.close()
-                providerDispatcher.close()
-                workerExecutor.shutdownNow()
-                providerExecutor.shutdownNow()
+                dispatcher.close()
+                executor.shutdownNow()
             }
         }
 
     @Test
-    fun queueRequestsRemainOrderedWhileResolutionRunsOffThread(): Unit =
+    fun queueRequestsRemainOrdered() =
         runBlocking {
-            val workerExecutor =
-                Executors.newSingleThreadExecutor()
-            val providerExecutor =
-                Executors.newSingleThreadExecutor()
-            val workerDispatcher =
-                workerExecutor.asCoroutineDispatcher()
-            val providerDispatcher =
-                providerExecutor.asCoroutineDispatcher()
             val root =
-                VexExecutionRoot(
-                    dispatcher =
-                        workerDispatcher,
-                )
-            val committed =
+                VexExecutionRoot()
+            val realized =
                 CopyOnWriteArrayList<String>()
             val execution =
                 VexStreamTrackPlaybackExecution(
-                    root = root,
-                    providerDispatcher =
-                        providerDispatcher,
+                    root =
+                        root,
                     resolver =
-                        VexStreamTrackMediaItemResolver { state ->
-                            MediaItem.Builder()
-                                .setMediaId(
-                                    state.track
-                                        .trackRef
-                                        .value,
-                                )
-                                .build()
-                        },
-                    commitPlay = {
-                        true
-                    },
-                    commitQueue = { _, item ->
-                        committed +=
-                            item.mediaId
-                        true
-                    },
-                )
-            val first =
-                track(
-                    "track.queue.first",
-                )
-            val second =
-                track(
-                    "track.queue.second",
+                        VexStreamTrackPlaybackResolver(
+                            ::media,
+                        ),
+                    realization =
+                        realization(
+                            onQueue = { _, media ->
+                                realized +=
+                                    media.mediaId
+                            },
+                        ),
                 )
 
             try {
-                assertTrue(
-                    execution.queue(
-                        VexStreamTrackQueueRequest(
-                            track = first,
-                            placement =
-                                VexStreamTrackQueuePlacement.End,
-                        ),
+                execution.queue(
+                    VexStreamTrackQueueRequest(
+                        track =
+                            track(
+                                "track.queue.first",
+                            ),
+                        placement =
+                            VexStreamTrackQueuePlacement.End,
                     ),
                 )
-                assertTrue(
-                    execution.queue(
-                        VexStreamTrackQueueRequest(
-                            track = second,
-                            placement =
-                                VexStreamTrackQueuePlacement.End,
-                        ),
+                execution.queue(
+                    VexStreamTrackQueueRequest(
+                        track =
+                            track(
+                                "track.queue.second",
+                            ),
+                        placement =
+                            VexStreamTrackQueuePlacement.End,
                     ),
                 )
 
@@ -551,7 +405,7 @@ class VexStreamTrackPlaybackTest {
                     2_000L,
                 ) {
                     while (
-                        committed.size <
+                        realized.size <
                         2
                     ) {
                         yield()
@@ -563,28 +417,34 @@ class VexStreamTrackPlaybackTest {
                         "track.queue.first",
                         "track.queue.second",
                     ),
-                    committed.toList(),
+                    realized.toList(),
                 )
             } finally {
                 execution.shutdown()
                 root.joinStopAll(
                     "test complete",
                 )
-                workerDispatcher.close()
-                providerDispatcher.close()
-                workerExecutor.shutdownNow()
-                providerExecutor.shutdownNow()
             }
         }
 
     @Test
     fun playTargetFollowsResolvedContextInsteadOfRenderedIndex() {
-        val alpha = track("track.alpha")
-        val beta = track("track.beta")
-        val gamma = track("track.gamma")
+        val alpha =
+            track(
+                "track.alpha",
+            )
+        val beta =
+            track(
+                "track.beta",
+            )
+        val gamma =
+            track(
+                "track.gamma",
+            )
         val request =
             VexStreamTrackPlayRequest(
-                selected = beta,
+                selected =
+                    beta,
                 contextTracks =
                     listOf(
                         alpha,
@@ -596,7 +456,8 @@ class VexStreamTrackPlaybackTest {
         assertEquals(
             0,
             vexStreamTrackPlayTargetIndex(
-                request = request,
+                request =
+                    request,
                 resolvedMediaIds =
                     listOf(
                         "track.beta",
@@ -606,7 +467,8 @@ class VexStreamTrackPlaybackTest {
         )
         assertNull(
             vexStreamTrackPlayTargetIndex(
-                request = request,
+                request =
+                    request,
                 resolvedMediaIds =
                     listOf(
                         "track.alpha",
@@ -628,8 +490,10 @@ class VexStreamTrackPlaybackTest {
         assertFalse(
             vexStreamTrackSourceProjectedAvailable(
                 track(
-                    ref = "track.unavailable",
-                    hubAvailable = false,
+                    ref =
+                        "track.unavailable",
+                    hubAvailable =
+                        false,
                 ),
             ),
         )
@@ -664,15 +528,6 @@ class VexStreamTrackPlaybackTest {
                 setShuffleModeAvailable = false,
             ),
         )
-        assertTrue(
-            vexStreamTrackPlayCommandsAvailable(
-                changeMediaItemsAvailable = true,
-                prepareAvailable = true,
-                playAvailable = true,
-                shuffleEnabled = true,
-                setShuffleModeAvailable = true,
-            ),
-        )
     }
 
     @Test
@@ -682,26 +537,20 @@ class VexStreamTrackPlaybackTest {
             vexStreamTrackQueueTarget(
                 placement =
                     VexStreamTrackQueuePlacement.Next,
-                mediaItemCount = 0,
-                currentMediaItemIndex = 0,
-                timelineAvailable = true,
-                setMediaItemAvailable = true,
-                changeMediaItemsAvailable = false,
-                prepareAvailable = true,
-                playAvailable = true,
-            ),
-        )
-        assertNull(
-            vexStreamTrackQueueTarget(
-                placement =
-                    VexStreamTrackQueuePlacement.Next,
-                mediaItemCount = 0,
-                currentMediaItemIndex = 0,
-                timelineAvailable = true,
-                setMediaItemAvailable = true,
-                changeMediaItemsAvailable = true,
-                prepareAvailable = false,
-                playAvailable = true,
+                mediaItemCount =
+                    0,
+                currentMediaItemIndex =
+                    0,
+                timelineAvailable =
+                    true,
+                setMediaItemAvailable =
+                    true,
+                changeMediaItemsAvailable =
+                    false,
+                prepareAvailable =
+                    true,
+                playAvailable =
+                    true,
             ),
         )
     }
@@ -710,31 +559,26 @@ class VexStreamTrackPlaybackTest {
     fun playNextNeedsTimelineAndInsertsAfterCurrentItem() {
         assertEquals(
             VexStreamTrackQueueTarget.Insert(
-                index = 2,
+                index =
+                    2,
             ),
             vexStreamTrackQueueTarget(
                 placement =
                     VexStreamTrackQueuePlacement.Next,
-                mediaItemCount = 4,
-                currentMediaItemIndex = 1,
-                timelineAvailable = true,
-                setMediaItemAvailable = false,
-                changeMediaItemsAvailable = true,
-                prepareAvailable = false,
-                playAvailable = false,
-            ),
-        )
-        assertNull(
-            vexStreamTrackQueueTarget(
-                placement =
-                    VexStreamTrackQueuePlacement.Next,
-                mediaItemCount = null,
-                currentMediaItemIndex = null,
-                timelineAvailable = false,
-                setMediaItemAvailable = true,
-                changeMediaItemsAvailable = true,
-                prepareAvailable = true,
-                playAvailable = true,
+                mediaItemCount =
+                    4,
+                currentMediaItemIndex =
+                    1,
+                timelineAvailable =
+                    true,
+                setMediaItemAvailable =
+                    false,
+                changeMediaItemsAvailable =
+                    true,
+                prepareAvailable =
+                    false,
+                playAvailable =
+                    false,
             ),
         )
     }
@@ -746,34 +590,116 @@ class VexStreamTrackPlaybackTest {
             vexStreamTrackQueueTarget(
                 placement =
                     VexStreamTrackQueuePlacement.End,
-                mediaItemCount = null,
-                currentMediaItemIndex = null,
-                timelineAvailable = false,
-                setMediaItemAvailable = false,
-                changeMediaItemsAvailable = true,
-                prepareAvailable = false,
-                playAvailable = false,
-            ),
-        )
-        assertNull(
-            vexStreamTrackQueueTarget(
-                placement =
-                    VexStreamTrackQueuePlacement.End,
-                mediaItemCount = null,
-                currentMediaItemIndex = null,
-                timelineAvailable = false,
-                setMediaItemAvailable = true,
-                changeMediaItemsAvailable = false,
-                prepareAvailable = true,
-                playAvailable = true,
+                mediaItemCount =
+                    null,
+                currentMediaItemIndex =
+                    null,
+                timelineAvailable =
+                    false,
+                setMediaItemAvailable =
+                    false,
+                changeMediaItemsAvailable =
+                    true,
+                prepareAvailable =
+                    false,
+                playAvailable =
+                    false,
             ),
         )
     }
 
+    private fun realization(
+        onPlay:
+            suspend (
+                ResolvedTrackPlay,
+            ) -> Unit =
+            {},
+        onQueue:
+            suspend (
+                VexStreamTrackQueueRequest,
+                VexStreamPlayerPartner.Media,
+            ) -> Unit =
+            { _, _ -> },
+    ):
+        VexStreamTrackPlaybackRealization =
+        object :
+            VexStreamTrackPlaybackRealization {
+            override val isTrackPlayAvailable:
+                Boolean =
+                true
+
+            override fun isTrackQueueAvailable(
+                request:
+                    VexStreamTrackQueueRequest,
+            ):
+                Boolean =
+                true
+
+            override suspend fun realizeTrackPlay(
+                resolved:
+                    ResolvedTrackPlay,
+            ):
+                Boolean {
+                onPlay(
+                    resolved,
+                )
+                return true
+            }
+
+            override suspend fun realizeTrackQueue(
+                request:
+                    VexStreamTrackQueueRequest,
+                media:
+                    VexStreamPlayerPartner.Media,
+            ):
+                Boolean {
+                onQueue(
+                    request,
+                    media,
+                )
+                return true
+            }
+        }
+
+    private fun media(
+        state:
+            VexStreamTrackState,
+    ):
+        VexStreamPlayerPartner.Media =
+        VexStreamPlayerPartner.Media(
+            mediaId =
+                state.track
+                    .trackRef
+                    .value,
+            sourceRef =
+                "vexstream://media/" +
+                    state.track
+                        .trackRef
+                        .value,
+            mimeType =
+                "audio/mpeg",
+            title =
+                state.track.title,
+            artist =
+                state.track.artist,
+            album =
+                state.track.album,
+            artworkRef =
+                null,
+            playbackStartMs =
+                0L,
+            playbackEndMs =
+                null,
+        )
+
     private fun track(
-        ref: String,
-        hubAvailable: Boolean = true,
-    ): VexStreamTrackState =
+        ref:
+            String,
+        hubAvailable:
+            Boolean =
+            true,
+    ):
+        VexStreamTrackState =
         VexStreamTrackState(
             track =
                 VexStreamTrack(
@@ -783,14 +709,20 @@ class VexStreamTrackPlaybackTest {
                         ),
                     mediaSha256 =
                         VexStreamMediaSha256(
-                            "a".repeat(64),
+                            "a".repeat(
+                                64,
+                            ),
                         ),
-                    mediaByteLength = 1L,
-                    title = ref,
-                    artist = "Vex",
+                    mediaByteLength =
+                        1L,
+                    title =
+                        ref,
+                    artist =
+                        "Vex",
                 ),
-            hubAvailable = hubAvailable,
+            hubAvailable =
+                hubAvailable,
         )
 }
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][TRACK][PLAYER-PARTNER]
