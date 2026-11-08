@@ -138,6 +138,56 @@ Compound/Relay remains a separate semantic owner for multi-truth convergence.
 <!-- [VXG RealForever][FOUNDATION][FAMILY][DIRECT-ACT-EXECUTION-RELATIONSHIP] -->
 
 
+### Sustained Service contract candidate
+
+Current review source:
+
+~~~text
+architecture/behavior/src/main/.../VexService.kt
+architecture/behavior/src/test/.../VexServiceHighConfidenceTest.kt
+app/src/main/.../VexMapsNavigationService.kt
+app/src/test/.../VexMapsNavigationServiceExecutionContractTest.kt
+app/src/main/.../VexStreamPlaybackService.kt
+app/src/test/.../VexStreamPlaybackServiceContractTest.kt
+~~~
+
+The reusable contract is intentionally smaller than the earlier Entry / Retention / Execution draft:
+
+~~~text
+VexService<Service, Current>
+└─ current
+     borrowed from the rightful existing current owner
+~~~
+
+Permanent distinctions:
+
+~~~text
+SERVICE_CURRENT_AWARENESS != SERVICE_OWNED_CURRENT_TRUTH
+SERVICE != SEMANTIC CURRENT OWNER
+SERVICE_ALIVE != EFFECT_SUCCESS
+SERVICE_LIFETIME != EXECUTION_JOB
+~~~
+
+The Current generic binds from the Service side. Existing Family State, Relay OutputState, Session
+State, or Partner-derived truth does not implement another Service marker merely because a Service
+consumes it.
+
+Current production bindings:
+
+~~~text
+Navigation Service
+    -> VexNavigationSessionState
+
+Playback Service
+    -> VexStreamPlaybackState
+~~~
+
+Navigation demonstrates that a Service may use VexExecution without making Execution a VexService
+child. Playback demonstrates that Service existence is a sustained realization fact rather than a
+claim that the semantic Effect or provider operation succeeded. Future Companion/Call work should
+reuse this root only against its rightful current source; any additional Service child must be earned
+by repeated concrete pressure.
+
 ## Foundation establishment criteria
 
 The temporary incomplete notice can be removed when a fresh worker with repository access can:

@@ -7,30 +7,17 @@ import org.junit.Test
 
 class VexStreamPlaybackPendingTest {
     @Test
-    fun requestPlayEmitsPendingSemanticStateBeforeProviderAcknowledgement() {
-        val current =
+    fun requestPlayAdmitsPendingSemanticStateBeforeProviderAcknowledgement() {
+        val emitted =
             VexStreamPlaybackState.Media(
                 playRequested = false,
                 phase =
                     VexStreamPlaybackPhase.Buffering,
                 playPauseAvailable = true,
-            )
-
-        val pending =
-            VexStreamPlaybackPending()
-                .after(
-                    VexStreamPlaybackEffect.RequestPlay,
-                )
-
-        val emitted =
-            current.afterIntent(
+            ).afterIntent(
                 VexStreamPlaybackEffect.RequestPlay,
             )
 
-        assertEquals(
-            true,
-            pending.playRequested,
-        )
         assertEquals(
             VexStreamPlaybackState.Media(
                 playRequested = true,
@@ -44,10 +31,14 @@ class VexStreamPlaybackPendingTest {
     }
 
     @Test
-    fun staleProviderObservationCannotEraseNewerPlayIntent() {
-        val pending =
-            VexStreamPlaybackPending(
+    fun staleProviderObservationCannotEraseNewerFamilyIntent() {
+        val current =
+            VexStreamPlaybackState.Media(
                 playRequested = true,
+                requestPending = true,
+                phase =
+                    VexStreamPlaybackPhase.Buffering,
+                playPauseAvailable = true,
             )
         val staleProvider =
             VexStreamPlaybackState.Media(
@@ -59,31 +50,30 @@ class VexStreamPlaybackPendingTest {
 
         val reconciled =
             reconcileVexStreamPlaybackObservation(
-                observed = staleProvider,
-                pending = pending,
-            )
-        val state =
-            reconciled.state as
+                observed =
+                    staleProvider,
+                current =
+                    current,
+            ) as
                 VexStreamPlaybackState.Media
 
-        assertEquals(
-            true,
-            state.playRequested,
+        assertTrue(
+            reconciled.playRequested,
         )
         assertTrue(
-            state.requestPending,
-        )
-        assertEquals(
-            true,
-            reconciled.pending.playRequested,
+            reconciled.requestPending,
         )
     }
 
     @Test
-    fun matchingProviderObservationClearsPendingPlayIntent() {
-        val pending =
-            VexStreamPlaybackPending(
+    fun matchingProviderObservationClearsPendingFamilyIntent() {
+        val current =
+            VexStreamPlaybackState.Media(
                 playRequested = true,
+                requestPending = true,
+                phase =
+                    VexStreamPlaybackPhase.Buffering,
+                playPauseAvailable = true,
             )
         val provider =
             VexStreamPlaybackState.Media(
@@ -95,39 +85,24 @@ class VexStreamPlaybackPendingTest {
 
         val reconciled =
             reconcileVexStreamPlaybackObservation(
-                observed = provider,
-                pending = pending,
-            )
-        val state =
-            reconciled.state as
+                observed =
+                    provider,
+                current =
+                    current,
+            ) as
                 VexStreamPlaybackState.Media
 
         assertFalse(
-            state.requestPending,
+            reconciled.requestPending,
         )
-        assertEquals(
-            null,
-            reconciled.pending.playRequested,
+        assertTrue(
+            reconciled.playRequested,
         )
     }
 
     @Test
-    fun newerPauseIntentCanReplaceStillPendingPlayIntent() {
-        val pendingPlay =
-            VexStreamPlaybackPending(
-                playRequested = true,
-            )
+    fun newerPauseIntentCanReplacePendingPlayIntentInSharedFamilyState() {
         val pendingPause =
-            pendingPlay.after(
-                VexStreamPlaybackEffect.RequestPause,
-            )
-
-        assertEquals(
-            false,
-            pendingPause.playRequested,
-        )
-
-        val emitted =
             VexStreamPlaybackState.Media(
                 playRequested = true,
                 requestPending = true,
@@ -136,89 +111,100 @@ class VexStreamPlaybackPendingTest {
                 playPauseAvailable = true,
             ).afterIntent(
                 VexStreamPlaybackEffect.RequestPause,
-            ) as VexStreamPlaybackState.Media
+            ) as
+                VexStreamPlaybackState.Media
 
-        assertEquals(
-            false,
-            emitted.playRequested,
+        assertFalse(
+            pendingPause.playRequested,
         )
         assertTrue(
-            emitted.requestPending,
+            pendingPause.requestPending,
         )
     }
 
     @Test
     fun restartIntentStaysPendingUntilProviderLeavesEnded() {
-        val pending =
-            VexStreamPlaybackPending()
-                .after(
-                    VexStreamPlaybackEffect.RestartCurrent,
-                )
-
-        val emitted =
-            VexStreamPlaybackState.Ended(
-                restartAvailable = true,
-            ).afterIntent(
-                VexStreamPlaybackEffect.RestartCurrent,
-            )
-
-        assertEquals(
+        val current =
             VexStreamPlaybackState.Ended(
                 restartAvailable = true,
                 restartPending = true,
-            ),
-            emitted,
-        )
+            )
+        val provider =
+            VexStreamPlaybackState.Ended(
+                restartAvailable = true,
+            )
 
         val stillEnded =
             reconcileVexStreamPlaybackObservation(
                 observed =
-                    VexStreamPlaybackState.Ended(
-                        restartAvailable = true,
-                    ),
-                pending = pending,
-            )
-        val state =
-            stillEnded.state as
+                    provider,
+                current =
+                    current,
+            ) as
                 VexStreamPlaybackState.Ended
 
         assertTrue(
-            state.restartPending,
+            stillEnded.restartPending,
         )
-        assertTrue(
-            stillEnded.pending.restartPending,
+
+        val leftEnded =
+            reconcileVexStreamPlaybackObservation(
+                observed =
+                    VexStreamPlaybackState.Media(
+                        playRequested = true,
+                        phase =
+                            VexStreamPlaybackPhase.Buffering,
+                        playPauseAvailable = true,
+                    ),
+                current =
+                    current,
+            ) as
+                VexStreamPlaybackState.Media
+
+        assertFalse(
+            leftEnded.requestPending,
         )
     }
-    @Test
-    fun synchronousPlayIntentImmediatelyFlipsPlayPauseControlToPause() {
-        val behavior =
-            vexStreamPlaybackBehavior()
-        val controls =
-            behavior.vexStreamPlaybackControls()
 
-        val pendingState =
-            VexStreamPlaybackState.Media(
-                playRequested = false,
-                phase =
-                    VexStreamPlaybackPhase.Buffering,
-                playPauseAvailable = true,
-            ).afterIntent(
-                VexStreamPlaybackEffect.RequestPlay,
+    @Test
+    fun admittedPlayImmediatelyChangesTheSharedFamilyProjection() {
+        val family =
+            VexStreamPlaybackFamily(
+                VexStreamPlaybackState.Media(
+                    playRequested = false,
+                    phase =
+                        VexStreamPlaybackPhase.Buffering,
+                    playPauseAvailable = true,
+                ),
             )
+
+        family.activate(
+            VexStreamPlaybackControl.PlayPause,
+        )
 
         val projection =
-            controls.projection(
-                pendingState,
-            )
+            family
+                .currentPlaybackProjection
 
         assertEquals(
-            VexStreamPlaybackAct.Pause,
-            projection[
-                VexStreamPlaybackControl.PlayPause
-            ].act,
+            ElementIconExpected.Pause,
+            if (
+                (
+                    projection.state as
+                        VexStreamPlaybackState.Media
+                ).playRequested
+            ) {
+                ElementIconExpected.Pause
+            } else {
+                ElementIconExpected.Play
+            },
         )
     }
 
+    private enum class ElementIconExpected {
+        Play,
+        Pause,
+    }
 }
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][PLAYBACK][DIRECT-FAMILY]

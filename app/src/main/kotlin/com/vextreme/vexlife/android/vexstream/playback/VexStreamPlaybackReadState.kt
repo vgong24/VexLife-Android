@@ -292,18 +292,23 @@ internal interface VexStreamCurrentPlaybackObserver :
 /**
  * Media3 realization of the current-playback observer.
  *
- * Player.Listener callbacks run on the Player application looper. Projecting the complete
- * observation from onEvents therefore preserves Media3's ordering/thread contract before values
- * cross into other execution surfaces.
+ * Player.Listener callbacks run on the Player application looper. Each callback reconciles provider
+ * reality into the one process-shared Playback Family before projecting the complete observation.
+ * UI, Widget, Service, and Relay consumers therefore see the same semantic State.
  */
 internal class Media3VexStreamCurrentPlaybackObserver(
-    private val player: Player,
+    private val player:
+        Player,
+    private val playbackFamily:
+        VexStreamPlaybackFamily,
 ) :
     VexStreamCurrentPlaybackObserver {
     private val mutableObservations =
         MutableStateFlow(
             player
-                .toVexStreamCurrentPlaybackObservation(),
+                .toVexStreamCurrentPlaybackObservation(
+                    playbackFamily,
+                ),
         )
 
     override val observations:
@@ -322,7 +327,9 @@ internal class Media3VexStreamCurrentPlaybackObserver(
             ) {
                 val observed =
                     player
-                        .toVexStreamCurrentPlaybackObservation()
+                        .toVexStreamCurrentPlaybackObservation(
+                            playbackFamily,
+                        )
                 val changed =
                     mutableObservations.value !=
                         observed
@@ -400,16 +407,34 @@ internal class Media3VexStreamCurrentPlaybackObserver(
     }
 }
 
-internal fun Player.toVexStreamCurrentPlaybackObservation():
-    VexStreamCurrentPlaybackObservation =
-    VexStreamCurrentPlaybackObservation(
+internal fun Player.toVexStreamCurrentPlaybackObservation(
+    playbackFamily:
+        VexStreamPlaybackFamily,
+):
+    VexStreamCurrentPlaybackObservation {
+    val reconciled =
+        reconcileVexStreamPlaybackObservation(
+            observed =
+                toVexStreamPlaybackState(),
+            current =
+                playbackFamily
+                    .currentState,
+        )
+
+    playbackFamily.observe(
+        reconciled,
+    )
+
+    return VexStreamCurrentPlaybackObservation(
         readState =
             toVexStreamPlaybackReadState(),
         playbackProjection =
-            toVexStreamPlaybackProjection(),
+            playbackFamily
+                .currentPlaybackProjection,
         queueProjection =
             toVexStreamQueueProjection(),
     )
+}
 
 @Composable
 internal fun rememberVexStreamPlaybackReadState(

@@ -1,15 +1,15 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
-import com.vextreme.vexlife.android.behavior.VexBehaviorFamily
+import com.vextreme.vexlife.android.behavior.VexFamily
 
-enum class VexStreamPlaybackPhase {
+internal enum class VexStreamPlaybackPhase {
     Idle,
     Buffering,
     Ready,
 }
 
-sealed interface VexStreamPlaybackState :
-    VexBehaviorFamily.State<
+internal sealed interface VexStreamPlaybackState :
+    VexFamily.State<
         VexStreamPlaybackFamily
     > {
     data object NoMedia :
@@ -28,4 +28,4 @@ sealed interface VexStreamPlaybackState :
     ) : VexStreamPlaybackState
 }
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][PLAYBACK][DIRECT-FAMILY]

@@ -26,6 +26,45 @@ consumer
     -> receives concrete object explicitly
 ~~~
 
+## App-scope background coordination
+
+Current sustained/background coordination uses the ordinary dependency-lifetime law directly:
+
+~~~text
+VexApplication lifetime
+    Process VexExecutionRoot
+    VexStreamPlaybackFamily
+    VexNavigationSession
+    BackgroundServiceRelay
+~~~
+
+VexApplication resolves the Relay once as an explicit process root. The Relay then observes the
+rightful current StateFlows through the process VexExecutionRoot:
+
+~~~text
+PlaybackFamily.states --------\
+                               +-> BackgroundServiceRelay
+NavigationSession.states -----/
+                                      |
+                                      v
+                         coherent app-scope current truth
+                         - exact Playback State
+                         - compact Navigation background projection
+~~~
+
+The Relay carries typed current meaning without hauling unrelated heavyweight source payloads through
+every app-scope update. Navigation contributes phase / route identity + label / location disposition /
+pending reroute ref / latest issued cue rather than full route geometry. The Relay does not maintain
+Service IDs, an "activeServices" enum/set, or a Room-backed synchronization bus.
+
+A concrete Android Service may resolve the same memoized Relay when it has a real cross-domain
+decision to make, then observe/filter only the State it needs. Merely existing as a Service is not a
+reason to depend on the Relay.
+
+Dependency construction still owns only construction/reuse. The Relay owns live convergence;
+individual Services own their concrete sustained realization; VexExecution owns coroutine Job
+custody.
+
 ## Identity
 
 Provider declaration **object identity** is the construction coordinate.

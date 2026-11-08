@@ -1,35 +1,28 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
-import com.vextreme.vexlife.android.behavior.VexBehaviorProjection
-import com.vextreme.vexlife.android.behavior.VexPort
-import com.vextreme.vexlife.android.behavior.VexPortFlow
+/**
+ * Concrete Playback realization boundary.
+ *
+ * The connection does not own semantic State. It receives the shared Playback Family and realizes
+ * accepted Effects against one concrete Media3 controller.
+ */
+internal interface VexStreamPlaybackConnection {
+    fun activate(
+        control:
+            VexStreamPlaybackControl,
+    )
+}
 
 /**
- * Feature-local names hide foundation generic weight from ordinary VexStream callers while keeping
- * the full family-bound compiler contract underneath.
+ * Immutable outward snapshot of one Playback Family State and its control availability.
+ *
+ * This is a projection only. The live [VexStreamPlaybackFamily] remains the one semantic truth owner.
  */
-internal typealias VexStreamPlaybackConnection =
-    VexPort<
-        VexStreamPlaybackFamily,
+internal data class VexStreamPlaybackProjection(
+    val state:
         VexStreamPlaybackState,
-        VexStreamPlaybackControl,
-        VexStreamPlaybackAct
-    >
+    val playPauseAvailable:
+        Boolean,
+)
 
-internal typealias VexStreamPlaybackConnectionFlow =
-    VexPortFlow<
-        VexStreamPlaybackFamily,
-        VexStreamPlaybackState,
-        VexStreamPlaybackControl,
-        VexStreamPlaybackAct
-    >
-
-internal typealias VexStreamPlaybackProjection =
-    VexBehaviorProjection<
-        VexStreamPlaybackFamily,
-        VexStreamPlaybackState,
-        VexStreamPlaybackControl,
-        VexStreamPlaybackAct
-    >
-
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][PLAYBACK][DIRECT-FAMILY]
