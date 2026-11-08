@@ -66,6 +66,9 @@ Result != later State admission.
 Result != Observation.
 Result != Cancellation.
 
+Effect != automatic VexExecution Job.
+Immediate Effects may realize directly; unfinished asynchronous work may use VexExecution custody.
+
 
 The older exposition below is retained as lineage/background. Where it conflicts with
 FAMILY-CIRCUIT.md, VexFamily.kt, or current tests, follow current source rather than reconstructing
@@ -249,6 +252,9 @@ Direct `VexFamily` did **not** wholesale replace the existing Behavior/SCAE impl
 Migration/evolution remains consumer-driven. A fresh worker should not delete or rewrite older
 Behavior source merely because the Direct Family foundation exists.
 
+Migrate a compatibility consumer only when current source becomes smaller or clearer without moving
+provider, execution, Relay, or product ownership. Compatibility source is not debt merely by existing.
+
 PR #193 is the acceptance/origin reference for the Direct Family identity/custody refinement:
 https://github.com/vgong24/VexLife-Android/pull/193
 
@@ -264,7 +270,15 @@ Family.activate(control)
 -> when (currentState)
 -> when (control)
 -> stay / admit / optional begin
--> StateRelay / execution
+-> immediate State admission
+-> accepted Act
+
+accepted Act.effect
+├─ immediate rightful provider/platform realization
+│  -> no Job invented
+└─ asynchronous realization when actually required
+   -> bound Act.Method
+   -> VexExecution custody
 ~~~
 
 State and Control traversal are native Kotlin sealed-type when expressions. The current candidate

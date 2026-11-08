@@ -18,11 +18,13 @@ import kotlinx.coroutines.flow.asStateFlow
  * It owns that meaning and the one current semantic State holder.
  *
  * WHAT IT RELATES TO
- * A caller may call [activate], bind the returned accepted Act to one Family-owned executable
- * [Act.Method] through [Act.launchWith], and let VexExecution provide Job custody while the Method
- * touches the rightful Store/provider boundary. Already-reconciled semantic reality returns through
- * [observe]. Dependency construction may create a Family, but Family does not know that a dependency
- * system exists.
+ * A caller may call [activate] and consume the returned accepted Act at the rightful realization
+ * boundary. An immediate provider/platform transformation may consume [Act.effect] directly when no
+ * unfinished work needs custody. When realization creates asynchronous work whose lifetime, overlap,
+ * or cancellation must be maintained, the caller binds one Family-owned executable [Act.Method]
+ * through [Act.launchWith] and lets VexExecution provide Job custody. Already-reconciled semantic
+ * reality returns through [observe]. Dependency construction may create a Family, but Family does
+ * not know that a dependency system exists.
  *
  * WHAT IT ADDRESSES / WHY THIS SHAPE EXISTS
  * Keeping State + Control -> Act in one synchronous semantic owner prevents provider mechanics,
@@ -37,11 +39,15 @@ import kotlinx.coroutines.flow.asStateFlow
  *     -> admitted State? + Begin?
  *        -> Effect + execution Approach
  *
- *     accepted Act + bound Method
- *     -> VexExecution custody
- *     -> Method realization
- *     -> VexMethod.Result.Success / Failure / Error
- *     -> rightful interpretation
+ *     accepted Act
+ *     -> Effect?
+ *        -> immediate rightful realization when no unfinished work needs custody
+ *        OR
+ *        -> bound Method
+ *        -> VexExecution custody
+ *        -> Method realization
+ *        -> VexMethod.Result.Success / Failure / Error
+ *        -> rightful interpretation
  *
  *     outside/provider truth
  *     -> already-semantic State
@@ -243,8 +249,10 @@ abstract class VexFamily<
      *
      * Begin is authored here because Independent / Earliest / Latest / Queued describe the
      * relationship of THIS Act. It does not launch a coroutine, call a Store, or log anything while
-     * [act] is being resolved. The caller of [activate] later hands this already-authored consequence
-     * to VexExecution.
+     * [act] is being resolved. The accepted Act exposes [effect] to the rightful realization
+     * boundary. That boundary may realize an immediate Effect synchronously, or use [launchWith]
+     * when actual unfinished work requires VexExecution custody. Effect existence alone does not
+     * require a Job.
      */
     @ConsistentCopyVisibility
     data class Act<
@@ -263,8 +271,8 @@ abstract class VexFamily<
          * Accepted maintained-work identity mechanically bound by [activate] from the triggering
          * live Family + Control (+ typed ResourceId when required).
          *
-         * null means this Act has no maintained execution relationship (no Begin or Independent).
-         * Realization consumes this coordinate; callers do not reconstruct it from Control.
+         * null means this Act has no maintained execution relationship (no Begin, or an Independent
+         * Begin). Realization consumes this coordinate; callers do not reconstruct it from Control.
          */
         val relationshipId:
             VexExecution.RelationshipId? =
@@ -384,11 +392,15 @@ abstract class VexFamily<
         }
 
         /**
-         * Continue one accepted Act through the execution relationship it already authored.
+         * Continue one accepted Act through VexExecution when its realization needs Job custody.
          *
-         * null means this Act has no runtime consequence. The caller supplies only the
-         * VexExecutionRoot and then one bound Family Method; Approach, RelationshipId, and the live
-         * Family owner are consumed from this accepted Act rather than reconstructed downstream.
+         * This is not required merely because [effect] exists. A synchronous provider/platform
+         * boundary may consume [effect] directly and never call [launchWith]. When unfinished work
+         * does need execution custody, the caller supplies only the VexExecutionRoot and one bound
+         * Family Method; Approach, RelationshipId, and the live Family owner are consumed from this
+         * accepted Act rather than reconstructed downstream.
+         *
+         * null means this Act has no authored runtime consequence.
          */
         fun launchWith(
             executionRoot:
@@ -631,7 +643,13 @@ abstract class VexFamily<
                 null,
         )
 
-    /** Author a consequence where every accepted occurrence remains independently meaningful. */
+    /**
+     * Author an independent runtime consequence.
+     *
+     * Independent means no maintained overlap relationship is required. The rightful realization
+     * boundary may consume the resulting Act.effect synchronously when the transformation is
+     * immediate, or may use VexExecution for genuinely asynchronous independent work.
+     */
     protected fun begin(
         effect:
             FamilyEffect,
@@ -796,8 +814,11 @@ abstract class VexFamily<
      *     -> admit immediate State when present
      *     -> return accepted Act
      *
-     * Family never realizes [Act.begin]. The caller hands that consequence to VexExecution after
-     * activation; this keeps availability/act resolution side-effect free.
+     * Family never realizes [Act.begin]. After activation, the rightful runtime/provider boundary
+     * consumes the accepted consequence. Immediate transformations may realize [Act.effect]
+     * synchronously. Only work that actually needs lifetime/overlap/cancellation custody continues
+     * through VexExecution. This keeps availability/act resolution side-effect free without making
+     * every Effect a coroutine.
      */
     fun activate(
         control:

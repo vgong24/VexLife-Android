@@ -61,8 +61,8 @@ WHAT CAN I DO WITH THE CURRENT QUEUE?
 
 IS REPEAT ACTIVE FOR THIS PLAYBACK CONTEXT?
     vexstream/repeat
-    -> Repeat State / Control / Act / Effect
-    -> Media3VexStreamRepeatConnection
+    -> Direct VexStreamRepeatFamily State / Control / Effect
+    -> Media3VexStreamRepeatConnection provider realization / observation
 
 HOW MUCH OF THIS COLLECTION OR SONGS LIBRARY IS ON THIS PHONE?
     vexstream/offline
@@ -124,7 +124,9 @@ vexstream/offline/
 
 vexstream/repeat/
     human question: Is Repeat active for the current playback context?
-    Behavior family + concrete Media3 Connection + UI Experience membrane
+    Direct VexFamily semantic owner
+    + concrete Media3 provider Connection
+    + UI Experience membrane
 
 media/vexstream/
     Android MediaSession/player/network realization
@@ -461,9 +463,32 @@ rejected until the provider actually observes that occurrence at the expected in
 adjacent identical media IDs still fails closed because the provider projection cannot distinguish
 which duplicate moved without a stronger durable item identity.
 
-Repeat remains its independent sibling Behavior family. The accepted Behavior foundation does not
-carry arbitrary runtime request payloads through finite Controls, so Queue Play/Reorder remain
-feature-local request boundaries rather than a generic payload framework.
+Repeat remains its independent sibling semantic Family. Its Direct VexFamily migration does not
+change Queue's current compatibility ownership and does not imply that provider-backed siblings must
+share one Kotlin shape. The accepted semantic foundations still do not carry arbitrary runtime
+request payloads through finite Controls, so Queue Play/Reorder remain feature-local request
+boundaries rather than a generic payload framework.
+
+## Repeat Direct Family convergence
+
+Repeat is the first provider-backed Direct Family pressure:
+
+~~~text
+Media3 observation -> Connection -> Family.observe(State)
+Toggle -> Family.activate -> Effect -> Connection -> immediate repeatMode request
+~~~
+
+Permanent:
+
+~~~text
+EFFECT_REQUESTED != PROVIDER_OUTCOME
+REPEAT_FAMILY != MEDIA3_CONNECTION
+MEDIA3_CONNECTION != VEXPARTNER_CONNECTION
+SYNCHRONOUS_PROVIDER_EFFECT != VEXEXECUTION_JOB
+~~~
+
+The real Media3 Connection remains; the compatibility Blueprint / Act peer / VexPort projection
+layer does not. Playback and Queue remain separate migration questions.
 
 ## Dynamic Android presentation identity
 

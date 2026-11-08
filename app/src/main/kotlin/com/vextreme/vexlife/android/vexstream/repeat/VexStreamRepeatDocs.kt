@@ -3,25 +3,18 @@ package com.vextreme.vexlife.android.vexstream.repeat
 /**
  * # VexStream Repeat
  *
- * Search this symbol when asking:
+ * Question: is Repeat active for the current playback context, and can it be toggled?
  *
- * "Is Repeat active for the current playback context, and can I toggle it?"
+ * [VexStreamRepeatFamily] owns Repeat State / Control / Effect meaning.
+ * [Media3VexStreamRepeatConnection] owns the concrete Media3 provider relationship:
  *
- * Repeat is a sibling of Playback and Queue. It is not Queue ordering truth and it is not Play/Pause
- * truth merely because all three are displayed near the player.
+ *     Media3 observation -> Family.observe(State)
+ *     Family Effect      -> immediate repeatMode request
  *
- * [VexStreamRepeatState.Disabled] and [VexStreamRepeatState.Enabled] are provider-derived product
- * truth. The current product has one Repeat toggle, so Media3 Repeat-One and Repeat-All both project
- * as Enabled. From Disabled, Toggle requests queue-wide Repeat-All; from Enabled, Toggle requests
- * Repeat-Off. No repeat-scope chooser is invented.
- *
- * [Media3VexStreamRepeatConnection] re-reads current Media3 truth at activation time. Its Behavior
- * relationships use stay(): effect dispatch does not claim a provider mode change before Media3
- * observation reports it.
- *
- * Compose consumes [VexStreamRepeatExperience], not raw repeatMode.
+ * The request does not certify provider outcome, and the immediate assignment does not earn a
+ * VexExecution Job. Compose consumes [VexStreamRepeatExperience].
  */
 @Suppress("unused")
 internal class VexStreamRepeatDocs private constructor()
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][REPEAT][DIRECT-FAMILY]

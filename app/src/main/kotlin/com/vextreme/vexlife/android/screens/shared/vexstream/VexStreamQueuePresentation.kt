@@ -56,8 +56,7 @@ import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueReorderRequest
 import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueReorderConnection
 import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueAdjacentMoveTarget
 import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueOccurrences
-import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatControl
-import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatState
+import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatFamily
 import com.vextreme.vexlife.android.vexstream.repeat.rememberVexStreamRepeatExperience
 
 /**
@@ -92,8 +91,8 @@ internal fun VexStreamQueueContent(
         rememberVexStreamRepeatExperience(
             controller,
         )
-    val repeatProjection =
-        repeatExperience.projection
+    val repeatState =
+        repeatExperience.state
 
     val tracksByRef =
         remember(state.tracks) {
@@ -167,7 +166,7 @@ internal fun VexStreamQueueContent(
                         element,
                     )
                     repeatExperience.activate(
-                        VexStreamRepeatControl.Toggle,
+                        VexStreamRepeatFamily.Control.Toggle,
                     )
                 }
 
@@ -224,15 +223,11 @@ internal fun VexStreamQueueContent(
                     element = VexStreamMusicScreen.ToggleRepeat,
                     handler = handler,
                     enabled =
-                        repeatProjection
-                            ?.get(
-                                VexStreamRepeatControl.Toggle,
-                            )
-                            ?.isAvailable == true,
+                        repeatState
+                            ?.toggleAvailable == true,
                     selected =
-                        repeatProjection
-                            ?.state is
-                            VexStreamRepeatState.Enabled,
+                        repeatState is
+                            VexStreamRepeatFamily.State.Enabled,
                 )
                 VexButton(
                     element = VexStreamMusicScreen.ClearQueue,
