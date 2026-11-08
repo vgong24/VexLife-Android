@@ -7,27 +7,30 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VexStreamPlaybackPresentationTest {
-    private val behavior =
-        vexStreamPlaybackBehavior()
-
-    private val controls =
-        behavior.vexStreamPlaybackControls()
+    private fun projection(
+        state:
+            VexStreamPlaybackState,
+    ):
+        VexStreamPlaybackProjection =
+        VexStreamPlaybackFamily(
+            state,
+        ).playbackProjectionFor(
+            state,
+        )
 
     @Test
     fun normalPlayingPresentsPause() {
         val presentation =
-            controls
-                .projection(
-                    VexStreamPlaybackState.Media(
-                        playRequested = true,
-                        phase =
-                            VexStreamPlaybackPhase.Ready,
-                        playPauseAvailable = true,
-                    ),
-                )
-                .present(
-                    VexStreamPlaybackControl.PlayPause,
-                )
+            projection(
+                VexStreamPlaybackState.Media(
+                    playRequested = true,
+                    phase =
+                        VexStreamPlaybackPhase.Ready,
+                    playPauseAvailable = true,
+                ),
+            ).present(
+                VexStreamPlaybackControl.PlayPause,
+            )
 
         assertEquals(
             ElementIcon.Pause,
@@ -41,18 +44,16 @@ class VexStreamPlaybackPresentationTest {
     @Test
     fun pausedMediaPresentsPlay() {
         val presentation =
-            controls
-                .projection(
-                    VexStreamPlaybackState.Media(
-                        playRequested = false,
-                        phase =
-                            VexStreamPlaybackPhase.Ready,
-                        playPauseAvailable = true,
-                    ),
-                )
-                .present(
-                    VexStreamPlaybackControl.PlayPause,
-                )
+            projection(
+                VexStreamPlaybackState.Media(
+                    playRequested = false,
+                    phase =
+                        VexStreamPlaybackPhase.Ready,
+                    playPauseAvailable = true,
+                ),
+            ).present(
+                VexStreamPlaybackControl.PlayPause,
+            )
 
         assertEquals(
             ElementIcon.Play,
@@ -66,13 +67,11 @@ class VexStreamPlaybackPresentationTest {
     @Test
     fun unavailableControlPresentsNeutralDisabledAffordance() {
         val presentation =
-            controls
-                .projection(
-                    VexStreamPlaybackState.NoMedia,
-                )
-                .present(
-                    VexStreamPlaybackControl.PlayPause,
-                )
+            projection(
+                VexStreamPlaybackState.NoMedia,
+            ).present(
+                VexStreamPlaybackControl.PlayPause,
+            )
 
         assertEquals(
             ElementIcon.PlayPause,
@@ -84,4 +83,4 @@ class VexStreamPlaybackPresentationTest {
     }
 }
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][PLAYBACK][DIRECT-FAMILY]
