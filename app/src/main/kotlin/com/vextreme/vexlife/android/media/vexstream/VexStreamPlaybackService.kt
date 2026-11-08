@@ -9,6 +9,8 @@ import com.vextreme.vexlife.android.VexApplication
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.vexstream.playback.Media3VexStreamCurrentPlaybackObserver
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamCurrentPlaybackObserver
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackTrace
 import com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetUpdateExecution
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +32,9 @@ class VexStreamPlaybackService : MediaSessionService() {
             dispatcher =
                 Dispatchers.Default,
         )
+    private var playbackFamily:
+        VexStreamPlaybackFamily? =
+        null
     private var currentPlaybackObserver:
         VexStreamCurrentPlaybackObserver? =
         null
@@ -54,6 +59,8 @@ class VexStreamPlaybackService : MediaSessionService() {
                         .dependencyModule
                         .playbackFamily,
                 )
+        this.playbackFamily =
+            playbackFamily
 
         /*
          * Resolve the one process-lived background convergence owner. A Navigation or future
@@ -147,6 +154,18 @@ class VexStreamPlaybackService : MediaSessionService() {
             session.release()
         }
         mediaSession = null
+
+        /*
+         * The concrete Media3 realization is gone. Clear process semantic Playback truth so
+         * background convergence cannot retain a stale active Playback relationship.
+         */
+        playbackFamily
+            ?.observe(
+                VexStreamPlaybackState.NoMedia,
+            )
+        playbackFamily =
+            null
+
         widgetExecutionRoot
             .forceStopAll(
                 "VexStream PlaybackService destroyed",
