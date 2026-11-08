@@ -7,13 +7,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 /**
- * UI-facing membrane for the VexStream Playback Behavior experience.
+ * UI-facing membrane for the process-shared VexStream Playback Family.
  *
- * Compose should depend on this boundary instead of assembling Connection + VexPortFlow +
- * Projection + DisplayState itself.
- *
- * This interface owns no semantic truth. It exposes the final derived display classification and
- * carries Controls back into the existing VexPort boundary.
+ * Compose observes the same Family State that background Service/Relay consumers observe. The
+ * configuration-lifetime MediaController connection only realizes Controls; it is not another
+ * semantic truth owner.
  */
 internal interface VexStreamPlaybackExperience {
     val displayState:
@@ -42,9 +40,6 @@ private class CurrentVexStreamPlaybackExperience(
     }
 }
 
-/**
- * Observe the internal Playback Port and expose one feature membrane to Compose.
- */
 @Composable
 internal fun rememberVexStreamPlaybackExperience():
     VexStreamPlaybackExperience {
@@ -60,20 +55,21 @@ internal fun rememberVexStreamPlaybackExperience():
             owner.controller,
         )
 
-    val projections =
-        connection?.projections
+    val semanticState by
+        owner
+            .family
+            .states
+            .collectAsStateWithLifecycle()
 
-    val projection:
-        VexStreamPlaybackProjection? =
-        if (
-            projections == null
+    val projection =
+        remember(
+            semanticState,
         ) {
-            null
-        } else {
-            val current by
-                projections
-                    .collectAsStateWithLifecycle()
-            current
+            owner
+                .family
+                .playbackProjectionFor(
+                    semanticState,
+                )
         }
 
     val displayState =
@@ -96,4 +92,4 @@ internal fun rememberVexStreamPlaybackExperience():
     }
 }
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][PLAYBACK][PROCESS-FAMILY]
