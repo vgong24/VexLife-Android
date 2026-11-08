@@ -4,7 +4,7 @@ import com.vextreme.vexlife.android.relay.VexCompoundRelay
 import com.vextreme.vexlife.android.relay.VexCompoundState
 import com.vextreme.vexlife.android.relay.VexInputState
 import com.vextreme.vexlife.android.relay.VexOutputState
-import com.vextreme.vexlife.android.relay.vexDependencies
+import com.vextreme.vexlife.android.relay.vexObserveDependencies
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeControl
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeProjection
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeState
@@ -126,7 +126,7 @@ internal class VexMapsDistributionModeDeliveryRouteConvergenceRelay(
             ),
     ) {
     override fun dependencies() =
-        vexDependencies<
+        vexObserveDependencies<
             VexMapsDistributionModeDeliveryRouteInputState
         > {
             observe(

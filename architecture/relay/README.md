@@ -177,7 +177,7 @@ A Compound Relay may declare continuously observed Flows:
 
 ~~~kotlin
 override fun dependencies() =
-    vexDependencies<ExampleInputState> {
+    vexObserveDependencies<ExampleInputState> {
         observe(
             dependencyRef = "feed",
             flow = repository.states,

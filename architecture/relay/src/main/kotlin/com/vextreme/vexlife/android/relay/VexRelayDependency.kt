@@ -62,7 +62,7 @@ class VexRelayDependencies<InputState : VexInputState<InputState>> internal cons
         dependencies.toList()
 }
 
-fun <InputState : VexInputState<InputState>> vexDependencies(
+fun <InputState : VexInputState<InputState>> vexObserveDependencies(
     block: VexRelayDependencies<InputState>.() -> Unit,
 ): List<VexRelayDependency<InputState>> =
     VexRelayDependencies<InputState>()
