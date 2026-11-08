@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android
 
 import android.app.Application
+import com.vextreme.vexlife.android.background.BackgroundServiceRelay
 import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.data.AppRepositoryFactory
 import com.vextreme.vexlife.android.dependency.VexDependencyBuildScope
@@ -9,8 +10,18 @@ import com.vextreme.vexlife.android.dependency.VexDependencyModule
 import com.vextreme.vexlife.android.dependency.VexDependencyProvider
 import com.vextreme.vexlife.android.elements.UIBlueprintRegistry
 import com.vextreme.vexlife.android.screens.AppScreens
+import com.vextreme.vexlife.android.screens.shared.maps.VexMapsNavigationProcess
+import com.vextreme.vexlife.android.screens.shared.maps.VexNavigationSession
+import com.vextreme.vexlife.android.screens.shared.maps.VexNavigationSessionPhase
 import com.vextreme.vexlife.android.ui.SharedPreferencesThemeModeStore
 import com.vextreme.vexlife.android.ui.ThemeModeStore
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 /**
  * Android process-lifetime composition root.
@@ -20,9 +31,10 @@ import com.vextreme.vexlife.android.ui.ThemeModeStore
  * parent [VexDependencyFactory] used by narrower composition roots.
  *
  * WHAT IT RELATES TO
- * [VexApplicationDependencyModule] declares application-lifetime providers such as repositories,
- * Blueprint registry, and ThemeMode Store. A ViewModel/session composition root creates a child
- * factory and receives/reuses those concrete parent-lifetime objects.
+ * [VexApplicationDependencyModule] declares process-lifetime providers such as repositories,
+ * process-shared Families and background convergence. A ViewModel/session or Android Service
+ * composition root receives/reuses those exact parent-lifetime objects rather than creating semantic
+ * copies.
  *
  * WHAT IT ADDRESSES / WHY THIS SHAPE EXISTS
  * Android already supplies one process host. Reusing that host as the outer composition boundary
@@ -66,9 +78,10 @@ class VexApplication :
  * Readable application-lifetime provider declarations.
  *
  * WHAT THIS IS / RELATES TO
- * This module declares which process-lifetime objects exist and which prerequisites construct them.
- * [VexDependencyFactory] owns graph traversal, memoization, and lifetime reuse; the module itself
- * owns no runtime behavior.
+ * This module declares which process-lifetime objects exist and which prerequisites construct them:
+ * durable/shared repositories, semantic Families whose meaning survives UI, and process Relays whose
+ * relationship remains meaningful while background Services continue. [VexDependencyFactory] owns
+ * graph traversal, memoization, and lifetime reuse; the module itself owns no semantic behavior.
  *
  * WHY THIS SHAPE EXISTS
  * The Android Application is an already-existing host object, so its provider publishes that exact
@@ -100,6 +113,26 @@ internal class VexApplicationDependencyModule(
             androidApplication,
         )
 
+    val processScope =
+        ProcessScopeProvider()
+
+    val playbackFamily =
+        PlaybackFamilyProvider()
+
+    val navigationSession =
+        NavigationSessionProvider()
+
+    val backgroundServiceRelay =
+        BackgroundServiceRelayProvider(
+            playbackFamily =
+                playbackFamily,
+            navigationSession =
+                navigationSession,
+            processScope =
+                processScope,
+        )
+
+
     val module:
         VexDependencyModule =
         VexDependencyModule.of(
@@ -107,6 +140,10 @@ internal class VexApplicationDependencyModule(
             blueprintRegistry,
             repositories,
             themeModeStore,
+            processScope,
+            playbackFamily,
+            navigationSession,
+            backgroundServiceRelay,
         )
 
     internal class AndroidApplicationProvider(
@@ -176,6 +213,140 @@ internal class VexApplicationDependencyModule(
                     .applicationContext,
             )
     }
+
+    /**
+     * Process coroutine lifetime used only by process-lived dependency observation.
+     *
+     * Long lifetime does not imply continuous expensive work; Relay collectors suspend while their
+     * sources are unchanged and die with the Android process.
+     */
+    internal class ProcessScopeProvider :
+        VexDependencyProvider<
+            CoroutineScope
+        >() {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            CoroutineScope =
+            CoroutineScope(
+                SupervisorJob() +
+                    Dispatchers.Default,
+            )
+    }
+
+    /** One semantic Playback Family shared by UI, Service, Widget projections, and process Relays. */
+    internal class PlaybackFamilyProvider :
+        VexDependencyProvider<
+            VexStreamPlaybackFamily
+        >() {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexStreamPlaybackFamily =
+            VexStreamPlaybackFamily()
+    }
+
+    /**
+     * Publish the existing process-local Navigation owner into the explicit dependency topology.
+     *
+     * This does not claim Navigation has already migrated to direct VexFamily; it removes hidden
+     * singleton lookup for consumers that need its current process truth.
+     */
+    internal class NavigationSessionProvider :
+        VexDependencyProvider<
+            VexNavigationSession
+        >() {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexNavigationSession =
+            VexMapsNavigationProcess
+                .session
+    }
+
+    internal class BackgroundServiceRelayProvider(
+        private val playbackFamily:
+            VexDependencyProvider<
+                VexStreamPlaybackFamily
+            >,
+        private val navigationSession:
+            VexDependencyProvider<
+                VexNavigationSession
+            >,
+        private val processScope:
+            VexDependencyProvider<
+                CoroutineScope
+            >,
+    ) :
+        VexDependencyProvider<
+            BackgroundServiceRelay
+        >(
+            dependencies =
+                listOf(
+                    playbackFamily,
+                    navigationSession,
+                    processScope,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            BackgroundServiceRelay {
+            val playback =
+                dependencies.require(
+                    playbackFamily,
+                )
+            val navigation =
+                dependencies.require(
+                    navigationSession,
+                )
+
+            return BackgroundServiceRelay(
+                playbackStates =
+                    playback
+                        .states
+                        .map { state ->
+                            state !=
+                                VexStreamPlaybackState
+                                    .NoMedia
+                        }
+                        .distinctUntilChanged(),
+                navigationStates =
+                    navigation
+                        .states
+                        .map { state ->
+                            when (
+                                state.phase
+                            ) {
+                                VexNavigationSessionPhase.READY,
+                                VexNavigationSessionPhase.ACTIVE,
+                                VexNavigationSessionPhase.OFF_ROUTE,
+                                VexNavigationSessionPhase.LOCATION_HELD,
+                                ->
+                                    true
+
+                                VexNavigationSessionPhase.IDLE,
+                                VexNavigationSessionPhase.ARRIVED,
+                                ->
+                                    false
+                            }
+                        }
+                        .distinctUntilChanged(),
+            )
+                .also { relay ->
+                    relay.activate(
+                        dependencies.require(
+                            processScope,
+                        ),
+                    )
+                }
+        }
+    }
+
 }
 
 // [VXG RealForever]
