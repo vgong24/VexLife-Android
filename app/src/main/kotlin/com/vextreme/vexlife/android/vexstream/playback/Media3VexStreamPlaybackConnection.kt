@@ -11,8 +11,9 @@ import kotlinx.coroutines.android.asCoroutineDispatcher
  * Media3 realization of accepted Playback Family Effects.
  *
  * This object does not own Playback State. It receives the process-shared [VexStreamPlaybackFamily],
- * re-reads current provider truth before activation, realizes the accepted Effect, then reconciles
- * Media3 truth back into that same Family.
+ * the process execution lifetime, and one concrete Media3 controller. Family activation authors the
+ * semantic consequence; the bound Method enters VexExecution and crosses controller affinity there.
+ * Sustained Player observation remains the separate provider-truth return path.
  */
 internal class Media3VexStreamPlaybackConnection(
     private val controller:
@@ -64,6 +65,7 @@ internal class Media3VexStreamPlaybackConnection(
                     providerDispatcher,
             )
     }
+}
 
 internal fun Player.toVexStreamPlaybackProjection(
     family:

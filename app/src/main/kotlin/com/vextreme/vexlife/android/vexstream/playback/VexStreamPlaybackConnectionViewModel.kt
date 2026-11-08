@@ -122,9 +122,15 @@ internal class VexStreamPlaybackConnectionViewModel(
         cleared = true
         connection = null
         controller = null
-        MediaController.releaseFuture(
-            controllerFuture,
-        )
+        ContextCompat
+            .getMainExecutor(
+                getApplication(),
+            )
+            .execute {
+                MediaController.releaseFuture(
+                    controllerFuture,
+                )
+            }
         super.onCleared()
     }
 }
