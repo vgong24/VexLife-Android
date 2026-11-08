@@ -243,6 +243,16 @@ internal fun PartnersCircuitLabScreenContent(
             .pumpRequestStatus
             .collectAsState()
 
+    /*
+     * Compose State delegates are getter-backed, so Kotlin cannot smart-cast a repeated delegated
+     * read after an `is` branch. Snapshot the exact current values once for this composition pass;
+     * recomposition refreshes these locals whenever the collected State changes.
+     */
+    val currentCgmState =
+        cgmState
+    val currentInsulinState =
+        insulinState
+
     val handler =
         remember(
             runtime,
@@ -386,18 +396,18 @@ internal fun PartnersCircuitLabScreenContent(
                         "family",
                     text =
                         when (
-                            cgmState
+                            currentCgmState
                         ) {
                             CgmFamily.State.Waiting ->
                                 "CgmFamily: waiting"
 
                             is CgmFamily.State.LatestAdmitted ->
                                 "CgmFamily: " +
-                                    cgmState
+                                    currentCgmState
                                         .glucose
                                         .mgDl +
                                     " mg/dL · sequence " +
-                                    cgmState
+                                    currentCgmState
                                         .glucose
                                         .sequence
                         },
@@ -459,7 +469,7 @@ internal fun PartnersCircuitLabScreenContent(
                         "family",
                     text =
                         when (
-                            insulinState
+                            currentInsulinState
                         ) {
                             InsulinFamily.State.Empty ->
                                 "InsulinFamily: empty"
@@ -467,14 +477,14 @@ internal fun PartnersCircuitLabScreenContent(
                             is InsulinFamily.State.Admitted ->
                                 "InsulinFamily: pen=" +
                                     (
-                                        insulinState
+                                        currentInsulinState
                                             .latestPenDose
                                             ?.unitsHundredths
                                             ?: "-"
                                     ) +
                                     " · pump=" +
                                     (
-                                        insulinState
+                                        currentInsulinState
                                             .latestPumpDelivery
                                             ?.unitsHundredths
                                             ?: "-"
