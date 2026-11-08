@@ -34,8 +34,8 @@ import kotlinx.coroutines.flow.asStateFlow
  *
  *     Control + CURRENT State
  *     -> Act?
- *     -> admitted State? + Begin?
- *        -> Effect + execution Approach
+ *     -> admitted State? + Effect?
+ *        -> execution Approach
  *
  *     accepted Act + bound Method
  *     -> VexExecution custody
@@ -153,9 +153,9 @@ abstract class VexFamily<
     /**
      * Runtime transformation requested by a lawful Act.
      *
-     * Effect is not resulting truth. [Act.Begin] may author how that Effect overlaps with other
-     * active work; the later realization boundary attempts it and observed reality comes back
-     * separately as State.
+     * Effect is not resulting truth. When an Act carries an Effect, [Act.approach] authors how that
+     * runtime consequence overlaps with other active work; the later realization boundary attempts
+     * it and observed reality comes back separately as State.
      */
     interface Effect<
         Family,
@@ -239,12 +239,12 @@ abstract class VexFamily<
      * One lawful outcome resolved from exact CURRENT State + Control.
      *
      * [admittedState] is immediate semantic State meaning.
-     * [begin] is an inert description of the optional runtime transformation and its overlap law.
+     * [effect] is the optional requested runtime transformation.
+     * [approach] is the one overlap law for that Effect and is authored here, not at execution time.
      *
-     * Begin is authored here because Independent / Earliest / Latest / Queued describe the
-     * relationship of THIS Act. It does not launch a coroutine, call a Store, or log anything while
-     * [act] is being resolved. The caller of [activate] later hands this already-authored consequence
-     * to VexExecution.
+     * Effect + Approach are inert semantic consequence data. They do not launch a coroutine, call a
+     * Store, or log anything while [act] is being resolved. The caller of [activate] later hands the
+     * already-authored consequence to VexExecution.
      */
     @ConsistentCopyVisibility
     data class Act<
@@ -254,16 +254,21 @@ abstract class VexFamily<
     > internal constructor(
         val admittedState:
             State?,
-        val begin:
-            Begin<
-                Family,
-                Effect
-            >?,
+        val effect:
+            Effect?,
+        /**
+         * Execution overlap law for [effect].
+         *
+         * null means this Act has no runtime Effect. Independent / Earliest / Latest / Queued are
+         * meaningful only when [effect] exists.
+         */
+        val approach:
+            VexExecution.Approach?,
         /**
          * Accepted maintained-work identity mechanically bound by [activate] from the triggering
          * live Family + Control (+ typed ResourceId when required).
          *
-         * null means this Act has no maintained execution relationship (no Begin or Independent).
+         * null means this Act has no maintained execution relationship (no Effect, or Independent).
          * Realization consumes this coordinate; callers do not reconstruct it from Control.
          */
         val relationshipId:
@@ -278,6 +283,15 @@ abstract class VexFamily<
         >,
         State : VexFamily.State<Family>,
         Effect : VexFamily.Effect<Family> {
+        init {
+            require(
+                (effect == null) ==
+                    (approach == null),
+            ) {
+                "VexFamily Act Effect and Approach must either both exist or both be absent"
+            }
+        }
+
         /*
          * Acceptance binds the live Family execution owner after pure act(...) resolution without
          * putting runtime-owner identity into Act equality/copy semantics.
@@ -395,9 +409,19 @@ abstract class VexFamily<
                 VexExecutionRoot,
         ):
             MethodFollowUp<Family>? {
-            val authoredBegin =
-                begin
-                    ?: return null
+            if (
+                effect ==
+                null
+            ) {
+                return null
+            }
+
+            val authoredApproach =
+                checkNotNull(
+                    approach,
+                ) {
+                    "VexFamily Act Effect requires an authored execution Approach"
+                }
             val owner =
                 checkNotNull(
                     executionOwner,
@@ -411,7 +435,7 @@ abstract class VexFamily<
                 owner =
                     owner,
                 approach =
-                    authoredBegin.approach,
+                    authoredApproach,
                 relationshipId =
                     relationshipId,
             )
@@ -431,8 +455,10 @@ abstract class VexFamily<
             Act(
                 admittedState =
                     admittedState,
-                begin =
-                    begin,
+                effect =
+                    effect,
+                approach =
+                    approach,
                 relationshipId =
                     relationshipId,
             )
@@ -441,16 +467,8 @@ abstract class VexFamily<
                         owner
                 }
 
-        val effect:
-            Effect?
-            get() =
-                begin
-                    ?.effect
-
-        /**
-         * Execution relationship authored by the Act, not an executor and not another Effect layer.
-         *
-         * Approach answers only the overlap meaning of this consequence:
+        /*
+         * Approach answers only the overlap meaning of [effect]:
          *
          * Independent
          *     every accepted consequence remains independently meaningful
@@ -464,34 +482,14 @@ abstract class VexFamily<
          * Queued
          *     every accepted consequence remains meaningful and order must be preserved
          *
-         * This choice is orthogonal to immediate State admission. stay(...) does not imply one
-         * Approach and admit(State) does not imply another. A same-State Act may be Latest; a
-         * State-changing Act may be Independent, Earliest, Latest, or Queued according to the
-         * relationship being authored.
+         * This choice is orthogonal to immediate State admission. A same-State Act may be Latest;
+         * a State-changing Act may be Independent, Earliest, Latest, or Queued according to the
+         * relationship being authored. VexExecution consumes this choice; it does not re-author it.
          *
-         * Earlier #207 source let Begin author success/failure-specific later-State admission.
-         * The current Family keeps that semantic decision removed: Begin authors only Effect +
-         * overlap meaning. [VexMethod.Result] reports the later realization outcome, but does not
-         * prescribe State. Outside truth is still interpreted by its rightful owner and
-         * already-semantic truth re-enters through [observe].
+         * Earlier #207 source carried richer runtime-consequence grammar around later-State
+         * admission. That responsibility is gone. Current Act therefore carries Effect + Approach
+         * directly instead of retaining another wrapper around the same consequence pair.
          */
-        @ConsistentCopyVisibility
-        data class Begin<
-            Family,
-            Effect,
-        > internal constructor(
-            val approach:
-                VexExecution.Approach,
-            val effect:
-                Effect,
-        ) where
-            Family : VexFamily<
-                Family,
-                *,
-                *,
-                *
-            >,
-            Effect : VexFamily.Effect<Family>
     }
 
     private class FamilyRelationshipId(
@@ -572,8 +570,8 @@ abstract class VexFamily<
      * admit(...) means lawful Act with immediate State admission.
      *
      * This function is pure relationship meaning: no provider calls, persistence, logging, coroutine
-     * launch, or other runtime effect may happen while resolving. [begin], [beginEarliest],
-     * [beginLatest], and [beginQueued] only author inert Act consequence data here.
+     * launch, or other runtime effect may happen while resolving. Effect + Approach are only inert
+     * Act consequence data here.
      */
     protected abstract fun act(
         currentState: FamilyState,
@@ -585,13 +583,29 @@ abstract class VexFamily<
             FamilyEffect
         >?
 
+    protected fun stay():
+        Act<
+            Family,
+            FamilyState,
+            FamilyEffect
+        > =
+        Act(
+            admittedState =
+                null,
+            effect =
+                null,
+            approach =
+                null,
+            relationshipId =
+                null,
+        )
+
     protected fun stay(
-        begin:
-            Act.Begin<
-                Family,
-                FamilyEffect
-            >? =
-            null,
+        effect:
+            FamilyEffect,
+        approach:
+            VexExecution.Approach =
+            VexExecution.Approach.Independent,
     ):
         Act<
             Family,
@@ -601,8 +615,10 @@ abstract class VexFamily<
         Act(
             admittedState =
                 null,
-            begin =
-                begin,
+            effect =
+                effect,
+            approach =
+                approach,
             relationshipId =
                 null,
         )
@@ -610,12 +626,6 @@ abstract class VexFamily<
     protected fun admit(
         state:
             FamilyState,
-        begin:
-            Act.Begin<
-                Family,
-                FamilyEffect
-            >? =
-            null,
     ):
         Act<
             Family,
@@ -625,74 +635,37 @@ abstract class VexFamily<
         Act(
             admittedState =
                 state,
-            begin =
-                begin,
+            effect =
+                null,
+            approach =
+                null,
             relationshipId =
                 null,
         )
 
-    /** Author a consequence where every accepted occurrence remains independently meaningful. */
-    protected fun begin(
+    protected fun admit(
+        state:
+            FamilyState,
         effect:
             FamilyEffect,
+        approach:
+            VexExecution.Approach =
+            VexExecution.Approach.Independent,
     ):
-        Act.Begin<
+        Act<
             Family,
+            FamilyState,
             FamilyEffect
         > =
-        Act.Begin(
-            approach =
-                VexExecution.Approach.Independent,
+        Act(
+            admittedState =
+                state,
             effect =
                 effect,
-        )
-
-    /** Author a relationship where one unfinished earliest consequence is already sufficient. */
-    protected fun beginEarliest(
-        effect:
-            FamilyEffect,
-    ):
-        Act.Begin<
-            Family,
-            FamilyEffect
-        > =
-        Act.Begin(
             approach =
-                VexExecution.Approach.Earliest,
-            effect =
-                effect,
-        )
-
-    /** Author a relationship where the newest accepted consequence supersedes unfinished predecessors. */
-    protected fun beginLatest(
-        effect:
-            FamilyEffect,
-    ):
-        Act.Begin<
-            Family,
-            FamilyEffect
-        > =
-        Act.Begin(
-            approach =
-                VexExecution.Approach.Latest,
-            effect =
-                effect,
-        )
-
-    /** Author a relationship where every accepted consequence remains meaningful in arrival order. */
-    protected fun beginQueued(
-        effect:
-            FamilyEffect,
-    ):
-        Act.Begin<
-            Family,
-            FamilyEffect
-        > =
-        Act.Begin(
-            approach =
-                VexExecution.Approach.Queued,
-            effect =
-                effect,
+                approach,
+            relationshipId =
+                null,
         )
 
     /**
@@ -792,11 +765,11 @@ abstract class VexFamily<
      * Ordering is part of the semantic contract:
      *
      *     act(CURRENT State, Control)
-     *     -> bind maintained RelationshipId when Begin requires one
+     *     -> bind maintained RelationshipId when the authored Approach requires one
      *     -> admit immediate State when present
      *     -> return accepted Act
      *
-     * Family never realizes [Act.begin]. The caller hands that consequence to VexExecution after
+     * Family never realizes [Act.effect]. The caller hands that consequence to VexExecution after
      * activation; this keeps availability/act resolution side-effect free.
      */
     fun activate(
@@ -822,8 +795,7 @@ abstract class VexFamily<
 
             val acceptedRelationshipId =
                 when (
-                    resolved.begin
-                        ?.approach
+                    resolved.approach
                 ) {
                     VexExecution.Approach.Earliest,
                     VexExecution.Approach.Latest,

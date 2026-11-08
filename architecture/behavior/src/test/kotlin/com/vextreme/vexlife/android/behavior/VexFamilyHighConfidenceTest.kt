@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.behavior
 
+import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
@@ -147,11 +148,10 @@ class VexFamilyHighConfidenceTest {
 
                 is Control.Save ->
                     stay(
-                        begin(
+                        effect =
                             Effect.Save(
                                 value = control.value,
                             ),
-                        ),
                     )
             }
     }
@@ -240,6 +240,10 @@ class VexFamilyHighConfidenceTest {
             effect?.effect,
         )
         assertEquals(
+            VexExecution.Approach.Independent,
+            effect?.approach,
+        )
+        assertEquals(
             ValueFamily.State.Ready(
                 value = "one",
             ),
@@ -313,7 +317,7 @@ class VexFamilyHighConfidenceTest {
                             root,
                         ),
                     ) {
-                        "Save Effect requires an executable Act Begin"
+                        "Save Effect requires an executable Act consequence"
                     }
                         .method(
                             method =
