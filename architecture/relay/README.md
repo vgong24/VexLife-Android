@@ -437,8 +437,8 @@ The module still does **not** own provider lifecycle, repository history, Compos
 or Journey execution.
 
 Events now earns the smallest reusable dependency-binding layer: named Flow dependencies are
-declared by the Compound Relay and activated under a supplied owner scope. This does not turn Relay
-into a scheduler, operation system, service host, or readiness framework. More execution machinery
-still requires a real consumer.
+declared by the Compound Relay and admitted through its explicitly supplied VexExecutionRoot during
+Relay formation. Callers do not supply or activate a parallel CoroutineScope. This does not turn
+Relay into a scheduler, operation system, service host, or readiness framework.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][EVENTS-CONVERGENCE-PRACTICUM][EAP-00][RELAY] -->

@@ -69,7 +69,8 @@ Result != Cancellation.
 
 The older exposition below is retained as lineage/background. Where it conflicts with
 FAMILY-CIRCUIT.md, VexFamily.kt, or current tests, follow current source rather than reconstructing
-historical grammar.
+historical grammar. In particular, historical `Act.Begin` / `beginLatest(...)` language below is
+not the current Direct Family contract: current Act carries Effect + Approach directly.
 
 The Direct `VexFamily` foundation accepted on main through
 [PR #193](https://github.com/vgong24/VexLife-Android/pull/193) is the smallest readable Family circuit for:
@@ -78,8 +79,8 @@ The Direct `VexFamily` foundation accepted on main through
 CURRENT State + incoming Control
 -> Act outcome
 -> stay / admit
--> optional begin
--> current State / execution
+-> optional Effect + authored Approach
+-> current State / later VexExecution realization
 ~~~
 
 ## Partner circuit patient-zero candidate
