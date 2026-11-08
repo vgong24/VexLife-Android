@@ -404,7 +404,6 @@ internal fun VexStreamFullPlayerSheet(
             VexStreamQueueContent(
                 state = state,
                 playback = playback,
-                controller = controller,
                 runtime = runtime,
             )
         } else {

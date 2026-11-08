@@ -22,6 +22,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.elements.ElementIcon
 import com.vextreme.vexlife.android.elements.VexIcon
@@ -29,6 +31,7 @@ import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPage
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.playback.present
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackConnectionViewModel
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackDisplayState
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackExperience
@@ -101,11 +104,22 @@ private fun VexStreamContextDockContent(
     val queueProjection =
         queueExperience.projection
     val queuePlayConnection =
-        rememberVexStreamQueuePlayConnection(
-            controller,
-        )
+        rememberVexStreamQueuePlayConnection()
     val seekConnection =
         rememberVexStreamPlaybackSeekConnection()
+    val owner:
+        VexStreamPlaybackConnectionViewModel =
+        viewModel()
+    val queueCurrent by
+        owner
+            .playerStore
+            .queueCurrents
+            .collectAsStateWithLifecycle(
+                initialValue =
+                    owner
+                        .playerStore
+                        .currentQueue,
+            )
 
     var scrubFraction by
         remember(
@@ -345,22 +359,26 @@ private fun VexStreamContextDockContent(
                 (
                     queueStart + 3
                 ).coerceAtMost(
-                    controller?.mediaItemCount
+                    queueCurrent
+                        ?.items
+                        ?.items
+                        ?.size
                         ?: 0,
                 )
             if (
-                controller != null &&
-                queueStart < queueEnd
+                queueStart <
+                queueEnd
             ) {
+                val queueItems =
+                    queueCurrent
+                        ?.items
+                        ?.items
+                        .orEmpty()
                 val queueOccurrences =
                     vexStreamQueueOccurrences(
-                        (0 until controller.mediaItemCount)
-                            .map { index ->
-                                controller
-                                    .getMediaItemAt(
-                                        index,
-                                    ).mediaId
-                            },
+                        queueItems.map {
+                            it.mediaId
+                        },
                     )
 
                 HorizontalDivider()
@@ -387,18 +405,17 @@ private fun VexStreamContextDockContent(
                             )
                             ?: continue
                     val item =
-                        controller
-                            .getMediaItemAt(
+                        queueItems
+                            .getOrNull(
                                 index,
                             )
                     val title =
-                        item.mediaMetadata
-                            .title
-                            ?.toString()
+                        item
+                            ?.title
                             ?.takeIf {
                                 it.isNotBlank()
                             }
-                            ?: item.mediaId
+                            ?: occurrence.mediaId
 
                     TextButton(
                         onClick = {
@@ -417,7 +434,7 @@ private fun VexStreamContextDockContent(
                         },
                         enabled =
                             queuePlayConnection
-                                ?.isAvailable == true,
+                                ?.isPlayAvailable == true,
                     ) {
                         Text(
                             text = title,

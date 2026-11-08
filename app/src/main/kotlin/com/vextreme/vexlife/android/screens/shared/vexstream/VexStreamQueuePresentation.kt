@@ -71,27 +71,18 @@ import com.vextreme.vexlife.android.vexstream.repeat.rememberVexStreamRepeatExpe
 internal fun VexStreamQueueContent(
     state: VexStreamMusicState,
     playback: VexStreamPlaybackReadState,
-    controller: androidx.media3.session.MediaController?,
     runtime: VexRuntime,
 ) {
     val queueExperience =
-        rememberVexStreamQueueExperience(
-            controller,
-        )
+        rememberVexStreamQueueExperience()
     val queueProjection =
         queueExperience.projection
     val queuePlayConnection =
-        rememberVexStreamQueuePlayConnection(
-            controller,
-        )
+        rememberVexStreamQueuePlayConnection()
     val queueReorderConnection =
-        rememberVexStreamQueueReorderConnection(
-            controller,
-        )
+        rememberVexStreamQueueReorderConnection()
     val repeatExperience =
-        rememberVexStreamRepeatExperience(
-            controller,
-        )
+        rememberVexStreamRepeatExperience()
     val repeatProjection =
         repeatExperience.projection
 
@@ -316,10 +307,10 @@ VexStreamPresentationRefs
                                 stableKey
                         val queuePlayEnabled =
                             queuePlayConnection
-                                ?.isAvailable == true
+                                ?.isPlayAvailable == true
                         val reorderEnabled =
                             queueReorderConnection
-                                ?.isAvailable == true
+                                ?.isReorderAvailable == true
 
                         Row(
                             modifier = Modifier
