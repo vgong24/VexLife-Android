@@ -175,6 +175,29 @@ ON_EACH / CONSUMER FAILURE
 
 Cancellation is terminal.
 
+### Partner receipt versus Store observation
+
+The Partner patient zero pressures both execution-addressing modes at once:
+
+~~~text
+Connection receipt/admission
+    live Connection execution owner
+    + private runtime RelationshipId
+    + Queued
+    -> ordered finite receipt/admission Jobs
+
+Store observation
+    exact store::snapshots Flow source
+    + live Family owner
+    -> one maintained observation Job
+~~~
+
+Do not persist the runtime RelationshipId and do not substitute the Partner Connection.Id for it.
+Connection.Id belongs to source/observation provenance; RelationshipId coordinates active Jobs.
+
+Likewise, a Family-authored Pump request uses beginQueued(Effect) -> activate() -> accepted Act
+RelationshipId -> launchWith() -> Method. The Method/executor does not choose Queued again.
+
 ## Maintained semantic relationships
 
 The rightful semantic/runtime owner supplies RelationshipId.
@@ -342,6 +365,7 @@ PR #209 exercises the refined execution law through:
 - VexMaps Distribution Session directly uses VexExecution for async work whose meaning and lifecycle the Session already owns;
 - VexMaps destination/place search source-addressed replacement;
 - VexStream application/session and service execution roots;
+- Partner patient zero: inbound receipt/admission is queued under a private owner-local RelationshipId on each live Connection, while Store -> Family Flow observation remains exact-source addressed; durable Connection.Id provenance is deliberately not reused as runtime RelationshipId;
 - owner-scoped shutdown while a root may host sibling owners.
 
 The focused execution tests pressure:

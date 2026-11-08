@@ -10,6 +10,7 @@ import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.primary.settings.SettingsScreen
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
 import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
+import com.vextreme.vexlife.android.screens.shared.partners.PartnersCircuitLabScreen
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
@@ -87,6 +88,50 @@ class VexRuntimeNavigationTest {
         assertEquals(
             DebugMenuScreen.screenId,
             navigation.screenAfterId,
+        )
+    }
+
+    @Test
+    fun partnerFeedbackCircuitIsReachableFromHomeFabThroughDebugMenu() {
+        val runtime =
+            runtime()
+
+        assertSame(
+            HomeScreen,
+            runtime.currentScreen,
+        )
+
+        runtime.activate(
+            AppShell.Elements.Add,
+        )
+
+        assertTrue(
+            runtime.presentation.isOpen(
+                AppShell.Elements.FabOptions,
+            ),
+        )
+
+        runtime.activate(
+            AppShell.Elements.DebugMenu,
+        )
+
+        assertFalse(
+            runtime.presentation.isOpen(
+                AppShell.Elements.FabOptions,
+            ),
+        )
+        assertSame(
+            DebugMenuScreen,
+            runtime.currentScreen,
+        )
+
+        runtime.activate(
+            DebugMenuScreen.OpenPartnersCircuitLab,
+        )
+
+        assertSame(
+            PartnersCircuitLabScreen,
+            runtime.currentScreen,
         )
     }
 
