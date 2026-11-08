@@ -7,18 +7,33 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VexDependencyFactoryTest {
+    private sealed interface TestApplicationScope :
+        VexRootDependencyScope
+
+    private sealed interface TestSessionScope :
+        VexChildDependencyScope<
+            TestApplicationScope
+        >
+
     private data class Leaf(
-        val value: String,
+        val value:
+            String,
     )
 
     private data class Root(
-        val leaf: Leaf,
+        val leaf:
+            Leaf,
     )
 
     private class LeafProvider(
-        private val onBuild: () -> Unit = {},
+        private val onBuild:
+            () -> Unit =
+            {},
     ) :
-        VexDependencyProvider<Leaf>() {
+        VexDependencyProvider<
+            TestApplicationScope,
+            Leaf
+        >() {
         override fun create(
             dependencies:
                 VexDependencyBuildScope,
@@ -26,17 +41,26 @@ class VexDependencyFactoryTest {
             Leaf {
             onBuild()
             return Leaf(
-                value = "leaf",
+                value =
+                    "leaf",
             )
         }
     }
 
     private class RootProvider(
         private val leaf:
-            VexDependencyProvider<Leaf>,
-        private val onBuild: () -> Unit = {},
+            VexDependencyProvider<
+                TestApplicationScope,
+                Leaf
+            >,
+        private val onBuild:
+            () -> Unit =
+            {},
     ) :
-        VexDependencyProvider<Root>(
+        VexDependencyProvider<
+            TestApplicationScope,
+            Root
+        >(
             dependencies =
                 listOf(
                     leaf,
@@ -57,10 +81,41 @@ class VexDependencyFactoryTest {
         }
     }
 
+    private class SessionRootProvider(
+        private val leaf:
+            VexDependencyProvider<
+                TestApplicationScope,
+                Leaf
+            >,
+    ) :
+        VexDependencyProvider<
+            TestSessionScope,
+            Root
+        >(
+            dependencies =
+                listOf(
+                    leaf,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            Root =
+            Root(
+                leaf =
+                    dependencies.require(
+                        leaf,
+                    ),
+            )
+    }
+
     @Test
     fun requestedRootBuildsPrerequisitesFirstAndMemoizesEachProviderOnce() {
         val order =
-            mutableListOf<String>()
+            mutableListOf<
+                String
+            >()
         val leaf =
             LeafProvider {
                 order +=
@@ -142,7 +197,7 @@ class VexDependencyFactoryTest {
     }
 
     @Test
-    fun childLifetimeReusesParentProviderWithoutRebuildingIt() {
+    fun typedChildLifetimeReusesParentProviderWithoutRebuildingIt() {
         var builds =
             0
         val leaf =
@@ -151,7 +206,7 @@ class VexDependencyFactoryTest {
                     1
             }
         val root =
-            RootProvider(
+            SessionRootProvider(
                 leaf,
             )
         val application =
@@ -163,7 +218,10 @@ class VexDependencyFactoryTest {
                         ),
                     ),
             )
-        val session =
+        val session:
+            VexDependencyFactory<
+                TestSessionScope
+            > =
             application.child(
                 VexDependencyModule.of(
                     root,
@@ -203,7 +261,10 @@ class VexDependencyFactoryTest {
             LeafProvider()
 
         class InvalidProvider :
-            VexDependencyProvider<Root>(
+            VexDependencyProvider<
+                TestApplicationScope,
+                Root
+            >(
                 dependencies =
                     listOf(
                         declared,
@@ -263,13 +324,16 @@ class VexDependencyFactoryTest {
             LeafProvider()
         val mutablePrerequisites =
             mutableListOf<
-                VexDependencyProvider<*>
+                VexDependencyNode
             >(
                 leaf,
             )
 
         class SnapshotProvider :
-            VexDependencyProvider<Root>(
+            VexDependencyProvider<
+                TestApplicationScope,
+                Root
+            >(
                 dependencies =
                     mutablePrerequisites,
             ) {
@@ -326,33 +390,41 @@ class VexDependencyFactoryTest {
     }
 
     @Test
-    fun namedProviderKeepsReadableIdentityAndExplicitPrerequisitesWithoutSubclassBoilerplate() {
+    fun namedProviderKeepsScopeValueAndReadableIdentityWithoutSubclassBoilerplate() {
         val leaf =
-            VexDependencyProvider.named(
-                readableName =
-                    "test.leaf",
-            ) {
-                Leaf(
-                    value =
-                        "leaf",
-                )
-            }
+            VexDependencyProvider
+                .named<
+                    TestApplicationScope,
+                    Leaf
+                >(
+                    readableName =
+                        "test.leaf",
+                ) {
+                    Leaf(
+                        value =
+                            "leaf",
+                    )
+                }
         val root =
-            VexDependencyProvider.named(
-                readableName =
-                    "test.root",
-                dependencies =
-                    listOf(
-                        leaf,
-                    ),
-            ) { dependencies ->
-                Root(
-                    leaf =
-                        dependencies.require(
+            VexDependencyProvider
+                .named<
+                    TestApplicationScope,
+                    Root
+                >(
+                    readableName =
+                        "test.root",
+                    dependencies =
+                        listOf(
                             leaf,
                         ),
-                )
-            }
+                ) { dependencies ->
+                    Root(
+                        leaf =
+                            dependencies.require(
+                                leaf,
+                            ),
+                    )
+                }
         val factory =
             VexDependencyFactory(
                 modules =
@@ -390,11 +462,14 @@ class VexDependencyFactoryTest {
     fun cycleFailsClosedBeforeConstruction() {
         val cycle =
             mutableListOf<
-                VexDependencyProvider<*>
+                VexDependencyNode
             >()
 
         class SelfProvider :
-            VexDependencyProvider<Leaf>(
+            VexDependencyProvider<
+                TestApplicationScope,
+                Leaf
+            >(
                 dependencies =
                     cycle,
             ) {
@@ -404,7 +479,8 @@ class VexDependencyFactoryTest {
             ):
                 Leaf =
                 Leaf(
-                    value = "never",
+                    value =
+                        "never",
                 )
         }
 
@@ -445,4 +521,4 @@ class VexDependencyFactoryTest {
     }
 }
 
-// [VXG RealForever]
+// [VXG RealForever][VEXARCHITECTURE][DEPENDENCY][TYPED-SCOPES]
