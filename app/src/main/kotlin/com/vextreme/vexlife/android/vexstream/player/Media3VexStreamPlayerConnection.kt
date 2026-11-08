@@ -1,23 +1,21 @@
+@file:OptIn(com.vextreme.vexlife.android.execution.VexExecution.RelationshipFoundationApi::class)
+
 package com.vextreme.vexlife.android.vexstream.player
 
-import androidx.media3.common.C
 import androidx.media3.common.Player
 import com.vextreme.vexlife.android.behavior.VexPartner
+import com.vextreme.vexlife.android.execution.VexExecution
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueShuffleAvailable
+import java.util.concurrent.atomic.AtomicLong
 
-/**
- * Media3 realization of one live VexStream Player Partner Connection.
- *
- * Media3 vocabulary terminates here. A full Snapshot establishes outside totality once; subsequent
- * Player.Events are converted only into the complete facet Signals implicated by that provider
- * occurrence. Queue item identity is therefore not rebuilt for ordinary Playback/Repeat/position
- * events.
- */
 internal class Media3VexStreamPlayerConnection(
     private val player:
         Player,
     private val receiver:
         VexStreamPlayerObservationReceiver,
+    private val executionRoot:
+        VexExecutionRoot,
     private val clock:
         () -> Long = {
             System.currentTimeMillis()
@@ -25,16 +23,29 @@ internal class Media3VexStreamPlayerConnection(
 ) :
     VexStreamPlayerPartner.Connection,
     AutoCloseable {
-    override val id =
-        VexStreamPlayerPartner.Connection.Id(
-            "media3-player-" +
-                System.identityHashCode(
-                    player,
-                ),
-        )
+    private object InboundAdmission :
+        VexExecution.RelationshipId
 
-    private var closed =
-        false
+    private sealed interface Delivery {
+        data class Opened(
+            val observations:
+                List<
+                    VexStreamPlayerPartner.Connection.Observation
+                >,
+        ) :
+            Delivery
+
+        data class Observed(
+            val observations:
+                List<
+                    VexStreamPlayerPartner.Connection.Observation
+                >,
+        ) :
+            Delivery
+
+        data object Closed :
+            Delivery
+    }
 
     internal data class EventInput(
         val player:
@@ -43,19 +54,30 @@ internal class Media3VexStreamPlayerConnection(
             Player.Events,
     )
 
-    private val snapshotConversion =
+    private val occurrence =
+        nextConnectionOccurrence
+            .getAndIncrement()
+
+    override val id =
+        VexStreamPlayerPartner.Connection.Id(
+            value =
+                "media3-player-" +
+                    occurrence,
+            occurrence =
+                occurrence,
+        )
+
+    private var closed =
+        false
+
+    private val fullConversion =
         VexPartner.Connection.Conversion<
             Player,
             VexStreamPlayerPartner,
             VexStreamPlayerPartner.Signal
         > { provider ->
-            listOf(
-                VexStreamPlayerPartner.Signal
-                    .Snapshot(
-                        provider
-                            .toVexStreamPlayerCurrent(),
-                    ),
-            )
+            provider
+                .toVexStreamPlayerSignals()
         }
 
     private val eventConversion =
@@ -77,32 +99,47 @@ internal class Media3VexStreamPlayerConnection(
                 events:
                     Player.Events,
             ) {
-                eventConversion
-                    .convert(
-                        EventInput(
-                            player =
-                                player,
-                            events =
-                                events,
+                val signals =
+                    eventConversion
+                        .convert(
+                            EventInput(
+                                player =
+                                    player,
+                                events =
+                                    events,
+                            ),
+                        )
+
+                if (
+                    signals.isNotEmpty()
+                ) {
+                    enqueue(
+                        Delivery.Observed(
+                            observations =
+                                observations(
+                                    signals,
+                                ),
                         ),
                     )
-                    .forEach(
-                        ::publish,
-                    )
+                }
             }
         }
 
     init {
-        snapshotConversion
-            .convert(
-                player,
-            )
-            .forEach(
-                ::publish,
-            )
-
         player.addListener(
             listener,
+        )
+
+        enqueue(
+            Delivery.Opened(
+                observations =
+                    observations(
+                        fullConversion
+                            .convert(
+                                player,
+                            ),
+                    ),
+            ),
         )
     }
 
@@ -115,32 +152,103 @@ internal class Media3VexStreamPlayerConnection(
 
         closed =
             true
-
         player.removeListener(
             listener,
         )
-
-        receiver.connectionClosed(
-            id,
+        enqueue(
+            Delivery.Closed,
         )
     }
 
-    private fun publish(
-        signal:
-            VexStreamPlayerPartner.Signal,
+    private fun observations(
+        signals:
+            List<
+                VexStreamPlayerPartner.Signal
+            >,
+    ):
+        List<
+            VexStreamPlayerPartner.Connection.Observation
+        > {
+        val observedAt =
+            clock()
+
+        return signals
+            .map { signal ->
+                VexStreamPlayerPartner.Connection.Observation(
+                    connectionId =
+                        id,
+                    signal =
+                        signal,
+                    observedAtEpochMillis =
+                        observedAt,
+                )
+            }
+    }
+
+    private fun enqueue(
+        delivery:
+            Delivery,
     ) {
-        receiver.receiveNow(
-            VexStreamPlayerPartner.Connection.Observation(
-                connectionId =
-                    id,
-                signal =
-                    signal,
-                observedAtEpochMillis =
-                    clock(),
-            ),
+        VexExecution.beginQueued(
+            executionRoot =
+                executionRoot,
+            owner =
+                this,
+            relationshipId =
+                InboundAdmission,
+            operation =
+                ::admitForExecution,
+            argument =
+                delivery,
         )
+    }
+
+    private suspend fun admitForExecution(
+        delivery:
+            Delivery,
+    ) {
+        when (
+            delivery
+        ) {
+            is Delivery.Opened ->
+                receiver.connectionOpened(
+                    connectionId =
+                        id,
+                    observations =
+                        delivery.observations,
+                )
+
+            is Delivery.Observed ->
+                receiver.receive(
+                    delivery.observations,
+                )
+
+            Delivery.Closed ->
+                receiver.connectionClosed(
+                    id,
+                )
+        }
+    }
+
+    companion object {
+        private val nextConnectionOccurrence =
+            AtomicLong(
+                1L,
+            )
     }
 }
+
+private fun Player.toVexStreamPlayerSignals():
+    List<
+        VexStreamPlayerPartner.Signal
+    > =
+    listOf(
+        toVexStreamPlayerPlaybackSignal(),
+        toVexStreamPlayerQueueItemsSignal(),
+        toVexStreamPlayerQueueNavigationSignal(),
+        toVexStreamPlayerRepeatSignal(),
+        toVexStreamPlayerCurrentMediaSignal(),
+    )
 
 private fun Media3VexStreamPlayerConnection.EventInput.toVexStreamPlayerSignals():
     List<
@@ -167,10 +275,6 @@ private fun Media3VexStreamPlayerConnection.EventInput.toVexStreamPlayerSignals(
             )
         }
 
-        /*
-         * Item identity can be large. Re-read it only when the provider says the timeline itself
-         * changed; current-index/navigation changes have their own smaller Signal below.
-         */
         if (
             events.contains(
                 Player.EVENT_TIMELINE_CHANGED,
@@ -229,44 +333,7 @@ private fun Media3VexStreamPlayerConnection.EventInput.toVexStreamPlayerSignals(
                     .toVexStreamPlayerCurrentMediaSignal(),
             )
         }
-
-        if (
-            events.contains(
-                Player.EVENT_TIMELINE_CHANGED,
-            ) ||
-            events.contains(
-                Player.EVENT_MEDIA_ITEM_TRANSITION,
-            ) ||
-            events.contains(
-                Player.EVENT_POSITION_DISCONTINUITY,
-            ) ||
-            events.contains(
-                Player.EVENT_PLAYBACK_STATE_CHANGED,
-            )
-        ) {
-            add(
-                player
-                    .toVexStreamPlayerTimelineSignal(),
-            )
-        }
     }
-
-private fun Player.toVexStreamPlayerCurrent():
-    VexStreamPlayerPartner.Current.Available =
-    VexStreamPlayerPartner.Current.Available(
-        playback =
-            toVexStreamPlayerPlaybackSignal(),
-        queueItems =
-            toVexStreamPlayerQueueItemsSignal(),
-        queueNavigation =
-            toVexStreamPlayerQueueNavigationSignal(),
-        repeat =
-            toVexStreamPlayerRepeatSignal(),
-        currentMedia =
-            toVexStreamPlayerCurrentMediaSignal(),
-        timeline =
-            toVexStreamPlayerTimelineSignal(),
-    )
 
 private fun Player.toVexStreamPlayerPlaybackSignal():
     VexStreamPlayerPartner.Signal.Playback =
@@ -281,24 +348,21 @@ private fun Player.toVexStreamPlayerPlaybackSignal():
                 playbackState
             ) {
                 Player.STATE_IDLE ->
-                    VexStreamPlayerPartner
-                        .PlaybackPhase.Idle
+                    VexStreamPlayerPartner.PlaybackPhase.Idle
 
                 Player.STATE_BUFFERING ->
-                    VexStreamPlayerPartner
-                        .PlaybackPhase.Buffering
+                    VexStreamPlayerPartner.PlaybackPhase.Buffering
 
                 Player.STATE_READY ->
-                    VexStreamPlayerPartner
-                        .PlaybackPhase.Ready
+                    VexStreamPlayerPartner.PlaybackPhase.Ready
 
                 Player.STATE_ENDED ->
-                    VexStreamPlayerPartner
-                        .PlaybackPhase.Ended
+                    VexStreamPlayerPartner.PlaybackPhase.Ended
 
                 else ->
                     error(
-                        "unknown Media3 playbackState: $playbackState",
+                        "unknown Media3 playbackState: " +
+                            playbackState,
                     )
             },
         playPauseAvailable =
@@ -381,7 +445,8 @@ private fun Player.toVexStreamPlayerRepeatSignal():
 
                 else ->
                     error(
-                        "unknown Media3 repeatMode: $repeatMode",
+                        "unknown Media3 repeatMode: " +
+                            repeatMode,
                     )
             },
         toggleAvailable =
@@ -416,62 +481,6 @@ private fun Player.toVexStreamPlayerCurrentMediaSignal():
                 ?.mediaMetadata
                 ?.artworkUri
                 ?.toString(),
-    )
-}
-
-private fun Player.toVexStreamPlayerTimelineSignal():
-    VexStreamPlayerPartner.Signal.Timeline {
-    val durationMs =
-        duration.takeIf {
-            it !=
-                C.TIME_UNSET &&
-                it >
-                0L
-        } ?: 0L
-
-    val positionMs =
-        currentPosition
-            .coerceAtLeast(
-                0L,
-            )
-            .let {
-                if (
-                    durationMs >
-                    0L
-                ) {
-                    it.coerceAtMost(
-                        durationMs,
-                    )
-                } else {
-                    it
-                }
-            }
-
-    val bufferedMs =
-        bufferedPosition
-            .coerceAtLeast(
-                0L,
-            )
-            .let {
-                if (
-                    durationMs >
-                    0L
-                ) {
-                    it.coerceAtMost(
-                        durationMs,
-                    )
-                } else {
-                    it
-                }
-            }
-
-    return VexStreamPlayerPartner.Signal.Timeline(
-        positionMs =
-            positionMs,
-        durationMs =
-            durationMs,
-        bufferedPositionMs =
-            bufferedMs,
     )
 }
 

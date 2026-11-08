@@ -6,9 +6,8 @@ import com.vextreme.vexlife.android.behavior.VexPartner
  * One independently-owned outside VexStream player participant.
  *
  * Media3 is one concrete Connection technology for this Partner; it is not the Partner identity.
- * Signals are complete statements about one bounded facet of the outside player. A Snapshot
- * establishes complete totality once when a Connection forms; later facet Signals maintain that
- * totality without requiring unrelated provider reads.
+ * Signals are complete statements about one bounded facet of the outside player. Retained totality
+ * belongs to the Player Store, not the Partner root itself.
  */
 internal object VexStreamPlayerPartner :
     VexPartner<
@@ -25,13 +24,6 @@ internal object VexStreamPlayerPartner :
         VexPartner.Signal<
             VexStreamPlayerPartner
         > {
-        /** One complete provider snapshot used to establish/recover retained Partner CURRENT. */
-        data class Snapshot(
-            val current:
-                Current.Available,
-        ) :
-            Signal
-
         data class Playback(
             val hasMedia:
                 Boolean,
@@ -46,7 +38,6 @@ internal object VexStreamPlayerPartner :
         ) :
             Signal
 
-        /** Queue identity changes independently from current-index/navigation changes. */
         data class QueueItems(
             val mediaIds:
                 List<String>,
@@ -86,23 +77,15 @@ internal object VexStreamPlayerPartner :
                 String?,
         ) :
             Signal
-
-        data class Timeline(
-            val positionMs:
-                Long,
-            val durationMs:
-                Long,
-            val bufferedPositionMs:
-                Long,
-        ) :
-            Signal
     }
 
-    /**
-     * Latest coherent outside-player truth retained from the Partner's admitted Signals.
-     *
-     * CURRENT here is provider/Partner truth, not Playback Family semantic State.
-     */
+    data class QueueCurrent(
+        val items:
+            Signal.QueueItems,
+        val navigation:
+            Signal.QueueNavigation,
+    )
+
     sealed interface Current {
         data object Unavailable :
             Current
@@ -118,13 +101,20 @@ internal object VexStreamPlayerPartner :
                 Signal.Repeat,
             val currentMedia:
                 Signal.CurrentMedia,
-            val timeline:
-                Signal.Timeline,
         ) :
-            Current
+            Current {
+            val queue:
+                QueueCurrent
+                get() =
+                    QueueCurrent(
+                        items =
+                            queueItems,
+                        navigation =
+                            queueNavigation,
+                    )
+        }
     }
 
-    /** Rooted live relationship coordinate for the Player Partner. */
     interface Connection :
         VexPartner.Connection<
             VexStreamPlayerPartner,
@@ -133,9 +123,16 @@ internal object VexStreamPlayerPartner :
         override val id:
             Id
 
+        /**
+         * Exact process-local Connection occurrence.
+         *
+         * occurrence is concrete-realization freshness, not durable Partner identity.
+         */
         data class Id(
             val value:
                 String,
+            val occurrence:
+                Long,
         ) :
             VexPartner.Connection.Id<
                 VexStreamPlayerPartner

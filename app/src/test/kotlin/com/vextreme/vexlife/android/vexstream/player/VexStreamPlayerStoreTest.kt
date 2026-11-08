@@ -1,5 +1,12 @@
 package com.vextreme.vexlife.android.vexstream.player
 
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
@@ -8,12 +15,101 @@ import org.junit.Test
 
 class VexStreamPlayerStoreTest {
     @Test
-    fun timelineUpdateDoesNotRebuildLargeQueueIdentity() {
+    fun oneProviderOccurrenceConvergesSeveralFacetSignalsIntoOneCurrentEmission() =
+        runBlocking {
+            val store =
+                VexStreamPlayerStore()
+            val id =
+                id(
+                    value =
+                        "connection-a",
+                    occurrence =
+                        1L,
+                )
+            val emissions =
+                mutableListOf<
+                    VexStreamPlayerPartner.Current
+                >()
+            val collector =
+                launch(
+                    start =
+                        CoroutineStart.UNDISPATCHED,
+                ) {
+                    store
+                        .states
+                        .drop(
+                            1,
+                        )
+                        .take(
+                            2,
+                        )
+                        .toList(
+                            emissions,
+                        )
+                }
+
+            store.connectionOpened(
+                connectionId =
+                    id,
+                observations =
+                    observations(
+                        id =
+                            id,
+                        signals =
+                            completeSignals(),
+                    ),
+            )
+            yield()
+
+            store.receive(
+                observations(
+                    id =
+                        id,
+                    signals =
+                        listOf(
+                            playback(
+                                playRequested =
+                                    true,
+                            ),
+                            VexStreamPlayerPartner.Signal.Repeat(
+                                enabled =
+                                    true,
+                                toggleAvailable =
+                                    true,
+                            ),
+                        ),
+                ),
+            )
+            yield()
+
+            collector.join()
+
+            assertEquals(
+                2,
+                emissions.size,
+            )
+            val second =
+                emissions
+                    .last() as
+                    VexStreamPlayerPartner.Current.Available
+            assertTrue(
+                second.playback.playRequested,
+            )
+            assertTrue(
+                second.repeat.enabled,
+            )
+        }
+
+    @Test
+    fun playbackUpdateRetainsExactLargeQueueIdentity() {
         val store =
             VexStreamPlayerStore()
         val id =
-            VexStreamPlayerPartner.Connection.Id(
-                "connection-a",
+            id(
+                value =
+                    "connection-a",
+                occurrence =
+                    1L,
             )
         val queueItems =
             VexStreamPlayerPartner.Signal.QueueItems(
@@ -23,37 +119,32 @@ class VexStreamPlayerStoreTest {
                             "song-$index"
                         },
             )
-        val initial =
-            available(
-                queueItems =
-                    queueItems,
-                timeline =
-                    timeline(
-                        positionMs =
-                            1_000L,
-                    ),
-            )
 
-        store.receiveNow(
-            observation(
-                id =
-                    id,
-                signal =
-                    VexStreamPlayerPartner.Signal
-                        .Snapshot(
-                            initial,
+        store.connectionOpened(
+            connectionId =
+                id,
+            observations =
+                observations(
+                    id =
+                        id,
+                    signals =
+                        completeSignals(
+                            queueItems =
+                                queueItems,
                         ),
-            ),
+                ),
         )
 
-        store.receiveNow(
-            observation(
+        store.receive(
+            observations(
                 id =
                     id,
-                signal =
-                    timeline(
-                        positionMs =
-                            2_000L,
+                signals =
+                    listOf(
+                        playback(
+                            playRequested =
+                                true,
+                        ),
                     ),
             ),
         )
@@ -70,10 +161,6 @@ class VexStreamPlayerStoreTest {
             queueItems.mediaIds,
             current.queueItems.mediaIds,
         )
-        assertEquals(
-            2_000L,
-            current.timeline.positionMs,
-        )
     }
 
     @Test
@@ -81,43 +168,51 @@ class VexStreamPlayerStoreTest {
         val store =
             VexStreamPlayerStore()
         val currentId =
-            VexStreamPlayerPartner.Connection.Id(
-                "current",
+            id(
+                value =
+                    "current",
+                occurrence =
+                    2L,
             )
         val staleId =
-            VexStreamPlayerPartner.Connection.Id(
-                "stale",
+            id(
+                value =
+                    "stale",
+                occurrence =
+                    1L,
             )
-        val initial =
-            available(
-                playback =
-                    playback(
-                        playRequested =
-                            false,
-                    ),
+        val initialPlayback =
+            playback(
+                playRequested =
+                    false,
             )
 
-        store.receiveNow(
-            observation(
-                id =
-                    currentId,
-                signal =
-                    VexStreamPlayerPartner.Signal
-                        .Snapshot(
-                            initial,
+        store.connectionOpened(
+            connectionId =
+                currentId,
+            observations =
+                observations(
+                    id =
+                        currentId,
+                    signals =
+                        completeSignals(
+                            playback =
+                                initialPlayback,
                         ),
-            ),
+                ),
         )
 
         val admission =
-            store.receiveNow(
-                observation(
+            store.receive(
+                observations(
                     id =
                         staleId,
-                    signal =
-                        playback(
-                            playRequested =
-                                true,
+                    signals =
+                        listOf(
+                            playback(
+                                playRequested =
+                                    true,
+                            ),
                         ),
                 ),
             )
@@ -126,100 +221,195 @@ class VexStreamPlayerStoreTest {
             admission.accepted,
         )
         assertEquals(
-            initial,
+            initialPlayback,
+            (
+                store.current as
+                    VexStreamPlayerPartner.Current.Available
+            ).playback,
+        )
+    }
+
+    @Test
+    fun lateOlderConnectionOpenCannotReplaceNewerTruthEvenAfterNewerClose() {
+        val store =
+            VexStreamPlayerStore()
+        val older =
+            id(
+                value =
+                    "older",
+                occurrence =
+                    1L,
+            )
+        val newer =
+            id(
+                value =
+                    "newer",
+                occurrence =
+                    2L,
+            )
+
+        store.connectionOpened(
+            connectionId =
+                newer,
+            observations =
+                observations(
+                    id =
+                        newer,
+                    signals =
+                        completeSignals(),
+                ),
+        )
+        store.connectionClosed(
+            newer,
+        )
+
+        val staleOpen =
+            store.connectionOpened(
+                connectionId =
+                    older,
+                observations =
+                    observations(
+                        id =
+                            older,
+                        signals =
+                            completeSignals(
+                                playback =
+                                    playback(
+                                        playRequested =
+                                            true,
+                                    ),
+                            ),
+                    ),
+            )
+
+        assertFalse(
+            staleOpen.accepted,
+        )
+        assertEquals(
+            VexStreamPlayerPartner.Current.Unavailable,
             store.current,
         )
     }
 
     @Test
-    fun oldConnectionCloseCannotEraseNewerSnapshot() {
+    fun oldConnectionCloseCannotEraseNewerConnectionCurrent() {
         val store =
             VexStreamPlayerStore()
         val first =
-            VexStreamPlayerPartner.Connection.Id(
-                "first",
+            id(
+                value =
+                    "first",
+                occurrence =
+                    1L,
             )
         val second =
-            VexStreamPlayerPartner.Connection.Id(
-                "second",
+            id(
+                value =
+                    "second",
+                occurrence =
+                    2L,
             )
 
-        store.receiveNow(
-            observation(
-                id =
-                    first,
-                signal =
-                    VexStreamPlayerPartner.Signal
-                        .Snapshot(
-                            available(
-                                playback =
-                                    playback(
-                                        playRequested =
-                                            false,
-                                    ),
-                            ),
-                        ),
-            ),
-        )
-        val newer =
-            available(
-                playback =
-                    playback(
-                        playRequested =
-                            true,
-                    ),
-            )
-        store.receiveNow(
-            observation(
-                id =
-                    second,
-                signal =
-                    VexStreamPlayerPartner.Signal
-                        .Snapshot(
-                            newer,
-                        ),
-            ),
+        store.connectionOpened(
+            connectionId =
+                first,
+            observations =
+                observations(
+                    id =
+                        first,
+                    signals =
+                        completeSignals(),
+                ),
         )
 
-        val afterOldClose =
+        val newerPlayback =
+            playback(
+                playRequested =
+                    true,
+            )
+        store.connectionOpened(
+            connectionId =
+                second,
+            observations =
+                observations(
+                    id =
+                        second,
+                    signals =
+                        completeSignals(
+                            playback =
+                                newerPlayback,
+                        ),
+                ),
+        )
+
+        val oldClose =
             store.connectionClosed(
                 first,
             )
 
-        assertEquals(
-            newer,
-            afterOldClose,
+        assertFalse(
+            oldClose.accepted,
         )
-        assertTrue(
-            afterOldClose is
-                VexStreamPlayerPartner.Current.Available,
+        assertEquals(
+            newerPlayback,
+            (
+                store.current as
+                    VexStreamPlayerPartner.Current.Available
+            ).playback,
         )
 
-        assertEquals(
-            VexStreamPlayerPartner.Current.Unavailable,
+        val currentClose =
             store.connectionClosed(
                 second,
-            ),
+            )
+
+        assertTrue(
+            currentClose.accepted,
+        )
+        assertEquals(
+            VexStreamPlayerPartner.Current.Unavailable,
+            store.current,
         )
     }
 
-    private fun observation(
-        id:
-            VexStreamPlayerPartner.Connection.Id,
-        signal:
-            VexStreamPlayerPartner.Signal,
+    private fun id(
+        value:
+            String,
+        occurrence:
+            Long,
     ):
-        VexStreamPlayerPartner.Connection.Observation =
-        VexStreamPlayerPartner.Connection.Observation(
-            connectionId =
-                id,
-            signal =
-                signal,
-            observedAtEpochMillis =
-                123L,
+        VexStreamPlayerPartner.Connection.Id =
+        VexStreamPlayerPartner.Connection.Id(
+            value =
+                value,
+            occurrence =
+                occurrence,
         )
 
-    private fun available(
+    private fun observations(
+        id:
+            VexStreamPlayerPartner.Connection.Id,
+        signals:
+            List<
+                VexStreamPlayerPartner.Signal
+            >,
+    ):
+        List<
+            VexStreamPlayerPartner.Connection.Observation
+        > =
+        signals
+            .map { signal ->
+                VexStreamPlayerPartner.Connection.Observation(
+                    connectionId =
+                        id,
+                    signal =
+                        signal,
+                    observedAtEpochMillis =
+                        123L,
+                )
+            }
+
+    private fun completeSignals(
         playback:
             VexStreamPlayerPartner.Signal.Playback =
             playback(
@@ -230,61 +420,52 @@ class VexStreamPlayerStoreTest {
             VexStreamPlayerPartner.Signal.QueueItems =
             VexStreamPlayerPartner.Signal.QueueItems(
                 mediaIds =
-                    emptyList(),
-            ),
-        timeline:
-            VexStreamPlayerPartner.Signal.Timeline =
-            timeline(
-                positionMs =
-                    0L,
+                    listOf(
+                        "song-a",
+                    ),
             ),
     ):
-        VexStreamPlayerPartner.Current.Available =
-        VexStreamPlayerPartner.Current.Available(
-            playback =
-                playback,
-            queueItems =
-                queueItems,
-            queueNavigation =
-                VexStreamPlayerPartner.Signal.QueueNavigation(
-                    currentIndex =
-                        if (
-                            queueItems.mediaIds.isEmpty()
-                        ) {
-                            -1
-                        } else {
-                            0
-                        },
-                    previousAvailable =
-                        false,
-                    nextAvailable =
-                        false,
-                    shuffleAvailable =
-                        false,
-                    clearAvailable =
-                        queueItems.mediaIds.isNotEmpty(),
-                ),
-            repeat =
-                VexStreamPlayerPartner.Signal.Repeat(
-                    enabled =
-                        false,
-                    toggleAvailable =
-                        true,
-                ),
-            currentMedia =
-                VexStreamPlayerPartner.Signal.CurrentMedia(
-                    mediaId =
-                        queueItems.mediaIds
-                            .firstOrNull(),
-                    title =
-                        "",
-                    artist =
-                        "",
-                    artworkUri =
-                        null,
-                ),
-            timeline =
-                timeline,
+        List<
+            VexStreamPlayerPartner.Signal
+        > =
+        listOf(
+            playback,
+            queueItems,
+            VexStreamPlayerPartner.Signal.QueueNavigation(
+                currentIndex =
+                    if (
+                        queueItems.mediaIds.isEmpty()
+                    ) {
+                        -1
+                    } else {
+                        0
+                    },
+                previousAvailable =
+                    false,
+                nextAvailable =
+                    false,
+                shuffleAvailable =
+                    false,
+                clearAvailable =
+                    queueItems.mediaIds.isNotEmpty(),
+            ),
+            VexStreamPlayerPartner.Signal.Repeat(
+                enabled =
+                    false,
+                toggleAvailable =
+                    true,
+            ),
+            VexStreamPlayerPartner.Signal.CurrentMedia(
+                mediaId =
+                    queueItems.mediaIds
+                        .firstOrNull(),
+                title =
+                    "",
+                artist =
+                    "",
+                artworkUri =
+                    null,
+            ),
         )
 
     private fun playback(
@@ -298,26 +479,11 @@ class VexStreamPlayerStoreTest {
             playRequested =
                 playRequested,
             phase =
-                VexStreamPlayerPartner
-                    .PlaybackPhase.Ready,
+                VexStreamPlayerPartner.PlaybackPhase.Ready,
             playPauseAvailable =
                 true,
             restartAvailable =
                 true,
-        )
-
-    private fun timeline(
-        positionMs:
-            Long,
-    ):
-        VexStreamPlayerPartner.Signal.Timeline =
-        VexStreamPlayerPartner.Signal.Timeline(
-            positionMs =
-                positionMs,
-            durationMs =
-                10_000L,
-            bufferedPositionMs =
-                5_000L,
         )
 }
 
