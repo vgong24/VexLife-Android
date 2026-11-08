@@ -16,6 +16,10 @@ import com.vextreme.vexlife.android.screens.shared.maps.VexNavigationSession
 import com.vextreme.vexlife.android.ui.SharedPreferencesThemeModeStore
 import com.vextreme.vexlife.android.ui.ThemeModeStore
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
+import com.vextreme.vexlife.android.vexstream.playback.toVexStreamCurrentPlaybackObservation
+import com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetUpdateExecution
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
 
 /**
@@ -73,6 +77,9 @@ class VexApplication :
          */
         dependencies.resolve(
             dependencyModule.backgroundServiceRelay,
+        )
+        dependencies.resolve(
+            dependencyModule.playbackWidgetUpdateExecution,
         )
     }
 }
@@ -138,6 +145,18 @@ internal class VexApplicationDependencyModule(
                 navigationSession,
         )
 
+    val playbackWidgetUpdateExecution =
+        PlaybackWidgetUpdateExecutionProvider(
+            application =
+                androidApplication,
+            executionRoot =
+                processExecutionRoot,
+            playerStore =
+                playerStore,
+            playbackFamily =
+                playbackFamily,
+        )
+
     val module:
         VexDependencyModule =
         VexDependencyModule.of(
@@ -150,6 +169,7 @@ internal class VexApplicationDependencyModule(
             playerStore,
             navigationSession,
             backgroundServiceRelay,
+            playbackWidgetUpdateExecution,
         )
 
     internal class AndroidApplicationProvider(
@@ -338,6 +358,80 @@ internal class VexApplicationDependencyModule(
             )
         }
     }
+
+    /**
+     * Process-lived Widget publication over process-current Player/Playback truth.
+     *
+     * This execution does not belong to MediaSessionService lifetime. Service teardown changes the
+     * truth it observes; it must not kill the consumer before that terminal truth is published.
+     */
+    internal class PlaybackWidgetUpdateExecutionProvider(
+        private val application:
+            VexDependencyProvider<
+                Application
+            >,
+        private val executionRoot:
+            VexDependencyProvider<
+                VexExecutionRoot
+            >,
+        private val playerStore:
+            VexDependencyProvider<
+                VexStreamPlayerStore
+            >,
+        private val playbackFamily:
+            VexDependencyProvider<
+                VexStreamPlaybackFamily
+            >,
+    ) :
+        VexDependencyProvider<
+            VexStreamPlaybackWidgetUpdateExecution
+        >(
+            dependencies =
+                listOf(
+                    application,
+                    executionRoot,
+                    playerStore,
+                    playbackFamily,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexStreamPlaybackWidgetUpdateExecution {
+            val family =
+                dependencies.require(
+                    playbackFamily,
+                )
+            val store =
+                dependencies.require(
+                    playerStore,
+                )
+
+            return VexStreamPlaybackWidgetUpdateExecution(
+                root =
+                    dependencies.require(
+                        executionRoot,
+                    ),
+                context =
+                    dependencies.require(
+                        application,
+                    )
+                        .applicationContext,
+                observations =
+                    store
+                        .states
+                        .map { current ->
+                            current
+                                .toVexStreamCurrentPlaybackObservation(
+                                    family,
+                                )
+                        }
+                        .distinctUntilChanged(),
+            )
+        }
+    }
+
 }
 
 // [VXG RealForever]

@@ -920,10 +920,11 @@ class VexStreamPlaybackWidgetActionCallback :
 }
 
 /**
- * MediaSessionService-owned widget publication sink.
+ * Process-lived widget publication sink over retained Player Partner + Playback Family truth.
  *
- * Exactly one ordered provider observation stream feeds this execution. Widget callbacks only issue
- * Controls; they never become a second playback read/publication producer.
+ * MediaSessionService teardown changes the observed truth but does not own this execution lifetime.
+ * Widget callbacks issue Controls through the Player Partner outbound relationship; they do not
+ * become a second playback read/publication producer.
  */
 internal class VexStreamPlaybackWidgetUpdateExecution(
     root: VexExecutionRoot,
