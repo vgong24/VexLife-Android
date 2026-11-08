@@ -1,12 +1,16 @@
 package com.vextreme.vexlife.android.media.vexstream
 
 import android.content.ComponentName
+import android.os.Looper
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import androidx.core.content.ContextCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vextreme.vexlife.android.VexApplication
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -57,37 +61,81 @@ class VexStreamPlaybackServiceArchitectureInstrumentedTest {
                         ),
                     ),
                 )
+                .setApplicationLooper(
+                    Looper.getMainLooper(),
+                )
                 .buildAsync()
-
-        val controller =
-            controllerFuture.get(
-                15L,
-                TimeUnit.SECONDS,
+        val completed =
+            CountDownLatch(
+                1,
             )
+        val failure =
+            AtomicReference<
+                Throwable?
+            >()
 
-        try {
-            assertTrue(
-                "MediaController must connect to the production Playback MediaSessionService",
-                controller.isConnected,
-            )
+        controllerFuture.addListener(
+            {
+                try {
+                    val controller =
+                        controllerFuture.get(
+                            15L,
+                            TimeUnit.SECONDS,
+                        )
 
-            val after =
-                application
-                    .dependencies
-                    .resolve(
-                        application
-                            .dependencyModule
-                            .playbackFamily,
+                    assertTrue(
+                        "MediaController must connect to the production Playback MediaSessionService",
+                        controller.isConnected,
                     )
 
-            assertSame(
-                "Playback Service startup must not replace the process-scoped Playback Family",
-                before,
-                after,
-            )
-        } finally {
-            controller.release()
-        }
+                    val after =
+                        application
+                            .dependencies
+                            .resolve(
+                                application
+                                    .dependencyModule
+                                    .playbackFamily,
+                            )
+
+                    assertSame(
+                        "Playback Service startup must not replace the process-scoped Playback Family",
+                        before,
+                        after,
+                    )
+                } catch (
+                    throwable:
+                        Throwable
+                ) {
+                    failure.set(
+                        throwable,
+                    )
+                } finally {
+                    MediaController.releaseFuture(
+                        controllerFuture,
+                    )
+                    completed.countDown()
+                }
+            },
+            ContextCompat.getMainExecutor(
+                context,
+            ),
+        )
+
+        assertTrue(
+            "MediaController provider-lifecycle assertion timed out",
+            completed.await(
+                15L,
+                TimeUnit.SECONDS,
+            ),
+        )
+
+        failure.get()
+            ?.let { throwable ->
+                throw AssertionError(
+                    "MediaController provider-lifecycle assertion failed",
+                    throwable,
+                )
+            }
     }
 }
 

@@ -13,7 +13,6 @@ import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackTrace
 import com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetUpdateExecution
-import kotlinx.coroutines.Dispatchers
 
 /**
  * Android-native owner for VexStream audio playback realization lifetime.
@@ -28,10 +27,7 @@ import kotlinx.coroutines.Dispatchers
 class VexStreamPlaybackService : MediaSessionService() {
     private var mediaSession: MediaSession? = null
     private val widgetExecutionRoot =
-        VexExecutionRoot(
-            dispatcher =
-                Dispatchers.Default,
-        )
+        VexExecutionRoot()
     private var playbackFamily:
         VexStreamPlaybackFamily? =
         null
