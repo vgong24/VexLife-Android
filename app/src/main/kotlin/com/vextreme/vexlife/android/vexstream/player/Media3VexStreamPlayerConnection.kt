@@ -120,9 +120,8 @@ internal class Media3VexStreamPlayerConnection(
             listener,
         )
 
-        publish(
-            VexStreamPlayerPartner.Signal
-                .Unavailable,
+        receiver.connectionClosed(
+            id,
         )
     }
 

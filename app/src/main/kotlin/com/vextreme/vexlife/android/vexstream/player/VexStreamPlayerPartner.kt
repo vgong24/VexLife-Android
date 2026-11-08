@@ -32,10 +32,6 @@ internal object VexStreamPlayerPartner :
         ) :
             Signal
 
-        /** The live outside relationship is not currently available. */
-        data object Unavailable :
-            Signal
-
         data class Playback(
             val hasMedia:
                 Boolean,
