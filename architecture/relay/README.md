@@ -126,7 +126,7 @@ The concrete Relay should be boring to inspect:
 
 ### Convergence kernel below Relay
 
-`VexConvergence<Update, Current>` owns only the small retained-current mechanism that Compound
+`architecture:convergence` owns `VexConvergence<Update, Current>`, the small retained-current mechanism that Compound
 Relay and another rightful current owner may genuinely share:
 
 ~~~text

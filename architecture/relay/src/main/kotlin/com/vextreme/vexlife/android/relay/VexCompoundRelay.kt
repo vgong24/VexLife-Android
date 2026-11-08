@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.relay
 
+import com.vextreme.vexlife.android.convergence.VexConvergence
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
