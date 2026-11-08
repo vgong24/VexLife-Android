@@ -46,7 +46,8 @@ VEX_EXECUTION_OWNER
 ~~~
 
 There is no public execution InstanceId, SourceRef, Handle, completed Snapshot registry, or
-root-level activeExecutions projection.
+root-level activeExecutions registry. The read-only CurrentProjection described below is derived
+directly from canonical custody and owns no second active-work truth.
 
 ## Authoring surface
 
@@ -73,7 +74,7 @@ ownership while VexExecution supplies custody:
 VexExecution.begin(
     executionRoot = root,
     owner = family,
-    approach = act.begin.approach,
+    approach = requireNotNull(act.approach),
     relationshipId = act.relationshipId,
     operation = store::save,
     argument = effect.mode,
@@ -195,8 +196,8 @@ Store observation
 Do not persist the runtime RelationshipId and do not substitute the Partner Connection.Id for it.
 Connection.Id belongs to source/observation provenance; RelationshipId coordinates active Jobs.
 
-Likewise, a Family-authored Pump request uses beginQueued(Effect) -> activate() -> accepted Act
-RelationshipId -> launchWith() -> Method. The Method/executor does not choose Queued again.
+Likewise, a Family-authored Pump request carries Effect + Approach.Queued -> activate() -> accepted
+Act RelationshipId -> launchWith() -> Method. The Method/executor does not choose Queued again.
 
 ## Maintained semantic relationships
 
@@ -340,6 +341,66 @@ onResult throws
 OPERATION FAILURE
 != RESULT-ADMISSION FAILURE
 ~~~
+
+## Current custody projection
+
+VexExecution exposes one read-only projection derived directly from its canonical current custody:
+
+~~~text
+VexExecution
+    ownedJobs
+    jobsBySource
+    observationBySource
+    relationships
+        |
+        v
+CurrentProjection
+    ownerLabel
+    activeJobCount
+    sources
+        sourceLabel
+        activeJobCount
+        maintainedObservation
+    relationships
+        relationshipTypeLabel
+        Approach
+        activeJobCount
+~~~
+
+The projection is deliberately lossy and non-authoritative.
+
+~~~text
+CURRENT_PROJECTION
+!= SECOND REGISTRY
+!= HISTORY
+!= JOB HANDLE
+!= SEMANTIC IDENTITY
+~~~
+
+Source/type labels are readable diagnostic coordinates only. VexBoard, Debug Menu or another
+read-only consumer may project current custody without learning private Job fields such as
+`locationJob` or `stateJob`, but those labels must never be fed back as control or semantic identity.
+
+For an already-existing direct execution owner:
+
+~~~kotlin
+VexExecution.currentProjection(
+    executionRoot = root,
+    owner = service,
+)
+~~~
+
+and exact source-addressed stop remains canonical custody rather than caller-owned Job bookkeeping:
+
+~~~kotlin
+VexExecution.forceStop(
+    executionRoot = root,
+    owner = service,
+    source = service::locationUpdatesForExecution,
+)
+~~~
+
+This is the same active truth already owned by VexExecution; no active-executions ledger is added.
 
 ## Failure / history ownership
 

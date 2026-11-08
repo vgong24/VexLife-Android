@@ -576,6 +576,168 @@ class VexExecutionTest {
         }
 
     @Test
+    fun currentProjectionDerivesActiveObservationCustodyWithoutExposingJobHandles() =
+        runBlocking {
+            val root =
+                VexExecutionRoot()
+            val repository =
+                TestRepository()
+            val execution =
+                TestExecution(
+                    root,
+                    repository,
+                )
+            val values =
+                CopyOnWriteArrayList<Int>()
+
+            try {
+                execution.observeStates(
+                    values,
+                )
+                execution.observeSecondary(
+                    values,
+                )
+
+                withTimeout(
+                    2_000,
+                ) {
+                    while (
+                        !values.containsAll(
+                            listOf(
+                                7,
+                                9,
+                            ),
+                        )
+                    ) {
+                        kotlinx.coroutines.yield()
+                    }
+                }
+
+                val projection =
+                    execution.currentProjection
+
+                assertEquals(
+                    2,
+                    projection.activeJobCount,
+                )
+                assertEquals(
+                    listOf(
+                        "secondaryStates",
+                        "states",
+                    ),
+                    projection.sources
+                        .map { source ->
+                            source.sourceLabel
+                        },
+                )
+                assertTrue(
+                    projection.sources
+                        .all { source ->
+                            source.maintainedObservation
+                        },
+                )
+                assertTrue(
+                    projection.relationships.isEmpty(),
+                )
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
+            }
+        }
+
+    @Test
+    fun directOwnerProjectionAndSourceStopReuseCanonicalCustody() =
+        runBlocking {
+            val root =
+                VexExecutionRoot()
+            val repository =
+                TestRepository()
+            val owner =
+                Any()
+            val values =
+                CopyOnWriteArrayList<Int>()
+
+            try {
+                val job =
+                    VexExecution.observe(
+                        executionRoot =
+                            root,
+                        owner =
+                            owner,
+                        source =
+                            repository::states,
+                    ) { value ->
+                        values +=
+                            value
+                    }
+
+                withTimeout(
+                    2_000,
+                ) {
+                    while (
+                        7 !in
+                        values
+                    ) {
+                        kotlinx.coroutines.yield()
+                    }
+                }
+
+                val current =
+                    VexExecution.currentProjection(
+                        executionRoot =
+                            root,
+                        owner =
+                            owner,
+                    )
+
+                assertEquals(
+                    1,
+                    current.activeJobCount,
+                )
+                assertEquals(
+                    "states",
+                    current.sources.single().sourceLabel,
+                )
+                assertTrue(
+                    current.sources.single().maintainedObservation,
+                )
+
+                assertTrue(
+                    VexExecution.forceStop(
+                        executionRoot =
+                            root,
+                        owner =
+                            owner,
+                        source =
+                            repository::states,
+                        reason =
+                            "test direct source stop",
+                    ),
+                )
+
+                job.join()
+
+                assertTrue(
+                    job.isCancelled,
+                )
+                assertEquals(
+                    0,
+                    VexExecution.currentProjection(
+                        executionRoot =
+                            root,
+                        owner =
+                            owner,
+                    ).activeJobCount,
+                )
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
+            }
+        }
+
+    @Test
     fun sourceCreationAndUpstreamFailureMayRecoverButDownstreamFailureDoesNotRestart() =
         runBlocking {
             val root =
