@@ -5,6 +5,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import com.vextreme.vexlife.android.VexApplication
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.vexstream.playback.Media3VexStreamCurrentPlaybackObserver
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamCurrentPlaybackObserver
@@ -13,7 +14,10 @@ import com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetUpda
 import kotlinx.coroutines.Dispatchers
 
 /**
- * Android-native owner for VexStream audio playback lifetime.
+ * Android-native owner for VexStream audio playback realization lifetime.
+ *
+ * Playback semantic State remains in the process-shared VexStreamPlaybackFamily. This Service keeps
+ * Media3/Player realization alive while UI is absent and reconciles provider truth into that Family.
  *
  * Local file MediaItems are resolved by DefaultDataSource. Opaque vexstream:// media requests flow
  * through [VexStreamNetworkDataSource], which loads the remembered endpoint/token and pins the
@@ -35,6 +39,33 @@ class VexStreamPlaybackService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
+
+        val vexApplication =
+            application as?
+                VexApplication
+                ?: error(
+                    "VexStream PlaybackService requires VexApplication as the process composition root",
+                )
+        val playbackFamily =
+            vexApplication
+                .dependencies
+                .resolve(
+                    vexApplication
+                        .dependencyModule
+                        .playbackFamily,
+                )
+
+        /*
+         * Resolve the one process-lived background convergence owner. A Navigation or future
+         * background Service resolves the same memoized Relay; no Service owns a private copy.
+         */
+        vexApplication
+            .dependencies
+            .resolve(
+                vexApplication
+                    .dependencyModule
+                    .backgroundServiceRelay,
+            )
 
         val dataSourceFactory =
             DefaultDataSource.Factory(
@@ -71,7 +102,10 @@ class VexStreamPlaybackService : MediaSessionService() {
 
         val playbackObserver =
             Media3VexStreamCurrentPlaybackObserver(
-                player,
+                player =
+                    player,
+                playbackFamily =
+                    playbackFamily,
             )
         currentPlaybackObserver =
             playbackObserver
