@@ -1,15 +1,13 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.media3.common.Player
-import androidx.media3.session.MediaController
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 /**
  * One exact request to seek the media item the listener actually scrubbed.
  *
- * Media identity + current Media3 index are part of the request so a delayed/stale scrub cannot
- * seek another occurrence of the same track or whichever item happens to be current later.
+ * Media identity + current index are part of the request so a delayed/stale scrub cannot seek
+ * another occurrence of the same track or whichever item happens to be current later.
  */
 internal data class VexStreamPlaybackSeekRequest(
     val mediaId: String,
@@ -38,75 +36,26 @@ internal data class VexStreamPlaybackSeekRequest(
 /**
  * Feature-local payload boundary for Playback Seek.
  *
- * Seek intentionally does not pretend an arbitrary millisecond value is a finite Behavior Control.
- * UI availability is informative only; [seek] re-checks provider command availability plus the
- * exact current Media3 ID/index coordinate at activation time.
+ * Provider realization stays behind the ViewModel-owned Player Partner controller Connection.
  */
 internal interface VexStreamPlaybackSeekConnection {
     val isAvailable: Boolean
 
     fun seek(
-        request: VexStreamPlaybackSeekRequest,
-    ): Boolean
+        request:
+            VexStreamPlaybackSeekRequest,
+    ):
+        Boolean
 }
 
 @Composable
-internal fun rememberVexStreamPlaybackSeekConnection(
-    controller: MediaController?,
-): VexStreamPlaybackSeekConnection? =
-    remember(
-        controller,
-    ) {
-        controller?.let {
-            Media3VexStreamPlaybackSeekConnection(
-                it,
-            )
-        }
-    }
+internal fun rememberVexStreamPlaybackSeekConnection():
+    VexStreamPlaybackSeekConnection? {
+    val owner:
+        VexStreamPlaybackConnectionViewModel =
+        viewModel()
 
-internal class Media3VexStreamPlaybackSeekConnection(
-    private val controller: MediaController,
-) :
-    VexStreamPlaybackSeekConnection {
-    override val isAvailable: Boolean
-        get() =
-            controller.currentMediaItem != null &&
-                controller.isCommandAvailable(
-                    Player
-                        .COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
-                )
-
-    override fun seek(
-        request: VexStreamPlaybackSeekRequest,
-    ): Boolean {
-        val currentMediaId =
-            controller
-                .currentMediaItem
-                ?.mediaId
-        val currentMediaItemIndex =
-            controller.currentMediaItemIndex
-        val seekAvailable =
-            controller.isCommandAvailable(
-                Player
-                    .COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
-            )
-        val target =
-            vexStreamPlaybackSeekTarget(
-                request = request,
-                currentMediaId =
-                    currentMediaId,
-                currentMediaItemIndex =
-                    currentMediaItemIndex,
-                seekAvailable =
-                    seekAvailable,
-            )
-                ?: return false
-
-        controller.seekTo(
-            target,
-        )
-        return true
-    }
+    return owner.seekConnection
 }
 
 internal fun vexStreamPlaybackSeekTarget(
@@ -149,4 +98,4 @@ internal fun vexStreamPlaybackSeekPositionMs(
         )
 }
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][PLAYBACK][PLAYER-PARTNER]

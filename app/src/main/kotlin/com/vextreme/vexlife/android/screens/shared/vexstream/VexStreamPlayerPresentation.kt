@@ -78,15 +78,11 @@ internal fun VexStreamMiniPlayer(
             .displayState
             .playback
     val queueExperience =
-        rememberVexStreamQueueExperience(
-            controller,
-        )
+        rememberVexStreamQueueExperience()
     val queueProjection =
         queueExperience.projection
     val seekConnection =
-        rememberVexStreamPlaybackSeekConnection(
-            controller,
-        )
+        rememberVexStreamPlaybackSeekConnection()
     val playbackProjection =
         requireNotNull(
             playbackExperience
@@ -325,21 +321,15 @@ internal fun VexStreamFullPlayerSheet(
             VexStreamPlaybackControl.PlayPause,
         )
     val queueExperience =
-        rememberVexStreamQueueExperience(
-            controller,
-        )
+        rememberVexStreamQueueExperience()
     val queueProjection =
         queueExperience.projection
     val repeatExperience =
-        rememberVexStreamRepeatExperience(
-            controller,
-        )
+        rememberVexStreamRepeatExperience()
     val repeatProjection =
         repeatExperience.projection
     val seekConnection =
-        rememberVexStreamPlaybackSeekConnection(
-            controller,
-        )
+        rememberVexStreamPlaybackSeekConnection()
     val selected =
         runtime.presentation.selected(
             VexStreamMusicScreen.FullPlayerContent,
