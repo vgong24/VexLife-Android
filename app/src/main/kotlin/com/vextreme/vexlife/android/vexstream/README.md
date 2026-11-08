@@ -35,7 +35,12 @@ WHERE CAN MEDIA COME FROM?
     verified local copy
       -> durable Android MediaStore content URI when device publication succeeded
       -> legacy app-private copy only where current migration/compatibility truth still requires it
-    paired VexStream desktop
+    paired VexStream Hub/Desktop
+      -> VexStreamHubPartner external-participant vocabulary
+      -> existing hubRef = Partner Source
+      -> pinned certificateSha256 = Connection identity
+      -> provider representation converts to sanitized Partner Signal
+      -> repository remains consumer/admission owner
     admitted remote routes
     -> repository/source-resolution/network owners
 
@@ -139,6 +144,62 @@ journeyTest/.../vexstream/
 
 The folders are not required to be symmetrical. A source area exists when its human/product question
 and owner are real.
+
+## Hub Partner vs Media3 provider boundary
+
+The current architecture pressure distinguishes two outside relationships that must not be collapsed:
+
+~~~text
+paired VexStream Hub/Desktop
+    independently-owned external participant
+    -> VexPartner is earned when its existing Source / Connection / Signal relationships reduce
+       duplicated transport/repository meaning
+
+Media3 Player / MediaController
+    Android-local playback/platform realization
+    -> provider boundary for Playback / Queue / Repeat
+    -> not rejected from Partner by assumption
+    -> positive Partner pressure found no independent Source / Connection provenance / Signal
+       vocabulary there that was not already Family meaning
+~~~
+
+Current Hub Partner pressure is stacked on VexPartner #219.
+
+~~~text
+HTTP catalog JSON
+-> VexStreamHubPartner.Connection.CatalogConversion
+-> Signal.Catalog
+   -> Source(hubRef)
+-> PairedVexStreamMusicRepository admission
+~~~
+
+The existing pinned certificate digest is the paired endpoint identity; mutable host/port routing is
+not promoted to Partner Source or semantic identity.
+
+Permanent:
+
+~~~text
+HUB PARTNER
+!= MEDIA3 PLAYER
+
+PARTNER SIGNAL
+!= FAMILY STATE
+
+PARTNER CONNECTION
+!= REPOSITORY
+
+MEDIA3 PROVIDER REALIZATION
+!= PARTNER REJECTION
+
+NOT PARTNER
+-> rightful provider/platform boundary
+-> consumer reconciliation
+-> Family
+~~~
+
+This distinction came from positively testing both candidate routes. Do not treat an untested
+"ordinary provider" label as authority, and do not force Partner vocabulary where the concrete
+external-participant question is absent.
 
 ## Library organization — current slice
 
