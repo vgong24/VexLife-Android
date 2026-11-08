@@ -18,6 +18,7 @@ import com.vextreme.vexlife.android.MainActivity
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.VexApplication
 import com.vextreme.vexlife.android.dependency.VexDependencyBuildScope
+import com.vextreme.vexlife.android.dependency.VexDependencyFactory
 import com.vextreme.vexlife.android.dependency.VexDependencyModule
 import com.vextreme.vexlife.android.dependency.VexDependencyProvider
 import com.vextreme.vexlife.android.dependency.VexServiceScope
@@ -38,6 +39,12 @@ import kotlinx.coroutines.launch
  */
 class VexMapsNavigationService :
     Service() {
+    private lateinit var serviceDependencies:
+        VexDependencyFactory<
+            VexServiceScope<
+                VexMapsNavigationService
+            >
+        >
     private lateinit var serviceScope:
         CoroutineScope
 
@@ -64,7 +71,7 @@ class VexMapsNavigationService :
                 )
         val serviceModule =
             VexMapsNavigationServiceDependencyModule()
-        val serviceDependencies =
+        serviceDependencies =
             vexApplication
                 .dependencies
                 .child(
