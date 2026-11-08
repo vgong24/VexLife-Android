@@ -7,7 +7,6 @@ import com.vextreme.vexlife.android.behavior.VexPartner
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueShuffleAvailable
-import java.util.concurrent.atomic.AtomicLong
 
 internal class Media3VexStreamPlayerConnection(
     private val player:
@@ -54,18 +53,11 @@ internal class Media3VexStreamPlayerConnection(
             Player.Events,
     )
 
-    private val occurrence =
-        nextConnectionOccurrence
-            .getAndIncrement()
-
     override val id =
-        VexStreamPlayerPartner.Connection.Id(
-            value =
-                "media3-player-" +
-                    occurrence,
-            occurrence =
-                occurrence,
-        )
+        VexStreamPlayerPartner.Connection.Id
+            .next(
+                "media3-player",
+            )
 
     private var closed =
         false
@@ -230,12 +222,6 @@ internal class Media3VexStreamPlayerConnection(
         }
     }
 
-    companion object {
-        private val nextConnectionOccurrence =
-            AtomicLong(
-                1L,
-            )
-    }
 }
 
 private fun Player.toVexStreamPlayerSignals():
