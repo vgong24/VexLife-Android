@@ -1,7 +1,13 @@
 package com.vextreme.vexlife.android.vexstream.player
 
+import android.content.ComponentName
+import android.content.Context
+import android.os.Handler
+
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackService
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackEffect
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackEffectConnection
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackSeekConnection
@@ -14,6 +20,11 @@ import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueEffectConnecti
 import com.vextreme.vexlife.android.vexstream.queue.shuffleVexStreamFutureQueue
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatEffect
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatEffectConnection
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.android.asCoroutineDispatcher
+import kotlinx.coroutines.withContext
 
 /**
  * Media3 controller realization at the outbound side of the same VexStream Player Partner.
@@ -25,12 +36,7 @@ internal class Media3VexStreamPlayerControlConnection(
     private val controller:
         MediaController,
 ) :
-    VexStreamPlayerPartner.Connection,
-    VexStreamPlaybackEffectConnection,
-    VexStreamQueueEffectConnection,
-    VexStreamRepeatEffectConnection,
-    VexStreamPlaybackSeekConnection,
-    VexStreamPlaybackProgressConnection {
+    VexStreamPlayerPartner.Connection.Outbound {
     override val id =
         VexStreamPlayerPartner.Connection.Id
             .next(
@@ -202,3 +208,82 @@ internal class Media3VexStreamPlayerControlConnection(
 }
 
 // [VXG RealForever][VEXSTREAM][PLAYER-PARTNER][MEDIA3-CONTROL]
+
+
+/**
+ * One bounded Media3 controller occurrence for a short-lived caller such as a Widget action.
+ *
+ * Media3 connection, timeout, provider-looper handoff and release remain inside the concrete Player
+ * Partner realization boundary.
+ */
+internal suspend fun <
+    Result,
+> withVexStreamPlayerOutboundConnection(
+    context:
+        Context,
+    block:
+        suspend (
+            VexStreamPlayerPartner.Connection.Outbound,
+        ) -> Result,
+):
+    Result? {
+    val appContext =
+        context.applicationContext
+    val controllerFuture =
+        MediaController.Builder(
+            appContext,
+            SessionToken(
+                appContext,
+                ComponentName(
+                    appContext,
+                    VexStreamPlaybackService::class.java,
+                ),
+            ),
+        ).buildAsync()
+
+    return try {
+        val controller =
+            withContext(
+                Dispatchers.IO,
+            ) {
+                controllerFuture
+                    .get(
+                        PLAYER_CONTROLLER_CONNECT_TIMEOUT_MS,
+                        TimeUnit.MILLISECONDS,
+                    )
+            }
+        val providerDispatcher =
+            Handler(
+                controller.applicationLooper,
+            ).asCoroutineDispatcher(
+                "VexStream Player Partner Media3",
+            )
+
+        withContext(
+            providerDispatcher,
+        ) {
+            block(
+                Media3VexStreamPlayerControlConnection(
+                    controller,
+                ),
+            )
+        }
+    } catch (
+        cancelled:
+            CancellationException,
+    ) {
+        throw cancelled
+    } catch (
+        failure:
+            Exception,
+    ) {
+        null
+    } finally {
+        MediaController.releaseFuture(
+            controllerFuture,
+        )
+    }
+}
+
+private const val PLAYER_CONTROLLER_CONNECT_TIMEOUT_MS =
+    2_000L

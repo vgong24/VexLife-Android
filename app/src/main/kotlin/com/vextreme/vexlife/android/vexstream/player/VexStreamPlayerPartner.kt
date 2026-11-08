@@ -1,6 +1,11 @@
 package com.vextreme.vexlife.android.vexstream.player
 
 import com.vextreme.vexlife.android.behavior.VexPartner
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackEffectConnection
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackProgressConnection
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackSeekConnection
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueEffectConnection
+import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatEffectConnection
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -170,6 +175,20 @@ internal object VexStreamPlayerPartner :
                 }
             }
         }
+
+        /**
+         * Outbound capability of one live Player Connection.
+         *
+         * Existing feature-owned Effects/Seek remain their own vocabulary; this child only states
+         * that one Player Connection can realize those already-resolved requests.
+         */
+        interface Outbound :
+            Connection,
+            VexStreamPlaybackEffectConnection,
+            VexStreamQueueEffectConnection,
+            VexStreamRepeatEffectConnection,
+            VexStreamPlaybackSeekConnection,
+            VexStreamPlaybackProgressConnection
 
         data class Observation(
             override val connectionId:
