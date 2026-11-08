@@ -133,10 +133,8 @@ class VexStreamPlaybackReadStateTest {
         )
         assertTrue(
             observation
-                .playbackProjection[
-                    com.vextreme.vexlife.android.vexstream.playback
-                        .VexStreamPlaybackControl.PlayPause
-                ].isAvailable,
+                .playbackProjection
+                .playPauseAvailable,
         )
         assertEquals(
             false,
