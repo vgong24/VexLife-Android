@@ -648,6 +648,80 @@ abstract class VexExecution protected constructor(
             )
         }
 
+    private fun <Result> beginHandoff(
+        approach:
+            Approach,
+        relationshipId:
+            RelationshipId?,
+        handoffDispatcher:
+            CoroutineDispatcher,
+        operation:
+            KSuspendFunction0<Result>,
+        beforeOperation:
+            () -> Unit,
+        onResult:
+            (Result) -> Unit,
+        onFailure:
+            (Throwable) -> Unit,
+    ):
+        Job =
+        when (
+            approach
+        ) {
+            Approach.Independent ->
+                launchSource(
+                    source =
+                        operation,
+                ) {
+                    executeOperation(
+                        operation = {
+                            handoff(
+                                handoffDispatcher,
+                            ) {
+                                operation()
+                            }
+                        },
+                        beforeOperation =
+                            beforeOperation,
+                        onResult =
+                            onResult,
+                        onFailure =
+                            onFailure,
+                    )
+                }
+
+            Approach.Earliest,
+            Approach.Latest,
+            Approach.Queued,
+            ->
+                beginRelationship(
+                    approach =
+                        approach,
+                    relationshipId =
+                        requireNotNull(
+                            relationshipId,
+                        ) {
+                            approach.name +
+                                " execution requires RelationshipId"
+                        },
+                    source =
+                        operation,
+                    operation = {
+                        handoff(
+                            handoffDispatcher,
+                        ) {
+                            operation()
+                        }
+                    },
+                    beforeOperation =
+                        beforeOperation,
+                    onResult =
+                        onResult,
+                    onFailure =
+                        onFailure,
+                )
+        }
+
     /**
      * Relationship-addressed maintained work.
      *
@@ -1455,6 +1529,59 @@ abstract class VexExecution protected constructor(
                     )
             }
         }
+
+        /**
+         * Consume one already-authored Act relationship while entering provider-owned affinity
+         * inside the same admitted Job.
+         *
+         * [handoffDispatcher] is provider/thread realization mechanics only. It does not contribute
+         * RelationshipId, create another occurrence, or change the Family-authored overlap law.
+         */
+        @RelationshipFoundationApi
+        fun <Result> begin(
+            executionRoot:
+                VexExecutionRoot,
+            owner:
+                Any,
+            approach:
+                Approach,
+            relationshipId:
+                RelationshipId?,
+            handoffDispatcher:
+                CoroutineDispatcher,
+            operation:
+                KSuspendFunction0<Result>,
+            beforeOperation:
+                () -> Unit =
+                {},
+            onResult:
+                (Result) -> Unit =
+                {},
+            onFailure:
+                (Throwable) -> Unit =
+                {},
+        ):
+            Job =
+            executionRoot
+                .directExecution(
+                    owner,
+                )
+                .beginHandoff(
+                    approach =
+                        approach,
+                    relationshipId =
+                        relationshipId,
+                    handoffDispatcher =
+                        handoffDispatcher,
+                    operation =
+                        operation,
+                    beforeOperation =
+                        beforeOperation,
+                    onResult =
+                        onResult,
+                    onFailure =
+                        onFailure,
+                )
 
         /**
          * Consume an already-authored overlap Approach without making the feature translate that

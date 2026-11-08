@@ -5,6 +5,7 @@ package com.vextreme.vexlife.android.behavior
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import kotlin.reflect.KClass
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -341,6 +342,9 @@ abstract class VexFamily<
                         SuccessOutput,
                         FailureOutput
                     >,
+                handoffDispatcher:
+                    CoroutineDispatcher? =
+                    null,
                 beforeOperation:
                     () -> Unit =
                     {},
@@ -353,34 +357,73 @@ abstract class VexFamily<
                     ) -> Unit =
                     {},
             ):
-                Job =
-                VexExecution.begin(
-                    executionRoot =
-                        executionRoot,
-                    owner =
-                        owner,
-                    approach =
-                        approach,
-                    relationshipId =
-                        relationshipId,
-                    operation =
-                        method::invoke,
-                    beforeOperation =
-                        beforeOperation,
-                    onResult = { result ->
+                Job {
+                val resultHandler:
+                    (
+                        VexMethod.Result<
+                            SuccessOutput,
+                            FailureOutput
+                        >
+                    ) -> Unit = { result ->
                         onResult(
                             result,
                         )
-                    },
-                    onFailure = { error ->
+                    }
+                val failureHandler:
+                    (Throwable) -> Unit = { error ->
                         onResult(
                             VexMethod.Result.Error(
                                 cause =
                                     error,
                             ),
                         )
-                    },
-                )
+                    }
+
+                return if (
+                    handoffDispatcher ==
+                    null
+                ) {
+                    VexExecution.begin(
+                        executionRoot =
+                            executionRoot,
+                        owner =
+                            owner,
+                        approach =
+                            approach,
+                        relationshipId =
+                            relationshipId,
+                        operation =
+                            method::invoke,
+                        beforeOperation =
+                            beforeOperation,
+                        onResult =
+                            resultHandler,
+                        onFailure =
+                            failureHandler,
+                    )
+                } else {
+                    VexExecution.begin(
+                        executionRoot =
+                            executionRoot,
+                        owner =
+                            owner,
+                        approach =
+                            approach,
+                        relationshipId =
+                            relationshipId,
+                        handoffDispatcher =
+                            handoffDispatcher,
+                        operation =
+                            method::invoke,
+                        beforeOperation =
+                            beforeOperation,
+                        onResult =
+                            resultHandler,
+                        onFailure =
+                            failureHandler,
+                    )
+                }
+            }
         }
 
         /**

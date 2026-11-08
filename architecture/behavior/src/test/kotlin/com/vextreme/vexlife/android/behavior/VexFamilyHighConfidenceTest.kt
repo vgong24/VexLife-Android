@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 
@@ -87,6 +88,24 @@ class VexFamilyHighConfidenceTest {
                             value,
                     )
                 }
+        }
+
+        class ThreadCapturingSaveMethod :
+            VexFamily.Act.Method<
+                ValueFamily,
+                String,
+                Unit
+            > {
+            override suspend fun invoke():
+                VexMethod.Result<
+                    String,
+                    Unit
+                > =
+                VexMethod.Result.Success(
+                    output =
+                        Thread.currentThread()
+                            .name,
+                )
         }
 
         class ThrowingSaveMethod :
@@ -337,6 +356,93 @@ class VexFamilyHighConfidenceTest {
                 root.joinStopAll(
                     "test complete",
                 )
+            }
+        }
+
+    @Test
+    fun acceptedFamilyMethodMayCrossProviderAffinityInsideTheSameExecutionOccurrence() =
+        runBlocking {
+            val workerExecutor =
+                Executors.newSingleThreadExecutor { runnable ->
+                    Thread(
+                        runnable,
+                        "family-worker",
+                    )
+                }
+            val providerExecutor =
+                Executors.newSingleThreadExecutor { runnable ->
+                    Thread(
+                        runnable,
+                        "family-provider",
+                    )
+                }
+            val workerDispatcher =
+                workerExecutor
+                    .asCoroutineDispatcher()
+            val providerDispatcher =
+                providerExecutor
+                    .asCoroutineDispatcher()
+            val root =
+                VexExecutionRoot(
+                    dispatcher =
+                        workerDispatcher,
+                )
+            val family =
+                ValueFamily(
+                    initialState =
+                        ValueFamily.State.Empty,
+                )
+            val act =
+                checkNotNull(
+                    family.activate(
+                        ValueFamily.Control.Save(
+                            value =
+                                "provider",
+                        ),
+                    ),
+                )
+            var providerThread:
+                String? =
+                null
+
+            try {
+                val job =
+                    checkNotNull(
+                        act.launchWith(
+                            root,
+                        ),
+                    )
+                        .method(
+                            method =
+                                ValueFamily.ThreadCapturingSaveMethod(),
+                            handoffDispatcher =
+                                providerDispatcher,
+                            onResult = { result ->
+                                providerThread =
+                                    (
+                                        result as
+                                            VexMethod.Result.Success<String>
+                                    ).output
+                            },
+                        )
+
+                job.join()
+
+                assertTrue(
+                    providerThread
+                        ?.startsWith(
+                            "family-provider",
+                        ) ==
+                        true,
+                )
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
+                workerDispatcher.close()
+                providerDispatcher.close()
+                workerExecutor.shutdownNow()
+                providerExecutor.shutdownNow()
             }
         }
 

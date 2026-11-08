@@ -314,7 +314,19 @@ handoff(providerDispatcher) {
 }
 ~~~
 
-handoff changes execution context inside the same Job. It does not create another occurrence,
+When the work is an accepted Family Act.Method, the same boundary is available through the canonical
+Act continuation:
+
+~~~kotlin
+act.launchWith(executionRoot)
+    ?.method(
+        method = boundMethod,
+        handoffDispatcher = providerDispatcher,
+    )
+~~~
+
+The Family still owns Approach + RelationshipId. The dispatcher is provider realization mechanics
+only. Handoff changes execution context inside the same Job; it does not create another occurrence,
 relationship, retry boundary, or lifetime owner.
 
 ## Operation/result callback boundary
