@@ -9,9 +9,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 /**
  * UI-facing membrane for the process-shared VexStream Playback Family.
  *
- * Compose observes the same Family State that background Service/Relay consumers observe. The
- * configuration-lifetime MediaController connection only realizes Controls; it is not another
- * semantic truth owner.
+ * Compose observes process-shared Family semantics plus retained Player Partner outside truth.
+ * The configuration-lifetime Player Partner controller Connection only realizes Effects/progress;
+ * it is not another semantic truth owner.
  */
 internal interface VexStreamPlaybackExperience {
     val displayState:
@@ -51,9 +51,7 @@ internal fun rememberVexStreamPlaybackExperience():
         owner.connection
 
     val playback by
-        rememberVexStreamPlaybackReadState(
-            owner.controller,
-        )
+        rememberVexStreamPlaybackReadState()
 
     val semanticState by
         owner

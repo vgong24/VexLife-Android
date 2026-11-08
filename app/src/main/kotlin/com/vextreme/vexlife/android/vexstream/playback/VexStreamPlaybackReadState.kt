@@ -2,15 +2,16 @@ package com.vextreme.vexlife.android.vexstream.playback
 
 import android.util.Log
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.media3.common.C
 import androidx.media3.common.Player
-import androidx.media3.session.MediaController
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueProjection
 import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueBehavior
 import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueControls
@@ -25,6 +26,31 @@ import java.util.concurrent.atomic.AtomicLong
  * This is not the semantic [VexStreamPlaybackState]. It carries Media3 read data such as metadata,
  * queue position and progress that the view needs alongside the Behavior Projection.
  */
+internal data class VexStreamPlaybackProgress(
+    val positionMs:
+        Long =
+        0L,
+    val durationMs:
+        Long =
+        0L,
+    val bufferedPositionMs:
+        Long =
+        0L,
+) {
+    companion object {
+        val Empty =
+            VexStreamPlaybackProgress()
+    }
+}
+
+internal interface VexStreamPlaybackProgressConnection {
+    val isPlaying:
+        Boolean
+
+    fun readProgress():
+        VexStreamPlaybackProgress
+}
+
 internal data class VexStreamPlaybackReadState(
     val currentMediaId: String? = null,
     val currentTitle: String = "",
@@ -299,7 +325,11 @@ internal fun VexStreamPlayerPartner.Current.toVexStreamCurrentPlaybackObservatio
             toVexStreamQueueProjection(),
     )
 
-private fun VexStreamPlayerPartner.Current.toVexStreamPlaybackReadState():
+private fun VexStreamPlayerPartner.Current.toVexStreamPlaybackReadState(
+    progress:
+        VexStreamPlaybackProgress =
+        VexStreamPlaybackProgress.Empty,
+):
     VexStreamPlaybackReadState =
     when (
         this
@@ -325,11 +355,11 @@ private fun VexStreamPlayerPartner.Current.toVexStreamPlaybackReadState():
                 currentIndex =
                     queueNavigation.currentIndex,
                 currentPositionMs =
-                    0L,
+                    progress.positionMs,
                 durationMs =
-                    0L,
+                    progress.durationMs,
                 bufferedPositionMs =
-                    0L,
+                    progress.bufferedPositionMs,
             )
     }
 
@@ -419,95 +449,66 @@ internal fun Player.toVexStreamCurrentPlaybackObservation(
 }
 
 @Composable
-internal fun rememberVexStreamPlaybackReadState(
-    controller:
-        MediaController?,
-): State<
-    VexStreamPlaybackReadState
-> {
-    val projected =
+internal fun rememberVexStreamPlaybackReadState():
+    State<
+        VexStreamPlaybackReadState
+    > {
+    val owner:
+        VexStreamPlaybackConnectionViewModel =
+        viewModel()
+    val playerCurrent by
+        owner
+            .playerStore
+            .states
+            .collectAsStateWithLifecycle(
+                initialValue =
+                    owner
+                        .playerStore
+                        .current,
+            )
+    val progressConnection =
+        owner.progressConnection
+    val progress =
         remember(
-            controller,
+            progressConnection,
         ) {
             mutableStateOf(
-                controller
-                    ?.toVexStreamPlaybackReadState()
-                    ?: VexStreamPlaybackReadState
+                progressConnection
+                    ?.readProgress()
+                    ?: VexStreamPlaybackProgress
                         .Empty,
             )
         }
 
-    DisposableEffect(
-        controller,
+    LaunchedEffect(
+        playerCurrent,
+        progressConnection,
     ) {
-        if (
-            controller == null
-        ) {
-            projected.value =
-                VexStreamPlaybackReadState
+        progress.value =
+            progressConnection
+                ?.readProgress()
+                ?: VexStreamPlaybackProgress
                     .Empty
-            return@DisposableEffect onDispose {}
-        }
-
-        val listener =
-            object :
-                Player.Listener {
-                override fun onEvents(
-                    player: Player,
-                    events:
-                        Player.Events,
-                ) {
-                    val current =
-                        player
-                            .toVexStreamPlaybackReadState()
-                    projected.value =
-                        current
-                    VexStreamPlaybackTrace.record(
-                        stage =
-                            "full-player.event",
-                        mediaId =
-                            current.currentMediaId,
-                        title =
-                            current.currentTitle,
-                        artist =
-                            current.currentArtist,
-                        detail =
-                            "index=${current.currentIndex}",
-                    )
-                }
-            }
-
-        controller.addListener(
-            listener,
-        )
-        projected.value =
-            controller
-                .toVexStreamPlaybackReadState()
-
-        onDispose {
-            controller.removeListener(
-                listener,
-            )
-        }
     }
 
     LaunchedEffect(
-        controller,
+        progressConnection,
     ) {
         if (
-            controller == null
+            progressConnection ==
+            null
         ) {
             return@LaunchedEffect
         }
 
         while (true) {
-            projected.value =
-                controller
-                    .toVexStreamPlaybackReadState()
+            progress.value =
+                progressConnection
+                    .readProgress()
 
             delay(
                 if (
-                    controller.isPlaying
+                    progressConnection.isPlaying
                 ) {
                     250L
                 } else {
@@ -517,7 +518,12 @@ internal fun rememberVexStreamPlaybackReadState(
         }
     }
 
-    return projected
+    return rememberUpdatedState(
+        playerCurrent
+            .toVexStreamPlaybackReadState(
+                progress.value,
+            ),
+    )
 }
 
 internal fun Player
