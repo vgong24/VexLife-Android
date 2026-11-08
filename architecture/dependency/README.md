@@ -49,9 +49,62 @@ NavigationService composition
 The shared parent object is not copied into each Service. A Service keeps its concrete behavior alive;
 the Family remains the semantic State owner and the Relay remains the relationship owner.
 
-The next dependency-foundation pressure is to make scope ancestry compiler-visible so Application,
-retained Session, and Service sibling relationships do not rely on naming or code placement. That
-typed-scope refinement is not claimed by the current factory merely because parent reuse already works.
+The dependency foundation now makes that ancestry compiler-visible:
+
+~~~text
+VexApplicationScope
+├── VexSessionScope
+├── VexServiceScope<VexStreamPlaybackService>
+└── VexServiceScope<VexMapsNavigationService>
+~~~
+
+The bindings are structural:
+
+~~~text
+VexDependencyProvider<VexApplicationScope, PlaybackFamily>
+VexDependencyProvider<VexSessionScope, EventsConvergenceRelay>
+VexDependencyProvider<VexServiceScope<VexStreamPlaybackService>, VexExecutionRoot>
+~~~
+
+`VexDependencyModule<Scope>` accepts declarations for one exact Scope, and
+`VexDependencyFactory<Scope>.child(...)` accepts only a
+`VexChildDependencyScope<Scope>`. A Service sibling therefore cannot be silently presented
+as a Session dependency merely because the object is constructible.
+
+The heterogeneous traversal common type is `VexDependencyNode`, not `Any`/star-projected dependency
+declarations. Value storage inside the factory remains private implementation machinery; the
+source-visible topology retains Scope + Value types.
+
+## Typed scope topology
+
+Scope is a dependency relationship, not a naming convention:
+
+~~~text
+A DEPENDENCY'S SCOPE
+IS PART OF ITS TYPE.
+
+A CHILD FACTORY'S PARENT
+IS PART OF ITS TYPE RELATIONSHIP.
+~~~
+
+Android realizes the current scope relationships:
+
+~~~text
+VexApplicationScope
+    process lifetime
+
+VexSessionScope : VexChildDependencyScope<VexApplicationScope>
+    retained VexLife session lifetime
+
+VexServiceScope<ServiceType : android.app.Service>
+    sibling Service child lifetime of VexApplicationScope
+~~~
+
+The concrete Service type remains in `VexServiceScope<ServiceType>` so Playback and Navigation
+are not interchangeable siblings in source.
+
+This type topology does not make Android framework classes semantic owners. It only makes the
+dependency lifetime relationship locally traceable.
 
 ## Identity
 
