@@ -113,10 +113,17 @@ class VexStreamPlayerStoreTest {
             )
         val queueItems =
             VexStreamPlayerPartner.Signal.QueueItems(
-                mediaIds =
+                items =
                     (0 until 500)
                         .map { index ->
-                            "song-$index"
+                            VexStreamPlayerPartner.Signal.QueueItems.Item(
+                                mediaId =
+                                    "song-$index",
+                                title =
+                                    "Song $index",
+                                artist =
+                                    "Artist",
+                            )
                         },
             )
 
