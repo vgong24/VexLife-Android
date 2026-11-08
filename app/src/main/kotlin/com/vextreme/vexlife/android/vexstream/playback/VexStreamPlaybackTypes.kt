@@ -1,5 +1,7 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
+import kotlinx.coroutines.Job
+
 /**
  * Concrete Playback realization boundary.
  *
@@ -10,7 +12,8 @@ internal interface VexStreamPlaybackConnection {
     fun activate(
         control:
             VexStreamPlaybackControl,
-    )
+    ):
+        Job?
 }
 
 /**

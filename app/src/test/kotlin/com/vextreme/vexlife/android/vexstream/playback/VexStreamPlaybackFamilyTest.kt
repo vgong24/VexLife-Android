@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
+import com.vextreme.vexlife.android.execution.VexExecution
 import org.junit.Test
 
 class VexStreamPlaybackFamilyTest {
@@ -30,6 +31,11 @@ class VexStreamPlaybackFamilyTest {
             VexStreamPlaybackEffect
                 .RequestPlay,
             play?.effect,
+        )
+        assertEquals(
+            VexExecution.Approach.Latest,
+            play?.begin
+                ?.approach,
         )
         assertEquals(
             VexStreamPlaybackState.Media(

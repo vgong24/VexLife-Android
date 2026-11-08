@@ -26,9 +26,11 @@ package com.vextreme.vexlife.android.vexstream.playback
  *
  * ## Android realization
  *
- * [Media3VexStreamPlaybackConnection] receives the same Family and one MediaController. It re-reads
- * provider truth, activates the Family Control, realizes the accepted Effect, and reconciles provider
- * truth back into that same Family.
+ * [Media3VexStreamPlaybackConnection] receives the same Family, process Execution root, and one
+ * MediaController. Family activation authors the pending State + Latest Effect relationship; the
+ * bound Playback Act.Method enters VexExecution custody and crosses Media3 application-looper
+ * affinity inside that same Job. Sustained provider truth returns through the Service-owned Player
+ * observer rather than a second action-local observation loop.
  *
  * [VexStreamPlaybackConnectionViewModel] owns only the UI MediaController connection across Android
  * configuration recreation. It resolves the Family from the process composition root rather than

@@ -1,7 +1,11 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
+import android.os.Handler
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.android.asCoroutineDispatcher
 
 /**
  * Media3 realization of accepted Playback Family Effects.
@@ -15,79 +19,51 @@ internal class Media3VexStreamPlaybackConnection(
         MediaController,
     private val family:
         VexStreamPlaybackFamily,
+    private val executionRoot:
+        VexExecutionRoot,
 ) :
     VexStreamPlaybackConnection {
     override fun activate(
         control:
             VexStreamPlaybackControl,
-    ) {
-        observe(
-            controller,
-        )
-
-        val effect =
+    ):
+        Job? {
+        val act =
             family
                 .activate(
                     control,
                 )
-                ?.effect
-                ?: return
-
-        try {
-            realize(
-                effect,
+                ?: return null
+        val effect =
+            act.effect
+                ?: return null
+        val method =
+            VexStreamPlaybackFamily
+                .Act
+                .Method(
+                    controller =
+                        controller,
+                    effect =
+                        effect,
+                )
+        val providerDispatcher =
+            Handler(
+                controller.applicationLooper,
+            ).asCoroutineDispatcher(
+                "VexStream Media3",
             )
-        } catch (
-            failure:
-                Throwable
-        ) {
-            observe(
-                controller,
+
+        return act
+            .launchWith(
+                executionRoot,
             )
-            throw failure
-        }
-
-        observe(
-            controller,
-        )
+            ?.method(
+                method =
+                    method,
+                handoffDispatcher =
+                    providerDispatcher,
+            )
     }
-
-    private fun observe(
-        player:
-            Player,
-    ) {
-        family.observe(
-            reconcileVexStreamPlaybackObservation(
-                observed =
-                    player
-                        .toVexStreamPlaybackState(),
-                current =
-                    family
-                        .currentState,
-            ),
-        )
-    }
-
-    private fun realize(
-        effect:
-            VexStreamPlaybackEffect,
-    ) {
-        when (
-            effect
-        ) {
-            VexStreamPlaybackEffect.RequestPlay ->
-                controller.play()
-
-            VexStreamPlaybackEffect.RequestPause ->
-                controller.pause()
-
-            VexStreamPlaybackEffect.RestartCurrent -> {
-                controller.seekToDefaultPosition()
-                controller.play()
-            }
-        }
-    }
-}
 
 internal fun Player.toVexStreamPlaybackProjection(
     family:

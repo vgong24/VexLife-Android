@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.vexstream.playback
 
 import android.app.Application
 import android.content.ComponentName
+import android.os.Looper
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,6 +48,15 @@ internal class VexStreamPlaybackConnectionViewModel(
                     .playbackFamily,
             )
 
+    private val executionRoot =
+        vexApplication
+            .dependencies
+            .resolve(
+                vexApplication
+                    .dependencyModule
+                    .processExecutionRoot,
+            )
+
     private val controllerFuture =
         MediaController.Builder(
             application,
@@ -57,7 +67,11 @@ internal class VexStreamPlaybackConnectionViewModel(
                     VexStreamPlaybackService::class.java,
                 ),
             ),
-        ).buildAsync()
+        )
+            .setApplicationLooper(
+                Looper.getMainLooper(),
+            )
+            .buildAsync()
 
     var controller by
         mutableStateOf<
@@ -90,6 +104,8 @@ internal class VexStreamPlaybackConnectionViewModel(
                                     connected,
                                 family =
                                     family,
+                                executionRoot =
+                                    executionRoot,
                             )
                         controller =
                             connected

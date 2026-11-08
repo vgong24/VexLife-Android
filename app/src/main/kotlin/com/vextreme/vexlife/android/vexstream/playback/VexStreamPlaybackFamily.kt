@@ -1,6 +1,8 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
+import androidx.media3.session.MediaController
 import com.vextreme.vexlife.android.behavior.VexFamily
+import com.vextreme.vexlife.android.behavior.VexMethod
 
 /**
  * Process-shareable semantic owner for VexStream Playback.
@@ -79,7 +81,7 @@ internal class VexStreamPlaybackFamily(
                                     effect,
                                 ),
                         begin =
-                            begin(
+                            beginLatest(
                                 effect,
                             ),
                     )
@@ -132,6 +134,54 @@ internal class VexStreamPlaybackFamily(
                 state.restartAvailable &&
                     !state.restartPending
         }
+
+    /**
+     * Fully-bound Media3 realization vocabulary for one accepted Playback Act.
+     *
+     * The Family already authored the Effect and Latest overlap relationship. This Method carries
+     * only the concrete provider required to attempt that Effect. VexExecution owns the Job and
+     * provider-affinity handoff; sustained Player observation later returns provider truth.
+     */
+    object Act {
+        class Method(
+            private val controller:
+                MediaController,
+            val effect:
+                VexStreamPlaybackEffect,
+        ) :
+            VexFamily.Act.Method<
+                VexStreamPlaybackFamily,
+                Unit,
+                Unit
+            > {
+            override suspend fun invoke():
+                VexMethod.Result<
+                    Unit,
+                    Unit
+                > {
+                when (
+                    effect
+                ) {
+                    VexStreamPlaybackEffect.RequestPlay ->
+                        controller.play()
+
+                    VexStreamPlaybackEffect.RequestPause ->
+                        controller.pause()
+
+                    VexStreamPlaybackEffect.RestartCurrent -> {
+                        controller.seekToDefaultPosition()
+                        controller.play()
+                    }
+                }
+
+                return VexMethod.Result.Success(
+                    output =
+                        Unit,
+                )
+            }
+        }
+    }
+
 }
 
 // [VXG RealForever][VEXSTREAM][PLAYBACK][DIRECT-FAMILY]
