@@ -1,10 +1,5 @@
 package com.vextreme.vexlife.android.background
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -12,93 +7,70 @@ import org.junit.Test
 
 class BackgroundServiceRelayTest {
     @Test
-    fun oneProcessRelayTracksBackgroundRelationshipsAsTheyBecomeCurrentTogether() {
-        val playback =
-            MutableStateFlow(
-                false,
-            )
-        val navigation =
-            MutableStateFlow(
-                false,
-            )
-        val scope =
-            CoroutineScope(
-                SupervisorJob() +
-                    Dispatchers.Unconfined,
-            )
+    fun oneProcessRelayTracksBackgroundRelationshipsAsAlreadyOwnedTruthChanges() {
         val relay =
-            BackgroundServiceRelay(
-                playbackStates =
-                    playback,
-                navigationStates =
-                    navigation,
-            )
+            BackgroundServiceRelay()
 
-        try {
-            relay.activate(
-                scope,
-            )
+        assertEquals(
+            emptySet<
+                BackgroundServiceRelationship
+            >(),
+            relay.currentOutput
+                .activeRelationships,
+        )
+        assertFalse(
+            relay.currentOutput
+                .backgroundContinuityRequired,
+        )
 
-            assertEquals(
-                emptySet<
-                    BackgroundServiceRelationship
-                >(),
-                relay.currentOutput
-                    .activeRelationships,
-            )
-            assertFalse(
-                relay.currentOutput
-                    .backgroundContinuityRequired,
-            )
+        relay.observePlayback(
+            true,
+        )
 
-            playback.value =
-                true
+        assertEquals(
+            setOf(
+                BackgroundServiceRelationship
+                    .Playback,
+            ),
+            relay.currentOutput
+                .activeRelationships,
+        )
+        assertFalse(
+            relay.currentOutput
+                .concurrentBackgroundRelationships,
+        )
 
-            assertEquals(
-                setOf(
-                    BackgroundServiceRelationship
-                        .Playback,
-                ),
-                relay.currentOutput
-                    .activeRelationships,
-            )
-            assertFalse(
-                relay.currentOutput
-                    .concurrentBackgroundRelationships,
-            )
+        relay.observeNavigation(
+            true,
+        )
 
-            navigation.value =
-                true
+        assertEquals(
+            setOf(
+                BackgroundServiceRelationship
+                    .Playback,
+                BackgroundServiceRelationship
+                    .Navigation,
+            ),
+            relay.currentOutput
+                .activeRelationships,
+        )
+        assertTrue(
+            relay.currentOutput
+                .concurrentBackgroundRelationships,
+        )
 
-            assertEquals(
-                setOf(
-                    BackgroundServiceRelationship
-                        .Playback,
-                    BackgroundServiceRelationship
-                        .Navigation,
-                ),
-                relay.currentOutput
-                    .activeRelationships,
-            )
-            assertTrue(
-                relay.currentOutput
-                    .concurrentBackgroundRelationships,
-            )
+        relay.observePlayback(
+            false,
+        )
 
-            playback.value =
-                false
-
-            assertEquals(
-                setOf(
-                    BackgroundServiceRelationship
-                        .Navigation,
-                ),
-                relay.currentOutput
-                    .activeRelationships,
-            )
-        } finally {
-            scope.cancel()
-        }
+        assertEquals(
+            setOf(
+                BackgroundServiceRelationship
+                    .Navigation,
+            ),
+            relay.currentOutput
+                .activeRelationships,
+        )
     }
 }
 

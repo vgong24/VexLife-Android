@@ -9,6 +9,8 @@ import com.vextreme.vexlife.android.dependency.VexDependencyFactory
 import com.vextreme.vexlife.android.dependency.VexDependencyModule
 import com.vextreme.vexlife.android.dependency.VexDependencyProvider
 import com.vextreme.vexlife.android.elements.UIBlueprintRegistry
+import com.vextreme.vexlife.android.execution.VexExecution
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsNavigationProcess
 import com.vextreme.vexlife.android.screens.shared.maps.VexNavigationSession
@@ -17,11 +19,6 @@ import com.vextreme.vexlife.android.ui.SharedPreferencesThemeModeStore
 import com.vextreme.vexlife.android.ui.ThemeModeStore
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 
 /**
  * Android process-lifetime composition root.
@@ -113,8 +110,8 @@ internal class VexApplicationDependencyModule(
             androidApplication,
         )
 
-    val processScope =
-        ProcessScopeProvider()
+    val processExecutionRoot =
+        ProcessExecutionRootProvider()
 
     val playbackFamily =
         PlaybackFamilyProvider()
@@ -128,8 +125,8 @@ internal class VexApplicationDependencyModule(
                 playbackFamily,
             navigationSession =
                 navigationSession,
-            processScope =
-                processScope,
+            processExecutionRoot =
+                processExecutionRoot,
         )
 
 
@@ -140,7 +137,7 @@ internal class VexApplicationDependencyModule(
             blueprintRegistry,
             repositories,
             themeModeStore,
-            processScope,
+            processExecutionRoot,
             playbackFamily,
             navigationSession,
             backgroundServiceRelay,
@@ -215,24 +212,22 @@ internal class VexApplicationDependencyModule(
     }
 
     /**
-     * Process coroutine lifetime used only by process-lived dependency observation.
+     * Process-lifetime execution tree for process-owned asynchronous work.
      *
-     * Long lifetime does not imply continuous expensive work; Relay collectors suspend while their
-     * sources are unchanged and die with the Android process.
+     * Coroutine scope/supervision/dispatcher mechanics stay inside VexExecutionRoot. Application
+     * composition owns only this root lifetime; each semantic/relationship owner keeps its own Job
+     * custody through VexExecution.
      */
-    internal class ProcessScopeProvider :
+    internal class ProcessExecutionRootProvider :
         VexDependencyProvider<
-            CoroutineScope
+            VexExecutionRoot
         >() {
         override fun create(
             dependencies:
                 VexDependencyBuildScope,
         ):
-            CoroutineScope =
-            CoroutineScope(
-                SupervisorJob() +
-                    Dispatchers.Default,
-            )
+            VexExecutionRoot =
+            VexExecutionRoot()
     }
 
     /** One semantic Playback Family shared by UI, Service, Widget projections, and process Relays. */
@@ -276,9 +271,9 @@ internal class VexApplicationDependencyModule(
             VexDependencyProvider<
                 VexNavigationSession
             >,
-        private val processScope:
+        private val processExecutionRoot:
             VexDependencyProvider<
-                CoroutineScope
+                VexExecutionRoot
             >,
     ) :
         VexDependencyProvider<
@@ -288,7 +283,7 @@ internal class VexApplicationDependencyModule(
                 listOf(
                     playbackFamily,
                     navigationSession,
-                    processScope,
+                    processExecutionRoot,
                 ),
         ) {
         override fun create(
@@ -304,46 +299,56 @@ internal class VexApplicationDependencyModule(
                 dependencies.require(
                     navigationSession,
                 )
+            val executionRoot =
+                dependencies.require(
+                    processExecutionRoot,
+                )
+            val relay =
+                BackgroundServiceRelay()
 
-            return BackgroundServiceRelay(
-                playbackStates =
-                    playback
-                        .states
-                        .map { state ->
-                            state !=
-                                VexStreamPlaybackState
-                                    .NoMedia
-                        }
-                        .distinctUntilChanged(),
-                navigationStates =
-                    navigation
-                        .states
-                        .map { state ->
-                            when (
-                                state.phase
-                            ) {
-                                VexNavigationSessionPhase.READY,
-                                VexNavigationSessionPhase.ACTIVE,
-                                VexNavigationSessionPhase.OFF_ROUTE,
-                                VexNavigationSessionPhase.LOCATION_HELD,
-                                ->
-                                    true
+            VexExecution.observe(
+                executionRoot =
+                    executionRoot,
+                owner =
+                    relay,
+                source =
+                    playback::states,
+            ) { state ->
+                relay.observePlayback(
+                    state !=
+                        VexStreamPlaybackState
+                            .NoMedia,
+                )
+            }
 
-                                VexNavigationSessionPhase.IDLE,
-                                VexNavigationSessionPhase.ARRIVED,
-                                ->
-                                    false
-                            }
-                        }
-                        .distinctUntilChanged(),
-            )
-                .also { relay ->
-                    relay.activate(
-                        dependencies.require(
-                            processScope,
-                        ),
-                    )
-                }
+            VexExecution.observe(
+                executionRoot =
+                    executionRoot,
+                owner =
+                    relay,
+                source =
+                    navigation::states,
+            ) { state ->
+                relay.observeNavigation(
+                    when (
+                        state.phase
+                    ) {
+                        VexNavigationSessionPhase.READY,
+                        VexNavigationSessionPhase.ACTIVE,
+                        VexNavigationSessionPhase.OFF_ROUTE,
+                        VexNavigationSessionPhase.LOCATION_HELD,
+                        ->
+                            true
+
+                        VexNavigationSessionPhase.IDLE,
+                        VexNavigationSessionPhase.ARRIVED,
+                        ->
+                            false
+                    },
+                )
+            }
+
+            return relay
         }
     }
 

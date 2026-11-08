@@ -32,6 +32,7 @@ The current background-Service convergence uses the existing parent-reuse law di
 
 ~~~text
 VexApplication dependency lifetime
+    process VexExecutionRoot
     PlaybackFamily
     Navigation process truth
     BackgroundServiceRelay

@@ -72,7 +72,9 @@ source exists. If a lower Relay already owns a relationship needed here, consume
 output rather than reopening its child inputs.
 
 BackgroundServiceRelay lifetime is process-level because its relationship remains meaningful while
-background Services outlive the UI session. That does not make all Relays process-lived:
+background Services outlive the UI session. Its Playback/Navigation observation Jobs are admitted
+through the process VexExecutionRoot with the Relay as the live owner; the Relay itself keeps only
+relationship calculation/current output. That does not make all Relays process-lived:
 EventsConvergenceRelay remains session-lived because its current relationship includes UI/session
 attention context.
 

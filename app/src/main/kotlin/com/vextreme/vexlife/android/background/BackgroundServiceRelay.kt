@@ -4,8 +4,6 @@ import com.vextreme.vexlife.android.relay.VexCompoundRelay
 import com.vextreme.vexlife.android.relay.VexCompoundState
 import com.vextreme.vexlife.android.relay.VexInputState
 import com.vextreme.vexlife.android.relay.VexOutputState
-import com.vextreme.vexlife.android.relay.vexDependencies
-import kotlinx.coroutines.flow.Flow
 
 /**
  * Current background-capable VexLife relationships represented by this process convergence.
@@ -81,12 +79,7 @@ internal data class BackgroundServiceOutputState(
  * convergence directly or through already-converged lower Relay outputs. Do not reopen lower Relay
  * children at this level merely to reconstruct relationship meaning they already own.
  */
-internal class BackgroundServiceRelay(
-    private val playbackStates:
-        Flow<Boolean>,
-    private val navigationStates:
-        Flow<Boolean>,
-) :
+internal class BackgroundServiceRelay :
     VexCompoundRelay<
         BackgroundServiceInputState,
         BackgroundServiceOutputState
@@ -103,33 +96,33 @@ internal class BackgroundServiceRelay(
         initialOutputState =
             BackgroundServiceOutputState(),
     ) {
-    override fun dependencies() =
-        vexDependencies<
-            BackgroundServiceInputState
-        > {
-            observe(
-                dependencyRef =
-                    PLAYBACK_DEPENDENCY,
-                flow =
-                    playbackStates,
-            ) { active ->
-                BackgroundServiceInputState(
-                    playbackActive =
-                        active,
-                )
-            }
-            observe(
-                dependencyRef =
-                    NAVIGATION_DEPENDENCY,
-                flow =
-                    navigationStates,
-            ) { active ->
-                BackgroundServiceInputState(
-                    navigationActive =
-                        active,
-                )
-            }
-        }
+    fun observePlayback(
+        active:
+            Boolean,
+    ):
+        BackgroundServiceOutputState {
+        send(
+            BackgroundServiceInputState(
+                playbackActive =
+                    active,
+            ),
+        )
+        return currentOutput
+    }
+
+    fun observeNavigation(
+        active:
+            Boolean,
+    ):
+        BackgroundServiceOutputState {
+        send(
+            BackgroundServiceInputState(
+                navigationActive =
+                    active,
+            ),
+        )
+        return currentOutput
+    }
 
     override fun processStates(
         inputState:
@@ -199,12 +192,6 @@ internal class BackgroundServiceRelay(
         )
     }
 
-    private companion object {
-        const val PLAYBACK_DEPENDENCY =
-            "playback"
-        const val NAVIGATION_DEPENDENCY =
-            "navigation"
-    }
 }
 
 // [VXG RealForever][VEXARCHITECTURE][BACKGROUND-SERVICE-RELAY]
