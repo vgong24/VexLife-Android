@@ -38,21 +38,24 @@ internal class VexStreamPlaybackFamily(
         when (
             control
         ) {
-            VexStreamPlaybackControl.PlayPause ->
-                when (
-                    currentState
+            VexStreamPlaybackControl.PlayPause -> {
+                if (
+                    !isPlayPauseAvailable(
+                        currentState,
+                    )
                 ) {
-                    VexStreamPlaybackState.NoMedia ->
-                        null
-
-                    is VexStreamPlaybackState.Media -> {
-                        if (
-                            !currentState
-                                .playPauseAvailable
+                    null
+                } else {
+                    val effect =
+                        when (
+                            currentState
                         ) {
-                            null
-                        } else {
-                            val effect =
+                            VexStreamPlaybackState.NoMedia ->
+                                error(
+                                    "NoMedia cannot admit PlayPause",
+                                )
+
+                            is VexStreamPlaybackState.Media ->
                                 if (
                                     currentState
                                         .playRequested
@@ -64,47 +67,24 @@ internal class VexStreamPlaybackFamily(
                                         .RequestPlay
                                 }
 
-                            admit(
-                                state =
-                                    currentState
-                                        .afterIntent(
-                                            effect,
-                                        ),
-                                begin =
-                                    begin(
-                                        effect,
-                                    ),
-                            )
-                        }
-                    }
-
-                    is VexStreamPlaybackState.Ended -> {
-                        if (
-                            currentState
-                                .restartAvailable &&
-                            !currentState
-                                .restartPending
-                        ) {
-                            val effect =
+                            is VexStreamPlaybackState.Ended ->
                                 VexStreamPlaybackEffect
                                     .RestartCurrent
-
-                            admit(
-                                state =
-                                    currentState
-                                        .afterIntent(
-                                            effect,
-                                        ),
-                                begin =
-                                    begin(
-                                        effect,
-                                    ),
-                            )
-                        } else {
-                            null
                         }
-                    }
+
+                    admit(
+                        state =
+                            currentState
+                                .afterIntent(
+                                    effect,
+                                ),
+                        begin =
+                            begin(
+                                effect,
+                            ),
+                    )
                 }
+            }
         }
 
     /**
