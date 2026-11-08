@@ -43,12 +43,6 @@ internal fun VexStreamLibrarySurface(
     val context = LocalContext.current
     val inspectionMode = LocalInspectionMode.current
 
-    val controller =
-        if (inspectionMode) {
-            null
-        } else {
-            rememberVexStreamMediaController()
-        }
     val playbackExperience =
         if (inspectionMode) {
             null
