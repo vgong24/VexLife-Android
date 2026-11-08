@@ -6,6 +6,11 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.vextreme.vexlife.android.VexApplication
+import com.vextreme.vexlife.android.dependency.VexDependencyBuildScope
+import com.vextreme.vexlife.android.dependency.VexDependencyFactory
+import com.vextreme.vexlife.android.dependency.VexDependencyModule
+import com.vextreme.vexlife.android.dependency.VexDependencyProvider
+import com.vextreme.vexlife.android.dependency.VexServiceScope
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.vexstream.playback.Media3VexStreamCurrentPlaybackObserver
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamCurrentPlaybackObserver
@@ -27,11 +32,14 @@ import kotlinx.coroutines.Dispatchers
  */
 class VexStreamPlaybackService : MediaSessionService() {
     private var mediaSession: MediaSession? = null
-    private val widgetExecutionRoot =
-        VexExecutionRoot(
-            dispatcher =
-                Dispatchers.Default,
-        )
+    private lateinit var serviceDependencies:
+        VexDependencyFactory<
+            VexServiceScope<
+                VexStreamPlaybackService
+            >
+        >
+    private lateinit var widgetExecutionRoot:
+        VexExecutionRoot
     private var playbackFamily:
         VexStreamPlaybackFamily? =
         null
@@ -51,9 +59,23 @@ class VexStreamPlaybackService : MediaSessionService() {
                 ?: error(
                     "VexStream PlaybackService requires VexApplication as the process composition root",
                 )
-        val playbackFamily =
+        val serviceModule =
+            VexStreamPlaybackServiceDependencyModule()
+        serviceDependencies =
             vexApplication
                 .dependencies
+                .child(
+                    serviceModule.module,
+                )
+        widgetExecutionRoot =
+            serviceDependencies
+                .resolve(
+                    serviceModule
+                        .widgetExecutionRoot,
+                )
+
+        val playbackFamily =
+            serviceDependencies
                 .resolve(
                     vexApplication
                         .dependencyModule
@@ -66,8 +88,7 @@ class VexStreamPlaybackService : MediaSessionService() {
          * Resolve the one process-lived background convergence owner. A Navigation or future
          * background Service resolves the same memoized Relay; no Service owns a private copy.
          */
-        vexApplication
-            .dependencies
+        serviceDependencies
             .resolve(
                 vexApplication
                     .dependencyModule
@@ -172,6 +193,40 @@ class VexStreamPlaybackService : MediaSessionService() {
             )
 
         super.onDestroy()
+    }
+
+}
+
+private class VexStreamPlaybackServiceDependencyModule {
+    val widgetExecutionRoot =
+        WidgetExecutionRootProvider()
+
+    val module:
+        VexDependencyModule<
+            VexServiceScope<
+                VexStreamPlaybackService
+            >
+        > =
+        VexDependencyModule.of(
+            widgetExecutionRoot,
+        )
+
+    private class WidgetExecutionRootProvider :
+        VexDependencyProvider<
+            VexServiceScope<
+                VexStreamPlaybackService
+            >,
+            VexExecutionRoot
+        >() {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexExecutionRoot =
+            VexExecutionRoot(
+                dispatcher =
+                    Dispatchers.Default,
+            )
     }
 }
 
