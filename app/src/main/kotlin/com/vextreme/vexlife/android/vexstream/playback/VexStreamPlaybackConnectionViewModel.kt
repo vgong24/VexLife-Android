@@ -18,6 +18,8 @@ import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
 import com.vextreme.vexlife.android.vexstream.queue.PartnerVexStreamQueueConnection
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueConnection
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueuePlayConnection
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueReorderConnection
 import com.vextreme.vexlife.android.vexstream.repeat.PartnerVexStreamRepeatConnection
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatConnection
 
@@ -100,6 +102,22 @@ internal class VexStreamPlaybackConnectionViewModel(
         )
         private set
 
+    var queuePlayConnection by
+        mutableStateOf<
+            VexStreamQueuePlayConnection?
+        >(
+            null,
+        )
+        private set
+
+    var queueReorderConnection by
+        mutableStateOf<
+            VexStreamQueueReorderConnection?
+        >(
+            null,
+        )
+        private set
+
     var repeatConnection by
         mutableStateOf<
             VexStreamRepeatConnection?
@@ -152,6 +170,10 @@ internal class VexStreamPlaybackConnectionViewModel(
                                 effectConnection =
                                     playerConnection,
                             )
+                        queuePlayConnection =
+                            playerConnection
+                        queueReorderConnection =
+                            playerConnection
                         repeatConnection =
                             PartnerVexStreamRepeatConnection(
                                 store =
@@ -178,6 +200,8 @@ internal class VexStreamPlaybackConnectionViewModel(
         cleared = true
         connection = null
         queueConnection = null
+        queuePlayConnection = null
+        queueReorderConnection = null
         repeatConnection = null
         seekConnection = null
         progressConnection = null
