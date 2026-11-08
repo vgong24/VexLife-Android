@@ -3,29 +3,16 @@ package com.vextreme.vexlife.android.dependency
 import java.util.IdentityHashMap
 
 /**
- * One explicit construction declaration in the readable dependency graph.
+ * Common construction-graph node.
  *
- * WHAT THIS IS / RELATES TO
- * A provider declares the prerequisites needed to construct one Value. [VexDependencyFactory] owns
- * traversal, prerequisite ordering, memoization, cycle detection, and lifetime reuse. The created
- * Value receives concrete dependencies and does not need to know the factory exists.
- *
- * WHY THIS SHAPE EXISTS
- * Provider object identity is the construction coordinate, while [readableName] is only a human
- * label. This lets two differently configured declarations use the same provider class without
- * inventing a global qualifier/string-ID system or discovering relationships through reflection.
- *
- * RESPONSIBILITY FENCE
- * Providers declare construction only. Do not make providers semantic owners, execution
- * RelationshipIds, Logger/trace identities, lifecycle managers, or service locators. Do not infer
- * prerequisites by scanning constructors/classes/packages; relationships remain explicit source.
+ * This is the real heterogeneous common type for dependency topology. It is not a value-erasing
+ * service locator: concrete [VexDependencyProvider] declarations still bind exact Scope + Value
+ * types, while this node lets the factory traverse differently-valued prerequisites.
  */
-abstract class VexDependencyProvider<
-    Value : Any,
->(
+abstract class VexDependencyNode(
     val dependencies:
         List<
-            VexDependencyProvider<*>
+            VexDependencyNode
         > =
         emptyList(),
     private val declaredReadableName:
@@ -40,16 +27,70 @@ abstract class VexDependencyProvider<
                     this::class.qualifiedName
                         ?: this::class.simpleName,
                 ) {
-                    "VexDependencyProvider must have a readable named declaration"
+                    "VexDependencyNode must have a readable named declaration"
                 }
 
+    internal abstract fun build(
+        dependencies:
+            VexDependencyBuildScope,
+    ):
+        Any
+}
+
+/** One dependency declaration whose lifetime Scope remains part of its type. */
+abstract class VexScopedDependency<
+    Scope : VexDependencyScope,
+>(
+    dependencies:
+        List<
+            VexDependencyNode
+        > =
+        emptyList(),
+    declaredReadableName:
+        String? =
+        null,
+) :
+    VexDependencyNode(
+        dependencies =
+            dependencies,
+        declaredReadableName =
+            declaredReadableName,
+    )
+
+/**
+ * One exact Scope + Value construction declaration.
+ *
+ * Provider object identity remains the construction coordinate. Scope is type-level lifetime
+ * topology; readableName remains human/debug text only.
+ */
+abstract class VexDependencyProvider<
+    Scope : VexDependencyScope,
+    Value : Any,
+>(
+    dependencies:
+        List<
+            VexDependencyNode
+        > =
+        emptyList(),
+    declaredReadableName:
+        String? =
+        null,
+) :
+    VexScopedDependency<
+        Scope
+    >(
+        dependencies =
+            dependencies,
+        declaredReadableName =
+            declaredReadableName,
+    ) {
     protected abstract fun create(
         dependencies:
             VexDependencyBuildScope,
     ):
         Value
 
-    internal fun build(
+    internal final override fun build(
         dependencies:
             VexDependencyBuildScope,
     ):
@@ -59,24 +100,24 @@ abstract class VexDependencyProvider<
         )
 
     companion object {
-        /**
-         * Explicit provider declaration without a one-off subclass.
-         *
-         * This removes naming boilerplate while preserving the same source-readable prerequisite
-         * graph, object-identity construction coordinate, and narrow build scope.
-         */
-        fun <Value : Any> named(
+        fun <
+            Scope : VexDependencyScope,
+            Value : Any,
+        > named(
             readableName:
                 String,
             dependencies:
                 List<
-                    VexDependencyProvider<*>
+                    VexDependencyNode
                 > =
                 emptyList(),
             build:
                 (VexDependencyBuildScope) -> Value,
         ):
-            VexDependencyProvider<Value> {
+            VexDependencyProvider<
+                Scope,
+                Value
+            > {
             require(
                 readableName.isNotBlank(),
             ) {
@@ -84,7 +125,10 @@ abstract class VexDependencyProvider<
             }
 
             return object :
-                VexDependencyProvider<Value>(
+                VexDependencyProvider<
+                    Scope,
+                    Value
+                >(
                     dependencies =
                         dependencies,
                     declaredReadableName =
@@ -106,19 +150,19 @@ abstract class VexDependencyProvider<
 /**
  * Narrow provider-construction view.
  *
- * A provider may retrieve only dependencies it explicitly declared. This keeps graph traversal and
- * memoization in the factory while making each provider's prerequisite relationship readable.
+ * A provider may retrieve only dependencies it explicitly declared. Exact Scope + Value type remains
+ * on the provider reference supplied to require(...); internal storage is construction machinery.
  */
 class VexDependencyBuildScope internal constructor(
     values:
         IdentityHashMap<
-            VexDependencyProvider<*>,
+            VexDependencyNode,
             Any
         >,
 ) {
     private val declared =
         IdentityHashMap<
-            VexDependencyProvider<*>,
+            VexDependencyNode,
             Any
         >().apply {
             putAll(
@@ -126,9 +170,15 @@ class VexDependencyBuildScope internal constructor(
             )
         }
 
-    fun <Value : Any> require(
+    fun <
+        Scope : VexDependencyScope,
+        Value : Any,
+    > require(
         provider:
-            VexDependencyProvider<Value>,
+            VexDependencyProvider<
+                Scope,
+                Value
+            >,
     ):
         Value {
         val value =
@@ -150,23 +200,33 @@ class VexDependencyBuildScope internal constructor(
 }
 
 /**
- * Source-readable provider grouping.
+ * Source-readable grouping for declarations that all belong to one exact Scope.
  *
- * Modules group related declarations; they do not own object lifetime, graph traversal, or runtime
- * identity. One provider may appear in exactly one visible module for a factory lineage.
+ * A provider cannot be moved from Application to Session or one Service sibling merely by placing it
+ * in another module: the module's Scope parameter and provider's Scope parameter must agree.
  */
-class VexDependencyModule private constructor(
+class VexDependencyModule<
+    Scope : VexDependencyScope,
+> private constructor(
     val providers:
         List<
-            VexDependencyProvider<*>
+            VexScopedDependency<
+                Scope
+            >
         >,
 ) {
     companion object {
-        fun of(
+        fun <
+            Scope : VexDependencyScope,
+        > of(
             vararg providers:
-                VexDependencyProvider<*>,
+                VexScopedDependency<
+                    Scope
+                >,
         ):
-            VexDependencyModule {
+            VexDependencyModule<
+                Scope
+            > {
             require(
                 providers.isNotEmpty(),
             ) {
@@ -199,42 +259,53 @@ class VexDependencyModule private constructor(
     }
 }
 
+private class VexDependencyParentAccess(
+    val isRegistered:
+        (VexDependencyNode) -> Boolean,
+    val resolve:
+        (VexDependencyNode) -> Any,
+)
+
 /**
- * Construction-graph and memoization owner for one explicit dependency lifetime.
+ * Construction graph + memoization owner for one typed dependency Scope.
  *
- * WHAT THIS IS
- * VexDependencyFactory resolves requested provider roots, recursively builds declared prerequisites
- * first, and memoizes one built Value per provider declaration for this exact factory lifetime.
- *
- * WHAT IT RELATES TO
- * [VexDependencyModule] groups visible declarations; [VexDependencyProvider] declares prerequisites;
- * [VexDependencyBuildScope] exposes only already-declared prerequisite Values during construction.
- * Child factories may reuse parent-lifetime providers while owning only their newly declared nodes.
- *
- * WHAT IT ADDRESSES / WHY THIS SHAPE EXISTS
- * It makes construction order, reuse, and lifetime boundaries readable without ambient get<T>(),
- * constructor scanning, reflection-driven DI, or a global service locator. Lazy resolution builds
- * only the prerequisite closure of roots the composition owner actually requests.
- *
- * RESPONSIBILITY FENCE
- * The factory constructs/reuses objects; it does not infer semantic Family meaning, own
- * RelationshipId/Job custody, become Logger/history, decide provider business policy, or provide
- * hidden dependency lookup to ordinary feature/UI code. Dependency provider identity must never be
- * reused as execution, semantic, UI, or trace identity merely because all are "IDs".
+ * Child formation is compiler-bound to [VexChildDependencyScope] of this exact Scope. Parent objects
+ * are reused; child providers cannot shadow them.
  */
-class VexDependencyFactory(
+class VexDependencyFactory<
+    Scope : VexDependencyScope,
+> private constructor(
     modules:
         List<
-            VexDependencyModule
+            VexDependencyModule<
+                Scope
+            >
         >,
     private val parent:
-        VexDependencyFactory? =
-        null,
+        VexDependencyParentAccess?,
 ) {
+    constructor(
+        modules:
+            List<
+                VexDependencyModule<
+                    Scope
+                >
+            >,
+    ) :
+        this(
+            modules =
+                modules,
+            parent =
+                null,
+        )
+
     private val lock =
         Any()
 
-    private val providers =
+    private val providers:
+        List<
+            VexDependencyNode
+        > =
         modules
             .flatMap {
                 it.providers
@@ -259,7 +330,8 @@ class VexDependencyFactory(
 
                         check(
                             parent
-                                ?.isRegistered(
+                                ?.isRegistered
+                                ?.invoke(
                                     provider,
                                 ) !=
                                 true,
@@ -270,16 +342,11 @@ class VexDependencyFactory(
                     }
             }
 
-    /*
-     * Freeze the readable graph at lifetime construction. Provider declarations may have been formed
-     * from caller-owned list objects; later mutation of those lists must not silently rewrite an
-     * already-established dependency lifetime.
-     */
     private val prerequisitesByProvider =
         IdentityHashMap<
-            VexDependencyProvider<*>,
+            VexDependencyNode,
             List<
-                VexDependencyProvider<*>
+                VexDependencyNode
             >
         >().apply {
             providers.forEach { provider ->
@@ -293,30 +360,52 @@ class VexDependencyFactory(
 
     private val instances =
         IdentityHashMap<
-            VexDependencyProvider<*>,
+            VexDependencyNode,
             Any
         >()
 
     private val resolving =
         mutableListOf<
-            VexDependencyProvider<*>
+            VexDependencyNode
         >()
 
-    fun child(
+    fun <
+        ChildScope,
+    > child(
         vararg modules:
-            VexDependencyModule,
+            VexDependencyModule<
+                ChildScope
+            >,
     ):
-        VexDependencyFactory =
+        VexDependencyFactory<
+            ChildScope
+        >
+        where
+        ChildScope :
+            VexChildDependencyScope<
+                Scope
+            > =
         VexDependencyFactory(
             modules =
                 modules.toList(),
             parent =
-                this,
+                VexDependencyParentAccess(
+                    isRegistered =
+                        ::isRegistered,
+                    resolve =
+                        ::resolveNode,
+                ),
         )
 
-    fun <Value : Any> resolve(
+    fun <
+        ProviderScope : VexDependencyScope,
+        Value : Any,
+    > resolve(
         provider:
-            VexDependencyProvider<Value>,
+            VexDependencyProvider<
+                ProviderScope,
+                Value
+            >,
     ):
         Value =
         synchronized(
@@ -325,7 +414,7 @@ class VexDependencyFactory(
             @Suppress(
                 "UNCHECKED_CAST",
             )
-            resolveAny(
+            resolveNode(
                 provider,
             ) as
                 Value
@@ -359,22 +448,9 @@ class VexDependencyFactory(
             }
         }
 
-    private fun resolveFromChild(
-        provider:
-            VexDependencyProvider<*>,
-    ):
-        Any =
-        synchronized(
-            lock,
-        ) {
-            resolveAny(
-                provider,
-            )
-        }
-
     private fun isRegistered(
         provider:
-            VexDependencyProvider<*>,
+            VexDependencyNode,
     ):
         Boolean =
         providers.any {
@@ -382,126 +458,125 @@ class VexDependencyFactory(
                 provider
         } ||
             parent
-                ?.isRegistered(
+                ?.isRegistered
+                ?.invoke(
                     provider,
                 ) ==
                 true
 
-    private fun resolveAny(
+    private fun resolveNode(
         provider:
-            VexDependencyProvider<*>,
+            VexDependencyNode,
     ):
-        Any {
-        instances[
-            provider
-        ]
-            ?.let {
-                return it
-            }
-
-        val local =
-            providers.firstOrNull {
-                it ===
-                    provider
-            }
-
-        if (
-            local ==
-            null
+        Any =
+        synchronized(
+            lock,
         ) {
-            return parent
-                ?.resolveFromChild(
-                    provider,
-                )
-                ?: error(
-                    "Provider " +
-                        provider.readableName +
-                        " is not registered in this dependency lifetime",
-                )
-        }
-
-        val cycleIndex =
-            resolving.indexOfFirst {
-                it ===
-                    provider
-            }
-
-        check(
-            cycleIndex <
-                0,
-        ) {
-            (
-                resolving
-                    .drop(
-                        cycleIndex
-                            .coerceAtLeast(
-                                0,
-                            ),
-                    ) +
-                    provider
-            )
-                .joinToString(
-                    prefix =
-                        "Dependency cycle: ",
-                    separator =
-                        " -> ",
-                ) {
-                    it.readableName
-                }
-        }
-
-        resolving +=
-            provider
-
-        try {
-            val prerequisites =
-                IdentityHashMap<
-                    VexDependencyProvider<*>,
-                    Any
-                >()
-
-            requireNotNull(
-                prerequisitesByProvider[
-                    provider
-                ],
-            )
-                .forEach { dependency ->
-                    prerequisites[
-                        dependency
-                    ] =
-                        resolveAny(
-                            dependency,
-                        )
-                }
-
-            val built =
-                provider.build(
-                    VexDependencyBuildScope(
-                        prerequisites,
-                    ),
-                )
-
             instances[
                 provider
-            ] =
-                built
+            ]
+                ?.let {
+                    return@synchronized it
+                }
 
-            return built
-        } finally {
+            val local =
+                providers.firstOrNull {
+                    it ===
+                        provider
+                }
+
+            if (
+                local ==
+                null
+            ) {
+                return@synchronized parent
+                    ?.resolve
+                    ?.invoke(
+                        provider,
+                    )
+                    ?: error(
+                        "Provider " +
+                            provider.readableName +
+                            " is not registered in this dependency lifetime",
+                    )
+            }
+
+            val cycleIndex =
+                resolving.indexOfFirst {
+                    it ===
+                        provider
+                }
+
             check(
-                resolving.removeLast() ===
-                    provider,
-            )
+                cycleIndex <
+                    0,
+            ) {
+                (
+                    resolving
+                        .drop(
+                            cycleIndex
+                                .coerceAtLeast(
+                                    0,
+                                ),
+                        ) +
+                        provider
+                )
+                    .joinToString(
+                        prefix =
+                            "Dependency cycle: ",
+                        separator =
+                            " -> ",
+                    ) {
+                        it.readableName
+                    }
+            }
+
+            resolving +=
+                provider
+
+            try {
+                val prerequisites =
+                    IdentityHashMap<
+                        VexDependencyNode,
+                        Any
+                    >()
+
+                requireNotNull(
+                    prerequisitesByProvider[
+                        provider
+                    ],
+                )
+                    .forEach { dependency ->
+                        prerequisites[
+                            dependency
+                        ] =
+                            resolveNode(
+                                dependency,
+                            )
+                    }
+
+                val built =
+                    provider.build(
+                        VexDependencyBuildScope(
+                            prerequisites,
+                        ),
+                    )
+
+                instances[
+                    provider
+                ] =
+                    built
+
+                built
+            } finally {
+                check(
+                    resolving.removeLast() ===
+                        provider,
+                )
+            }
         }
-    }
 }
 
-/**
- * Read-only human/debug projection of declared construction topology.
- *
- * Provider/prerequisite Strings are readable labels only. This projection must not be fed back into
- * construction as identity or treated as a second dependency registry.
- */
 data class VexDependencyRelationship(
     val provider:
         String,
@@ -511,4 +586,4 @@ data class VexDependencyRelationship(
         Boolean,
 )
 
-// [VXG RealForever]
+// [VXG RealForever][VEXARCHITECTURE][DEPENDENCY][TYPED-SCOPES]
