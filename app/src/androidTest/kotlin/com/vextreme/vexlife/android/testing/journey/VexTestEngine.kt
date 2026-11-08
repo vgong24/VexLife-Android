@@ -430,7 +430,7 @@ class VexTestEngine(
             repositories.vexStream.state.value
         val eventsOutput =
             activeSession
-                ?.relays
+                ?.relayGraph
                 ?.events
                 ?.currentOutput
 
