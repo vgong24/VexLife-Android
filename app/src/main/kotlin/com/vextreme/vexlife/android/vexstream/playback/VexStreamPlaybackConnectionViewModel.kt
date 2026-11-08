@@ -11,18 +11,41 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import com.vextreme.vexlife.android.VexApplication
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackService
 
 /**
  * Android configuration-lifetime owner for the concrete Playback Connection.
  *
- * This ViewModel is not a generic architecture Host. It exists because Android configuration
- * recreation needs a real lifetime owner for this Connection.
+ * The ViewModel owns only the MediaController connection lifetime. Playback semantic truth belongs
+ * to the process-shared [VexStreamPlaybackFamily] resolved from [VexApplication].
  */
 internal class VexStreamPlaybackConnectionViewModel(
-    application: Application,
-) : AndroidViewModel(application) {
-    private var cleared = false
+    application:
+        Application,
+) :
+    AndroidViewModel(
+        application,
+    ) {
+    private var cleared =
+        false
+
+    private val vexApplication =
+        application as?
+            VexApplication
+            ?: error(
+                "VexStream Playback requires VexApplication as the process composition root",
+            )
+
+    val family:
+        VexStreamPlaybackFamily =
+        vexApplication
+            .dependencies
+            .resolve(
+                vexApplication
+                    .dependencyModule
+                    .playbackFamily,
+            )
 
     private val controllerFuture =
         MediaController.Builder(
@@ -37,18 +60,16 @@ internal class VexStreamPlaybackConnectionViewModel(
         ).buildAsync()
 
     var controller by
-        mutableStateOf<MediaController?>(
+        mutableStateOf<
+            MediaController?
+        >(
             null,
         )
         private set
 
-    private var media3Connection:
-        Media3VexStreamPlaybackConnection? =
-        null
-
     var connection by
         mutableStateOf<
-            VexStreamPlaybackConnectionFlow?
+            VexStreamPlaybackConnection?
         >(
             null,
         )
@@ -60,15 +81,16 @@ internal class VexStreamPlaybackConnectionViewModel(
                 runCatching {
                     controllerFuture.get()
                 }.onSuccess { connected ->
-                    if (!cleared) {
-                        val playbackConnection =
-                            Media3VexStreamPlaybackConnection(
-                                connected,
-                            )
-                        media3Connection =
-                            playbackConnection
+                    if (
+                        !cleared
+                    ) {
                         connection =
-                            playbackConnection
+                            Media3VexStreamPlaybackConnection(
+                                controller =
+                                    connected,
+                                family =
+                                    family,
+                            )
                         controller =
                             connected
                     }
@@ -83,8 +105,6 @@ internal class VexStreamPlaybackConnectionViewModel(
     override fun onCleared() {
         cleared = true
         connection = null
-        media3Connection?.close()
-        media3Connection = null
         controller = null
         MediaController.releaseFuture(
             controllerFuture,
@@ -103,4 +123,4 @@ internal fun rememberVexStreamMediaController():
     return owner.controller
 }
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][PLAYBACK][PROCESS-FAMILY]

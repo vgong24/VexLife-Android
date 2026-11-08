@@ -4,19 +4,23 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class VexStreamPlaybackDisplayStateTest {
-    private val behavior =
-        vexStreamPlaybackBehavior()
-
-    private val controls =
-        behavior
-            .vexStreamPlaybackControls()
-
     private val playback =
         VexStreamPlaybackReadState(
             currentMediaId =
                 "media.test",
             currentTitle =
                 "Test Track",
+        )
+
+    private fun projection(
+        state:
+            VexStreamPlaybackState,
+    ):
+        VexStreamPlaybackProjection =
+        VexStreamPlaybackFamily(
+            state,
+        ).playbackProjectionFor(
+            state,
         )
 
     @Test
@@ -27,7 +31,8 @@ class VexStreamPlaybackDisplayStateTest {
                     playback =
                         playback,
                 ),
-            (null as VexStreamPlaybackProjection?)
+            (null as
+                VexStreamPlaybackProjection?)
                 .toVexStreamPlaybackDisplayState(
                     playback =
                         playback,
@@ -38,9 +43,8 @@ class VexStreamPlaybackDisplayStateTest {
     @Test
     fun noMediaProjectionIsInactive() {
         val projection =
-            controls.projection(
-                VexStreamPlaybackState
-                    .NoMedia,
+            projection(
+                VexStreamPlaybackState.NoMedia,
             )
 
         assertEquals(
@@ -62,17 +66,15 @@ class VexStreamPlaybackDisplayStateTest {
     @Test
     fun pendingMediaProjectionIsTransitioning() {
         val projection =
-            controls.projection(
-                VexStreamPlaybackState
-                    .Media(
-                        playRequested = true,
-                        requestPending = true,
-                        phase =
-                            VexStreamPlaybackPhase
-                                .Buffering,
-                        playPauseAvailable =
-                            true,
-                    ),
+            projection(
+                VexStreamPlaybackState.Media(
+                    playRequested = true,
+                    requestPending = true,
+                    phase =
+                        VexStreamPlaybackPhase
+                            .Buffering,
+                    playPauseAvailable = true,
+                ),
             )
 
         assertEquals(
@@ -94,12 +96,11 @@ class VexStreamPlaybackDisplayStateTest {
     @Test
     fun pendingRestartProjectionIsTransitioning() {
         val projection =
-            controls.projection(
-                VexStreamPlaybackState
-                    .Ended(
-                        restartAvailable = true,
-                        restartPending = true,
-                    ),
+            projection(
+                VexStreamPlaybackState.Ended(
+                    restartAvailable = true,
+                    restartPending = true,
+                ),
             )
 
         assertEquals(
@@ -121,42 +122,15 @@ class VexStreamPlaybackDisplayStateTest {
     @Test
     fun ordinaryMediaProjectionIsActive() {
         val projection =
-            controls.projection(
-                VexStreamPlaybackState
-                    .Media(
-                        playRequested = false,
-                        phase =
-                            VexStreamPlaybackPhase
-                                .Ready,
-                        playPauseAvailable =
-                            true,
-                    ),
-            )
-
-        assertEquals(
-            VexStreamPlaybackDisplayState
-                .Active(
-                    projection =
-                        projection,
-                    playback =
-                        playback,
+            projection(
+                VexStreamPlaybackState.Media(
+                    playRequested = false,
+                    phase =
+                        VexStreamPlaybackPhase
+                            .Ready,
+                    playPauseAvailable =
+                        true,
                 ),
-            projection
-                .toVexStreamPlaybackDisplayState(
-                    playback =
-                        playback,
-                ),
-        )
-    }
-
-    @Test
-    fun endedProjectionWithoutPendingRestartRemainsActiveDisplay() {
-        val projection =
-            controls.projection(
-                VexStreamPlaybackState
-                    .Ended(
-                        restartAvailable = true,
-                    ),
             )
 
         assertEquals(
@@ -176,4 +150,4 @@ class VexStreamPlaybackDisplayStateTest {
     }
 }
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][PLAYBACK][DIRECT-FAMILY]

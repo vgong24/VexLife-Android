@@ -47,6 +47,58 @@ a foreign Effect directly.
 VexLifeRelayGraph is the session-level projection of which independently-owned Relay nodes are alive.
 The graph does not construct, activate, or semantically own those Relays.
 
+## App-scope background Service convergence
+
+BackgroundServiceRelay is the process-lived convergence surface for current truths that sustained
+Vex realizations may need to understand together while UI is absent.
+
+Current patient-zero inputs are the actual owned States:
+
+~~~text
+VexStreamPlaybackFamily.states --------\
+                                        +-> BackgroundServiceRelay
+VexNavigationSession.states -----------/
+                                             |
+                                             v
+                               BackgroundServiceOutputState
+                                   playback:
+                                       VexStreamPlaybackState
+
+                                   navigation:
+                                       BackgroundServiceNavigationProjection
+                                       - phase
+                                       - routeRef / routeRevision
+                                       - destinationLabel
+                                       - locationDisposition
+                                       - pendingRerouteRef
+                                       - latestIssuedCue
+~~~
+
+The Navigation projection is intentionally smaller than VexNavigationSessionState: route geometry and
+other payload that do not answer background coordination are not repeatedly copied through every
+Playback/navigation update. This is deliberately not:
+
+~~~text
+Set<ServiceName>
+activeServices
+PlaybackActive:Boolean
+NavigationActive:Boolean
+Room/database message bus
+~~~
+
+Those forms erase the source meaning and create another management truth.
+
+VexApplication establishes one Relay at process lifetime. Constructor-declared observations enter
+through the process VexExecutionRoot, so no caller supplies a parallel CoroutineScope or activation
+ceremony.
+
+A Service consumes this Relay only when a real coordination question requires another owner's
+current truth. Playback and Navigation may otherwise remain completely independent sustained
+realizations.
+
+Future Health / Companion / Call participation should add their rightful State projections only when
+those owners exist; do not predeclare fake service categories.
+
 ## Developer shape
 
 One truth:

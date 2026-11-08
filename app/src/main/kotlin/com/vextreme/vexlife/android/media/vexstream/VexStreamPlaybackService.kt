@@ -5,27 +5,53 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import com.vextreme.vexlife.android.VexApplication
+import com.vextreme.vexlife.android.behavior.VexService
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.vexstream.playback.Media3VexStreamCurrentPlaybackObserver
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamCurrentPlaybackObserver
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackTrace
 import com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetUpdateExecution
 import kotlinx.coroutines.Dispatchers
 
 /**
- * Android-native owner for VexStream audio playback lifetime.
+ * Android-native owner for VexStream audio playback realization lifetime.
+ *
+ * Playback semantic State remains in the process-shared VexStreamPlaybackFamily. This Service keeps
+ * Media3/Player realization alive while UI is absent and reconciles provider truth into that Family.
  *
  * Local file MediaItems are resolved by DefaultDataSource. Opaque vexstream:// media requests flow
  * through [VexStreamNetworkDataSource], which loads the remembered endpoint/token and pins the
  * desktop TLS certificate before opening media bytes.
  */
-class VexStreamPlaybackService : MediaSessionService() {
+class VexStreamPlaybackService :
+    MediaSessionService(),
+    VexService<
+        VexStreamPlaybackService,
+        VexStreamPlaybackState
+    > {
     private var mediaSession: MediaSession? = null
     private val widgetExecutionRoot =
         VexExecutionRoot(
             dispatcher =
                 Dispatchers.Default,
         )
+    private var playbackFamily:
+        VexStreamPlaybackFamily? =
+        null
+
+    override val current:
+        VexStreamPlaybackState
+        get() =
+            requireNotNull(
+                playbackFamily,
+            ) {
+                "VexStream PlaybackService current truth is available only during its live realization"
+            }
+                .currentState
+
     private var currentPlaybackObserver:
         VexStreamCurrentPlaybackObserver? =
         null
@@ -35,6 +61,23 @@ class VexStreamPlaybackService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
+
+        val vexApplication =
+            application as?
+                VexApplication
+                ?: error(
+                    "VexStream PlaybackService requires VexApplication as the process composition root",
+                )
+        val playbackFamily =
+            vexApplication
+                .dependencies
+                .resolve(
+                    vexApplication
+                        .dependencyModule
+                        .playbackFamily,
+                )
+        this.playbackFamily =
+            playbackFamily
 
         val dataSourceFactory =
             DefaultDataSource.Factory(
@@ -71,7 +114,10 @@ class VexStreamPlaybackService : MediaSessionService() {
 
         val playbackObserver =
             Media3VexStreamCurrentPlaybackObserver(
-                player,
+                player =
+                    player,
+                playbackFamily =
+                    playbackFamily,
             )
         currentPlaybackObserver =
             playbackObserver
@@ -113,6 +159,18 @@ class VexStreamPlaybackService : MediaSessionService() {
             session.release()
         }
         mediaSession = null
+
+        /*
+         * The concrete Media3 realization is gone. Clear process semantic Playback truth so the
+         * shared Family no longer reports provider reality that this Service can no longer realize.
+         */
+        playbackFamily
+            ?.observe(
+                VexStreamPlaybackState.NoMedia,
+            )
+        playbackFamily =
+            null
+
         widgetExecutionRoot
             .forceStopAll(
                 "VexStream PlaybackService destroyed",

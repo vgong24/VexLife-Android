@@ -1,59 +1,22 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
 /**
- * Connection-local shock absorber between synchronous semantic intent and delayed Media3 observation.
+ * Synchronously reflect one admitted Playback Effect in Family State before Media3 acknowledgement.
  *
- * This is implementation state, not a fifth Behavior concept. Public semantic truth is still
- * VexStreamPlaybackState.
- */
-internal data class VexStreamPlaybackPending(
-    val playRequested: Boolean? = null,
-    val restartPending: Boolean = false,
-)
-
-internal data class VexStreamPlaybackReconciliation(
-    val state: VexStreamPlaybackState,
-    val pending: VexStreamPlaybackPending,
-)
-
-/**
- * Record the newest admitted Effect before dispatching it to Media3.
- */
-internal fun VexStreamPlaybackPending.after(
-    effect: VexStreamPlaybackEffect,
-): VexStreamPlaybackPending =
-    when (effect) {
-        VexStreamPlaybackEffect.RequestPlay ->
-            copy(
-                playRequested = true,
-                restartPending = false,
-            )
-
-        VexStreamPlaybackEffect.RequestPause ->
-            copy(
-                playRequested = false,
-                restartPending = false,
-            )
-
-        VexStreamPlaybackEffect.RestartCurrent ->
-            copy(
-                playRequested = true,
-                restartPending = true,
-            )
-    }
-
-/**
- * Synchronously reflect an admitted Effect in semantic State before provider dispatch.
- *
- * This does not claim provider convergence. The pending flags explicitly say the connection is waiting for
- * Media3 acknowledgement.
+ * Pending meaning now lives in the shared Family State itself rather than in one Connection-local
+ * shadow. Any provider observer in the process can therefore reconcile against the same current
+ * semantic truth.
  */
 internal fun VexStreamPlaybackState.afterIntent(
-    effect: VexStreamPlaybackEffect,
+    effect:
+        VexStreamPlaybackEffect,
 ): VexStreamPlaybackState =
-    when (effect) {
+    when (
+        effect
+    ) {
         VexStreamPlaybackEffect.RequestPlay ->
-            (this as? VexStreamPlaybackState.Media)
+            (this as?
+                VexStreamPlaybackState.Media)
                 ?.copy(
                     playRequested = true,
                     requestPending = true,
@@ -63,7 +26,8 @@ internal fun VexStreamPlaybackState.afterIntent(
                 )
 
         VexStreamPlaybackEffect.RequestPause ->
-            (this as? VexStreamPlaybackState.Media)
+            (this as?
+                VexStreamPlaybackState.Media)
                 ?.copy(
                     playRequested = false,
                     requestPending = true,
@@ -73,7 +37,8 @@ internal fun VexStreamPlaybackState.afterIntent(
                 )
 
         VexStreamPlaybackEffect.RestartCurrent ->
-            (this as? VexStreamPlaybackState.Ended)
+            (this as?
+                VexStreamPlaybackState.Ended)
                 ?.copy(
                     restartPending = true,
                 )
@@ -83,86 +48,83 @@ internal fun VexStreamPlaybackState.afterIntent(
     }
 
 /**
- * Fold provider observation through any newer local intent.
+ * Fold one Media3 observation through the exact current Playback Family State.
  *
- * A stale Media3 callback cannot erase a newer admitted Control activation. Pending intent clears
- * only when Media3 acknowledges the requested value or an incompatible terminal observation
- * invalidates it.
+ * A stale provider callback cannot erase a newer admitted Control. Pending intent clears only when
+ * Media3 acknowledges that request or an incompatible provider state makes the request no longer
+ * current.
  */
 internal fun reconcileVexStreamPlaybackObservation(
-    observed: VexStreamPlaybackState,
-    pending: VexStreamPlaybackPending,
-): VexStreamPlaybackReconciliation =
-    when (observed) {
-        VexStreamPlaybackState.NoMedia ->
-            VexStreamPlaybackReconciliation(
-                state =
-                    VexStreamPlaybackState.NoMedia,
-                pending =
-                    VexStreamPlaybackPending(),
-            )
-
-        is VexStreamPlaybackState.Media -> {
-            val expected =
-                pending.playRequested
-
-            when {
-                expected == null ->
-                    VexStreamPlaybackReconciliation(
-                        state =
-                            observed.copy(
-                                requestPending = false,
-                            ),
-                        pending =
-                            pending.copy(
-                                restartPending = false,
-                            ),
+    observed:
+        VexStreamPlaybackState,
+    current:
+        VexStreamPlaybackState,
+):
+    VexStreamPlaybackState =
+    when (
+        current
+    ) {
+        is VexStreamPlaybackState.Media ->
+            if (
+                current.requestPending &&
+                observed is
+                    VexStreamPlaybackState.Media
+            ) {
+                if (
+                    observed.playRequested ==
+                    current.playRequested
+                ) {
+                    observed.copy(
+                        requestPending = false,
                     )
-
-                observed.playRequested == expected ->
-                    VexStreamPlaybackReconciliation(
-                        state =
-                            observed.copy(
-                                requestPending = false,
-                            ),
-                        pending =
-                            VexStreamPlaybackPending(),
+                } else {
+                    observed.copy(
+                        playRequested =
+                            current.playRequested,
+                        requestPending = true,
                     )
-
-                else ->
-                    VexStreamPlaybackReconciliation(
-                        state =
-                            observed.copy(
-                                playRequested = expected,
-                                requestPending = true,
-                            ),
-                        pending =
-                            pending.copy(
-                                restartPending = false,
-                            ),
-                    )
+                }
+            } else {
+                observed
+                    .withoutPendingIntent()
             }
-        }
 
         is VexStreamPlaybackState.Ended ->
-            if (pending.restartPending) {
-                VexStreamPlaybackReconciliation(
-                    state =
-                        observed.copy(
-                            restartPending = true,
-                        ),
-                    pending = pending,
+            if (
+                current.restartPending &&
+                observed is
+                    VexStreamPlaybackState.Ended
+            ) {
+                observed.copy(
+                    restartPending = true,
                 )
             } else {
-                VexStreamPlaybackReconciliation(
-                    state =
-                        observed.copy(
-                            restartPending = false,
-                        ),
-                    pending =
-                        VexStreamPlaybackPending(),
-                )
+                observed
+                    .withoutPendingIntent()
             }
+
+        VexStreamPlaybackState.NoMedia ->
+            observed
+                .withoutPendingIntent()
     }
 
-// [VXG RealForever]
+private fun VexStreamPlaybackState.withoutPendingIntent():
+    VexStreamPlaybackState =
+    when (
+        this
+    ) {
+        VexStreamPlaybackState.NoMedia ->
+            this
+
+        is VexStreamPlaybackState.Media ->
+            copy(
+                requestPending = false,
+            )
+
+        is VexStreamPlaybackState.Ended ->
+            copy(
+                restartPending = false,
+            )
+    }
+
+// [VXG RealForever][VEXSTREAM][PLAYBACK][DIRECT-FAMILY]

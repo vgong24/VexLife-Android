@@ -232,6 +232,93 @@ The current synthetic BLE/HTTP forms prove vocabulary reuse, not networking/radi
 
 ThemeMode / VexStream migration and a first-class Partnership owner remain held.
 
+## Service circuit standard template
+
+Sustained realization uses the same rooted/kinship discipline as Family and Partner while keeping the
+least common denominator deliberately small:
+
+~~~text
+VexService<Service, Current>
+└─ current
+     exact CURRENT truth borrowed from its rightful existing owner
+~~~
+
+The recursive Service coordinate binds one exact sustained realization to one exact current
+vocabulary. The Current generic attaches from the Service side; Family State, Relay OutputState,
+Session State, Partner-derived truth, or another current owner does **not** implement a Service marker
+merely because a Service consumes it.
+
+Permanent:
+
+~~~text
+SERVICE_CURRENT_AWARENESS
+!= SERVICE_OWNED_CURRENT_TRUTH
+
+SERVICE
+= sustained realization owner
+!= semantic CURRENT owner
+
+SERVICE_ALIVE
+!= EFFECT_SUCCESS
+!= PROVIDER_SUCCESS
+
+ASYNC WORK
+-> VexExecution
+
+COMPOUND CURRENT MEANING
+-> Relay
+
+PLATFORM / PROVIDER REALITY
+-> rightful CURRENT owner
+~~~
+
+The contract deliberately does **not** standardize Entry, Admission, Retention, Grace, or Execution as
+VexService children. Navigation, Playback, and future Companion pressure show those are consequences
+or adjacent responsibilities whose exact semantics differ across realizations. Repeated consumers must
+earn any future child.
+
+Two production bindings now pressure the same tiny contract:
+
+~~~text
+VexMapsNavigationService
+    : VexService<
+          VexMapsNavigationService,
+          VexNavigationSessionState
+      >
+
+current
+    -> VexMapsNavigationProcess.session.current
+
+VexStreamPlaybackService
+    : VexService<
+          VexStreamPlaybackService,
+          VexStreamPlaybackState
+      >
+
+current
+    -> process-shared VexStreamPlaybackFamily.currentState
+~~~
+
+Navigation uses VexExecution for maintained location/session observation, but that execution custody is
+not a VexService child. Playback uses MediaSessionService / Media3 as its sustained realization; a live
+Service does not imply media successfully plays.
+
+The Playback Widget is useful pressure on this boundary:
+
+~~~text
+Widget Control
+-> Playback Family
+-> accepted consequence
+-> Media3 realization hosted by Playback Service
+-> Player observation
+-> Playback Family CURRENT
+-> Playback / Queue / read projection
+-> Widget
+~~~
+
+The Widget does not own Playback truth and does not turn the Service into the semantic owner. The
+Service is the sustained realization participating in the same currentness loop.
+
 ## Current foundation state
 
 Two behavior foundations intentionally coexist today:
