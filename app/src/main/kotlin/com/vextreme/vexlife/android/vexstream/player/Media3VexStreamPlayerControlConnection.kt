@@ -27,7 +27,7 @@ import kotlinx.coroutines.android.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
 
 /**
- * Media3 controller realization at the outbound side of the same VexStream Player Partner.
+ * Media3 controller realization of the request/progress sides of the same VexStream Player Partner.
  *
  * Feature semantics arrive here only after their rightful owner has resolved a Control/Act/Effect.
  * Media3 types do not leave this concrete Connection.
@@ -36,7 +36,8 @@ internal class Media3VexStreamPlayerControlConnection(
     private val controller:
         MediaController,
 ) :
-    VexStreamPlayerPartner.Connection.Outbound {
+    VexStreamPlayerPartner.Connection.Request,
+    VexStreamPlayerPartner.Connection.Progress {
     override val id =
         VexStreamPlayerPartner.Connection.Id
             .next(
@@ -218,12 +219,12 @@ internal class Media3VexStreamPlayerControlConnection(
  */
 internal suspend fun <
     Result,
-> withVexStreamPlayerOutboundConnection(
+> withVexStreamPlayerRequestConnection(
     context:
         Context,
     block:
         suspend (
-            VexStreamPlayerPartner.Connection.Outbound,
+            VexStreamPlayerPartner.Connection.Request,
         ) -> Result,
 ):
     Result? {

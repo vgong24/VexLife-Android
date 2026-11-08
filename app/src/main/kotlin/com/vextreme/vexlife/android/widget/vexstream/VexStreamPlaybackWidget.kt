@@ -53,7 +53,7 @@ import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackTrace
 import com.vextreme.vexlife.android.vexstream.playback.toVexStreamCurrentPlaybackObservation
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
-import com.vextreme.vexlife.android.vexstream.player.withVexStreamPlayerOutboundConnection
+import com.vextreme.vexlife.android.vexstream.player.withVexStreamPlayerRequestConnection
 import com.vextreme.vexlife.android.vexstream.queue.PartnerVexStreamQueueConnection
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
 import com.vextreme.vexlife.android.widget.VexGlanceAppWidget
@@ -869,7 +869,7 @@ class VexStreamPlaybackWidgetActionCallback :
                 "command=$command",
         )
 
-        withVexStreamPlayerOutboundConnection(
+        withVexStreamPlayerRequestConnection(
             context,
         ) { playerConnection ->
             VexStreamPlaybackTrace.record(

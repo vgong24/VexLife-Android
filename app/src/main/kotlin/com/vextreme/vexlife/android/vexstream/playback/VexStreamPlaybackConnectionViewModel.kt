@@ -14,6 +14,7 @@ import androidx.media3.session.SessionToken
 import com.vextreme.vexlife.android.VexApplication
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackService
 import com.vextreme.vexlife.android.vexstream.player.Media3VexStreamPlayerControlConnection
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
 import com.vextreme.vexlife.android.vexstream.queue.PartnerVexStreamQueueConnection
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueConnection
@@ -117,7 +118,7 @@ internal class VexStreamPlaybackConnectionViewModel(
 
     var progressConnection by
         mutableStateOf<
-            VexStreamPlaybackProgressConnection?
+            VexStreamPlayerPartner.Connection.Progress?
         >(
             null,
         )

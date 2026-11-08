@@ -22,7 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.media3.session.MediaController
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.elements.ElementIcon
 import com.vextreme.vexlife.android.elements.VexIcon
@@ -30,7 +29,6 @@ import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPage
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.playback.present
-import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamMediaController
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackDisplayState
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackExperience
@@ -57,8 +55,6 @@ private const val VEXSTREAM_CONTEXT_DOCK_PAGE_REF =
 internal fun rememberVexStreamContextDockPage(
     runtime: VexRuntime,
 ): VexContextDockPage? {
-    val controller =
-        rememberVexStreamMediaController()
     val playbackExperience =
         rememberVexStreamPlaybackExperience()
     when (
@@ -82,7 +78,6 @@ internal fun rememberVexStreamContextDockPage(
     ) { expanded ->
         VexStreamContextDockContent(
             runtime = runtime,
-            controller = controller,
             playbackExperience =
                 playbackExperience,
             expanded = expanded,
@@ -93,7 +88,6 @@ internal fun rememberVexStreamContextDockPage(
 @Composable
 private fun VexStreamContextDockContent(
     runtime: VexRuntime,
-    controller: MediaController?,
     playbackExperience:
         VexStreamPlaybackExperience,
     expanded: Boolean,
@@ -103,9 +97,7 @@ private fun VexStreamContextDockContent(
             .displayState
             .playback
     val queueExperience =
-        rememberVexStreamQueueExperience(
-            controller,
-        )
+        rememberVexStreamQueueExperience()
     val queueProjection =
         queueExperience.projection
     val queuePlayConnection =
@@ -113,9 +105,7 @@ private fun VexStreamContextDockContent(
             controller,
         )
     val seekConnection =
-        rememberVexStreamPlaybackSeekConnection(
-            controller,
-        )
+        rememberVexStreamPlaybackSeekConnection()
 
     var scrubFraction by
         remember(

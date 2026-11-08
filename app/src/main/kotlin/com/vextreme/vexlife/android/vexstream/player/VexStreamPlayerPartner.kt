@@ -177,17 +177,26 @@ internal object VexStreamPlayerPartner :
         }
 
         /**
-         * Outbound capability of one live Player Connection.
+         * Request-capable side of one live Player Connection.
          *
-         * Existing feature-owned Effects/Seek remain their own vocabulary; this child only states
-         * that one Player Connection can realize those already-resolved requests.
+         * Existing feature-owned Effect/Seek vocabularies remain authoritative; this role only says
+         * one Player Connection can realize those already-resolved requests.
          */
-        interface Outbound :
+        interface Request :
             Connection,
             VexStreamPlaybackEffectConnection,
             VexStreamQueueEffectConnection,
             VexStreamRepeatEffectConnection,
-            VexStreamPlaybackSeekConnection,
+            VexStreamPlaybackSeekConnection
+
+        /**
+         * Bounded live progress read from one Player Connection.
+         *
+         * Progress is deliberately separate from Request because reading provider time is not an
+         * outbound Effect.
+         */
+        interface Progress :
+            Connection,
             VexStreamPlaybackProgressConnection
 
         data class Observation(
