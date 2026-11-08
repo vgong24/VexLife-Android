@@ -8,6 +8,7 @@ import com.vextreme.vexlife.android.dependency.VexDependencyBuildScope
 import com.vextreme.vexlife.android.dependency.VexDependencyFactory
 import com.vextreme.vexlife.android.dependency.VexDependencyModule
 import com.vextreme.vexlife.android.dependency.VexDependencyProvider
+import com.vextreme.vexlife.android.dependency.VexApplicationScope
 import com.vextreme.vexlife.android.elements.UIBlueprintRegistry
 import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsNavigationProcess
@@ -53,7 +54,9 @@ class VexApplication :
         private set
 
     internal lateinit var dependencies:
-        VexDependencyFactory
+        VexDependencyFactory<
+            VexApplicationScope
+        >
         private set
 
     override fun onCreate() {
@@ -134,7 +137,9 @@ internal class VexApplicationDependencyModule(
 
 
     val module:
-        VexDependencyModule =
+        VexDependencyModule<
+            VexApplicationScope
+        > =
         VexDependencyModule.of(
             androidApplication,
             blueprintRegistry,
@@ -150,7 +155,7 @@ internal class VexApplicationDependencyModule(
         private val application:
             Application,
     ) :
-        VexDependencyProvider<Application>() {
+        VexDependencyProvider<VexApplicationScope, Application>() {
         override fun create(
             dependencies:
                 VexDependencyBuildScope,
@@ -160,7 +165,7 @@ internal class VexApplicationDependencyModule(
     }
 
     internal class BlueprintRegistryProvider :
-        VexDependencyProvider<UIBlueprintRegistry>() {
+        VexDependencyProvider<VexApplicationScope, UIBlueprintRegistry>() {
         override fun create(
             dependencies:
                 VexDependencyBuildScope,
@@ -171,9 +176,9 @@ internal class VexApplicationDependencyModule(
 
     internal class RepositoriesProvider(
         private val application:
-            VexDependencyProvider<Application>,
+            VexDependencyProvider<VexApplicationScope, Application>,
     ) :
-        VexDependencyProvider<AppRepositories>(
+        VexDependencyProvider<VexApplicationScope, AppRepositories>(
             dependencies =
                 listOf(
                     application,
@@ -193,9 +198,9 @@ internal class VexApplicationDependencyModule(
 
     internal class ThemeModeStoreProvider(
         private val application:
-            VexDependencyProvider<Application>,
+            VexDependencyProvider<VexApplicationScope, Application>,
     ) :
-        VexDependencyProvider<ThemeModeStore>(
+        VexDependencyProvider<VexApplicationScope, ThemeModeStore>(
             dependencies =
                 listOf(
                     application,
@@ -221,7 +226,7 @@ internal class VexApplicationDependencyModule(
      * sources are unchanged and die with the Android process.
      */
     internal class ProcessScopeProvider :
-        VexDependencyProvider<
+        VexDependencyProvider<VexApplicationScope, 
             CoroutineScope
         >() {
         override fun create(
@@ -237,7 +242,7 @@ internal class VexApplicationDependencyModule(
 
     /** One semantic Playback Family shared by UI, Service, Widget projections, and process Relays. */
     internal class PlaybackFamilyProvider :
-        VexDependencyProvider<
+        VexDependencyProvider<VexApplicationScope, 
             VexStreamPlaybackFamily
         >() {
         override fun create(
@@ -255,7 +260,7 @@ internal class VexApplicationDependencyModule(
      * singleton lookup for consumers that need its current process truth.
      */
     internal class NavigationSessionProvider :
-        VexDependencyProvider<
+        VexDependencyProvider<VexApplicationScope, 
             VexNavigationSession
         >() {
         override fun create(
@@ -269,19 +274,19 @@ internal class VexApplicationDependencyModule(
 
     internal class BackgroundServiceRelayProvider(
         private val playbackFamily:
-            VexDependencyProvider<
+            VexDependencyProvider<VexApplicationScope, 
                 VexStreamPlaybackFamily
             >,
         private val navigationSession:
-            VexDependencyProvider<
+            VexDependencyProvider<VexApplicationScope, 
                 VexNavigationSession
             >,
         private val processScope:
-            VexDependencyProvider<
+            VexDependencyProvider<VexApplicationScope, 
                 CoroutineScope
             >,
     ) :
-        VexDependencyProvider<
+        VexDependencyProvider<VexApplicationScope, 
             BackgroundServiceRelay
         >(
             dependencies =
