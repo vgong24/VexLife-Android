@@ -47,6 +47,36 @@ a foreign Effect directly.
 VexLifeRelayGraph is the session-level projection of which independently-owned Relay nodes are alive.
 The graph does not construct, activate, or semantically own those Relays.
 
+
+### Background Service convergence
+
+VexLife now has a process-lived [BackgroundServiceRelay] consumer pressure:
+
+~~~text
+process-shared Playback Family State ----\
+existing process Navigation truth --------+-> BackgroundServiceRelay
+future rightful background truths --------/
+                                             ↓
+                                  background relationship truth
+~~~
+
+The Relay answers which background-capable VexLife relationships are current together while UI may
+be absent. It is not an Android Service manager, startup bus, or duplicate State owner.
+
+Playback Service, UI, Widget, and this Relay all consume the same process-shared Playback Family.
+Provider changes re-enter through Family observation; the Relay sees the resulting StateFlow change
+through its ordinary declarative dependency observation.
+
+Future Health, Call, Companion, or other background-capable owners may join only when their real
+source exists. If a lower Relay already owns a relationship needed here, consume that complete Relay
+output rather than reopening its child inputs.
+
+BackgroundServiceRelay lifetime is process-level because its relationship remains meaningful while
+background Services outlive the UI session. That does not make all Relays process-lived:
+EventsConvergenceRelay remains session-lived because its current relationship includes UI/session
+attention context.
+
+
 ## Developer shape
 
 One truth:
