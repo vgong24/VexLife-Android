@@ -92,14 +92,34 @@ class VexRuntimeNavigationTest {
     }
 
     @Test
-    fun partnerFeedbackCircuitIsReachableFromSharedShellDebugPath() {
+    fun partnerFeedbackCircuitIsReachableFromHomeFabThroughDebugMenu() {
         val runtime =
             runtime()
+
+        assertSame(
+            HomeScreen,
+            runtime.currentScreen,
+        )
+
+        runtime.activate(
+            AppShell.Elements.Add,
+        )
+
+        assertTrue(
+            runtime.presentation.isOpen(
+                AppShell.Elements.FabOptions,
+            ),
+        )
 
         runtime.activate(
             AppShell.Elements.DebugMenu,
         )
 
+        assertFalse(
+            runtime.presentation.isOpen(
+                AppShell.Elements.FabOptions,
+            ),
+        )
         assertSame(
             DebugMenuScreen,
             runtime.currentScreen,
