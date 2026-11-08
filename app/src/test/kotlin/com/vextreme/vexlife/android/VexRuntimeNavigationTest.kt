@@ -10,6 +10,7 @@ import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.primary.settings.SettingsScreen
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
 import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
+import com.vextreme.vexlife.android.screens.shared.partners.PartnersCircuitLabScreen
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
@@ -87,6 +88,30 @@ class VexRuntimeNavigationTest {
         assertEquals(
             DebugMenuScreen.screenId,
             navigation.screenAfterId,
+        )
+    }
+
+    @Test
+    fun partnerFeedbackCircuitIsReachableFromSharedShellDebugPath() {
+        val runtime =
+            runtime()
+
+        runtime.activate(
+            AppShell.Elements.DebugMenu,
+        )
+
+        assertSame(
+            DebugMenuScreen,
+            runtime.currentScreen,
+        )
+
+        runtime.activate(
+            DebugMenuScreen.OpenPartnersCircuitLab,
+        )
+
+        assertSame(
+            PartnersCircuitLabScreen,
+            runtime.currentScreen,
         )
     }
 
