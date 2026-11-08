@@ -1,6 +1,6 @@
 package com.vextreme.vexlife.android.vexstream.repeat
 
-import androidx.media3.common.Player
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -14,12 +14,13 @@ class VexStreamRepeatBehaviorTest {
         behavior.vexStreamRepeatControls()
 
     @Test
-    fun repeatOffProjectsEnableWhenProviderAllowsToggle() {
+    fun partnerRepeatDisabledProjectsEnableWhenToggleIsAvailable() {
         val state =
-            vexStreamRepeatState(
-                repeatMode =
-                    Player.REPEAT_MODE_OFF,
-                toggleAvailable = true,
+            repeatState(
+                enabled =
+                    false,
+                toggleAvailable =
+                    true,
             )
 
         assertTrue(
@@ -37,40 +38,23 @@ class VexStreamRepeatBehaviorTest {
     }
 
     @Test
-    fun providerRepeatOneAndAllBothProjectAsEnabled() {
-        val repeatOne =
-            vexStreamRepeatState(
-                repeatMode =
-                    Player.REPEAT_MODE_ONE,
-                toggleAvailable = true,
-            )
-        val repeatAll =
-            vexStreamRepeatState(
-                repeatMode =
-                    Player.REPEAT_MODE_ALL,
-                toggleAvailable = true,
+    fun partnerRepeatEnabledProjectsDisable() {
+        val state =
+            repeatState(
+                enabled =
+                    true,
+                toggleAvailable =
+                    true,
             )
 
         assertTrue(
-            repeatOne is
-                VexStreamRepeatState.Enabled,
-        )
-        assertTrue(
-            repeatAll is
+            state is
                 VexStreamRepeatState.Enabled,
         )
         assertSame(
             VexStreamRepeatAct.Disable,
             controls.projection(
-                repeatOne,
-            )[
-                VexStreamRepeatControl.Toggle
-            ].act,
-        )
-        assertSame(
-            VexStreamRepeatAct.Disable,
-            controls.projection(
-                repeatAll,
+                state,
             )[
                 VexStreamRepeatControl.Toggle
             ].act,
@@ -78,12 +62,13 @@ class VexStreamRepeatBehaviorTest {
     }
 
     @Test
-    fun providerCommandAvailabilityOwnsToggleAvailability() {
+    fun partnerCapabilityOwnsToggleAvailability() {
         val state =
-            vexStreamRepeatState(
-                repeatMode =
-                    Player.REPEAT_MODE_OFF,
-                toggleAvailable = false,
+            repeatState(
+                enabled =
+                    false,
+                toggleAvailable =
+                    false,
             )
 
         assertFalse(
@@ -136,6 +121,21 @@ class VexStreamRepeatBehaviorTest {
             disable?.admittedStateKind,
         )
     }
+
+    private fun repeatState(
+        enabled:
+            Boolean,
+        toggleAvailable:
+            Boolean,
+    ):
+        VexStreamRepeatState =
+        VexStreamPlayerPartner.Signal.Repeat(
+            enabled =
+                enabled,
+            toggleAvailable =
+                toggleAvailable,
+        )
+            .toVexStreamRepeatState()
 }
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][REPEAT][PLAYER-PARTNER]

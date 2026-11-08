@@ -27,3 +27,43 @@ sealed interface VexStreamQueueState :
 }
 
 // [VXG RealForever]
+
+
+internal fun vexStreamQueueState(
+    mediaItemCount:
+        Int,
+    previousAvailable:
+        Boolean,
+    nextAvailable:
+        Boolean,
+    shuffleAvailable:
+        Boolean,
+    clearAvailable:
+        Boolean,
+):
+    VexStreamQueueState {
+    require(
+        mediaItemCount >=
+            0,
+    ) {
+        "mediaItemCount must not be negative"
+    }
+
+    if (
+        mediaItemCount ==
+        0
+    ) {
+        return VexStreamQueueState.Empty
+    }
+
+    return VexStreamQueueState.NonEmpty(
+        previousAvailable =
+            previousAvailable,
+        nextAvailable =
+            nextAvailable,
+        shuffleAvailable =
+            shuffleAvailable,
+        clearAvailable =
+            clearAvailable,
+    )
+}

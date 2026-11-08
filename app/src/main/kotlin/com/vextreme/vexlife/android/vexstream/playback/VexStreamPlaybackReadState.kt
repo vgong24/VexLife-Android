@@ -7,15 +7,10 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.media3.common.C
-import androidx.media3.common.Player
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueProjection
-import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueBehavior
-import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueControls
-import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueState
 import com.vextreme.vexlife.android.vexstream.queue.toVexStreamQueueProjection
 import kotlinx.coroutines.delay
 import java.util.concurrent.atomic.AtomicLong
@@ -322,7 +317,12 @@ internal fun VexStreamPlayerPartner.Current.toVexStreamCurrentPlaybackObservatio
             playbackFamily
                 .currentPlaybackProjection,
         queueProjection =
-            toVexStreamQueueProjection(),
+            (
+                this as?
+                    VexStreamPlayerPartner.Current.Available
+            )
+                ?.queue
+                .toVexStreamQueueProjection(),
     )
 
 private fun VexStreamPlayerPartner.Current.toVexStreamPlaybackReadState(
@@ -362,91 +362,6 @@ private fun VexStreamPlayerPartner.Current.toVexStreamPlaybackReadState(
                     progress.bufferedPositionMs,
             )
     }
-
-private fun VexStreamPlayerPartner.Current.toVexStreamQueueProjection():
-    VexStreamQueueProjection {
-    val state =
-        when (
-            this
-        ) {
-            VexStreamPlayerPartner.Current
-                .Unavailable ->
-                vexStreamQueueState(
-                    mediaItemCount =
-                        0,
-                    previousAvailable =
-                        false,
-                    nextAvailable =
-                        false,
-                    shuffleAvailable =
-                        false,
-                    clearAvailable =
-                        false,
-                )
-
-            is VexStreamPlayerPartner.Current
-                .Available ->
-                vexStreamQueueState(
-                    mediaItemCount =
-                        queueItems
-                            .mediaIds
-                            .size,
-                    previousAvailable =
-                        queueNavigation
-                            .previousAvailable,
-                    nextAvailable =
-                        queueNavigation
-                            .nextAvailable,
-                    shuffleAvailable =
-                        queueNavigation
-                            .shuffleAvailable,
-                    clearAvailable =
-                        queueNavigation
-                            .clearAvailable,
-                )
-        }
-
-    return vexStreamQueueBehavior()
-        .vexStreamQueueControls()
-        .projection(
-            state,
-        )
-}
-
-/**
- * Temporary Widget bootstrap bridge.
- *
- * Continuous Service observation no longer uses this provider->Family shortcut. The Widget
- * bootstrap remains a named successor seam until it consumes the process Player Store directly.
- */
-internal fun Player.toVexStreamCurrentPlaybackObservation(
-    playbackFamily:
-        VexStreamPlaybackFamily,
-):
-    VexStreamCurrentPlaybackObservation {
-    val reconciled =
-        reconcileVexStreamPlaybackObservation(
-            observed =
-                toVexStreamPlaybackState(),
-            current =
-                playbackFamily
-                    .currentState,
-        )
-
-    playbackFamily.observe(
-        reconciled,
-    )
-
-    return VexStreamCurrentPlaybackObservation(
-        readState =
-            toVexStreamPlaybackReadState(),
-        playbackProjection =
-            playbackFamily
-                .currentPlaybackProjection,
-        queueProjection =
-            toVexStreamQueueProjection(),
-    )
-}
 
 @Composable
 internal fun rememberVexStreamPlaybackReadState():
@@ -523,96 +438,6 @@ internal fun rememberVexStreamPlaybackReadState():
             .toVexStreamPlaybackReadState(
                 progress.value,
             ),
-    )
-}
-
-internal fun Player
-    .toVexStreamPlaybackReadState():
-    VexStreamPlaybackReadState {
-    val current =
-        currentMediaItem
-
-    val durationMs =
-        duration.takeIf {
-            it != C.TIME_UNSET &&
-                it > 0L
-        } ?: 0L
-
-    val positionMs =
-        currentPosition
-            .coerceAtLeast(
-                0L,
-            )
-            .let {
-                if (
-                    durationMs > 0L
-                ) {
-                    it.coerceAtMost(
-                        durationMs,
-                    )
-                } else {
-                    it
-                }
-            }
-
-    val bufferedMs =
-        bufferedPosition
-            .coerceAtLeast(
-                0L,
-            )
-            .let {
-                if (
-                    durationMs > 0L
-                ) {
-                    it.coerceAtMost(
-                        durationMs,
-                    )
-                } else {
-                    it
-                }
-            }
-
-    return VexStreamPlaybackReadState(
-        currentMediaId =
-            current?.mediaId,
-        currentTitle =
-            current
-                ?.mediaMetadata
-                ?.title
-                ?.toString()
-                .orEmpty(),
-        currentArtist =
-            current
-                ?.mediaMetadata
-                ?.artist
-                ?.toString()
-                .orEmpty(),
-        currentArtworkUri =
-            current
-                ?.mediaMetadata
-                ?.artworkUri
-                ?.toString(),
-        queueMediaIds =
-            (0 until mediaItemCount)
-                .map { index ->
-                    getMediaItemAt(
-                        index,
-                    ).mediaId
-                },
-        currentIndex =
-            if (
-                mediaItemCount > 0
-            ) {
-                currentMediaItemIndex
-            } else {
-                -1
-            },
-        currentPositionMs =
-            positionMs,
-        durationMs =
-            durationMs,
-        bufferedPositionMs =
-            bufferedMs,
     )
 }
 
