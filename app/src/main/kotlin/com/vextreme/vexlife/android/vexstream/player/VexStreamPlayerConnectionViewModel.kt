@@ -1,4 +1,4 @@
-package com.vextreme.vexlife.android.vexstream.playback
+package com.vextreme.vexlife.android.vexstream.player
 
 import android.app.Application
 import android.content.ComponentName
@@ -11,9 +11,11 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.vextreme.vexlife.android.VexApplication
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackService
-import com.vextreme.vexlife.android.vexstream.player.Media3VexStreamPlayerControlConnection
-import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
-import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
+import com.vextreme.vexlife.android.vexstream.playback.PartnerVexStreamPlaybackConnection
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackConnection
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackProgressConnection
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackSeekConnection
 import com.vextreme.vexlife.android.vexstream.queue.PartnerVexStreamQueueConnection
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueConnection
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueuePlayConnection
@@ -22,12 +24,12 @@ import com.vextreme.vexlife.android.vexstream.repeat.PartnerVexStreamRepeatConne
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatConnection
 
 /**
- * Android configuration-lifetime owner for the concrete Playback Connection.
+ * Android configuration-lifetime owner for one concrete Player Partner request/progress Connection.
  *
- * The ViewModel owns only the MediaController connection lifetime. Playback semantic truth belongs
- * to the process-shared [VexStreamPlaybackFamily] resolved from [VexApplication].
+ * Media3 connection construction/lifetime stays in the Player Partner neighborhood. Playback,
+ * Queue and Repeat remain separate semantic owners that receive Vex-owned connection surfaces.
  */
-internal class VexStreamPlaybackConnectionViewModel(
+internal class VexStreamPlayerConnectionViewModel(
     application:
         Application,
 ) :

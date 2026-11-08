@@ -2,7 +2,7 @@ package com.vextreme.vexlife.android.vexstream.queue
 
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackConnectionViewModel
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerConnectionViewModel
 
 internal enum class VexStreamQueueReorderDirection {
     Earlier,
@@ -31,7 +31,7 @@ internal interface VexStreamQueueReorderConnection {
 internal fun rememberVexStreamQueueReorderConnection():
     VexStreamQueueReorderConnection? {
     val owner:
-        VexStreamPlaybackConnectionViewModel =
+        VexStreamPlayerConnectionViewModel =
         viewModel()
 
     return owner.queueReorderConnection

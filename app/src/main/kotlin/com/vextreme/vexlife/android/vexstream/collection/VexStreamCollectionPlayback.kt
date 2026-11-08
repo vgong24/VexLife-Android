@@ -8,7 +8,7 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackAvailability
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackConnectionViewModel
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerConnectionViewModel
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueShuffleTargetOrder
 import com.vextreme.vexlife.android.vexstream.track.VexStreamTrackPlaybackResolver
@@ -73,7 +73,7 @@ internal fun rememberVexStreamCollectionPlaybackConnection(
 ):
     VexStreamCollectionPlaybackConnection? {
     val owner:
-        VexStreamPlaybackConnectionViewModel =
+        VexStreamPlayerConnectionViewModel =
         viewModel()
     val realization =
         owner.playerRequestConnection

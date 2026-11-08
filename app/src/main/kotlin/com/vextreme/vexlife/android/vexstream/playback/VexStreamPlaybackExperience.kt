@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerConnectionViewModel
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -44,7 +45,7 @@ private class CurrentVexStreamPlaybackExperience(
 internal fun rememberVexStreamPlaybackExperience():
     VexStreamPlaybackExperience {
     val owner:
-        VexStreamPlaybackConnectionViewModel =
+        VexStreamPlayerConnectionViewModel =
         viewModel()
 
     val connection =

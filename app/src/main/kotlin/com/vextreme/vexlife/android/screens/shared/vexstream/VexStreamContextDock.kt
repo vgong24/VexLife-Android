@@ -31,7 +31,7 @@ import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPage
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.playback.present
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackConnectionViewModel
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerConnectionViewModel
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackDisplayState
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackExperience
@@ -108,7 +108,7 @@ private fun VexStreamContextDockContent(
     val seekConnection =
         rememberVexStreamPlaybackSeekConnection()
     val owner:
-        VexStreamPlaybackConnectionViewModel =
+        VexStreamPlayerConnectionViewModel =
         viewModel()
     val queueCurrent by
         owner

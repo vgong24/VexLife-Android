@@ -5,7 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackConnectionViewModel
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerConnectionViewModel
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 
 /** Compose-facing membrane over retained Player Partner Repeat truth and Repeat Controls. */
@@ -40,7 +40,7 @@ private class CurrentVexStreamRepeatExperience(
 internal fun rememberVexStreamRepeatExperience():
     VexStreamRepeatExperience {
     val owner:
-        VexStreamPlaybackConnectionViewModel =
+        VexStreamPlayerConnectionViewModel =
         viewModel()
     val repeat by
         owner

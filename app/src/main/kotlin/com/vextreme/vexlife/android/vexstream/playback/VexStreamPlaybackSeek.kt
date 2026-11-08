@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerConnectionViewModel
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.viewmodel.compose.viewModel
 
@@ -52,7 +53,7 @@ internal interface VexStreamPlaybackSeekConnection {
 internal fun rememberVexStreamPlaybackSeekConnection():
     VexStreamPlaybackSeekConnection? {
     val owner:
-        VexStreamPlaybackConnectionViewModel =
+        VexStreamPlayerConnectionViewModel =
         viewModel()
 
     return owner.seekConnection

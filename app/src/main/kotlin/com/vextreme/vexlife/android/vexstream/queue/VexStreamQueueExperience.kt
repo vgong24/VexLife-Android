@@ -5,7 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackConnectionViewModel
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerConnectionViewModel
 
 /**
  * Compose-facing membrane for Queue semantic meaning.
@@ -44,7 +44,7 @@ private class CurrentVexStreamQueueExperience(
 internal fun rememberVexStreamQueueExperience():
     VexStreamQueueExperience {
     val owner:
-        VexStreamPlaybackConnectionViewModel =
+        VexStreamPlayerConnectionViewModel =
         viewModel()
     val queueCurrent by
         owner
