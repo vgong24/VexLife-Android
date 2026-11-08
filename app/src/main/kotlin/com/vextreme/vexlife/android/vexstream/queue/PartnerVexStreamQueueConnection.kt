@@ -13,26 +13,26 @@ internal class PartnerVexStreamQueueConnection(
         VexStreamQueueEffectConnection,
 ) :
     VexStreamQueueConnection {
-    private val behavior =
-        vexStreamQueueBehavior()
-
-    private val controls =
-        behavior
-            .vexStreamQueueControls()
-
     override val currentProjection:
         VexStreamQueueProjection
         get() =
-            controls.projection(
-                currentState(),
-            )
+            store
+                .currentQueue
+                .toVexStreamQueueProjection()
 
     override fun activate(
         control:
             VexStreamQueueControl,
     ) {
         val current =
-            currentState()
+            store
+                .currentQueue
+                .toVexStreamQueueState()
+        val behavior =
+            vexStreamQueueBehavior()
+        val controls =
+            behavior
+                .vexStreamQueueControls()
         val act =
             controls.resolve(
                 current =
@@ -55,32 +55,44 @@ internal class PartnerVexStreamQueueConnection(
             relationship.effect,
         )
     }
-
-    private fun currentState():
-        VexStreamQueueState {
-        val queue =
-            store.currentQueue
-                ?: return VexStreamQueueState
-                    .Empty
-
-        return queue
-            .toState()
-    }
 }
 
-internal fun VexStreamPlayerPartner.QueueCurrent.toState():
+internal fun VexStreamPlayerPartner.QueueCurrent?.toVexStreamQueueState():
     VexStreamQueueState =
-    vexStreamQueueState(
-        mediaItemCount =
-            items.mediaIds.size,
-        previousAvailable =
-            navigation.previousAvailable,
-        nextAvailable =
-            navigation.nextAvailable,
-        shuffleAvailable =
-            navigation.shuffleAvailable,
-        clearAvailable =
-            navigation.clearAvailable,
-    )
+    this
+        ?.let { queue ->
+            vexStreamQueueState(
+                mediaItemCount =
+                    queue.items
+                        .mediaIds
+                        .size,
+                previousAvailable =
+                    queue.navigation
+                        .previousAvailable,
+                nextAvailable =
+                    queue.navigation
+                        .nextAvailable,
+                shuffleAvailable =
+                    queue.navigation
+                        .shuffleAvailable,
+                clearAvailable =
+                    queue.navigation
+                        .clearAvailable,
+            )
+        }
+        ?: VexStreamQueueState
+            .Empty
+
+internal fun VexStreamPlayerPartner.QueueCurrent?.toVexStreamQueueProjection():
+    VexStreamQueueProjection {
+    val behavior =
+        vexStreamQueueBehavior()
+
+    return behavior
+        .vexStreamQueueControls()
+        .projection(
+            toVexStreamQueueState(),
+        )
+}
 
 // [VXG RealForever][VEXSTREAM][QUEUE][PLAYER-PARTNER]

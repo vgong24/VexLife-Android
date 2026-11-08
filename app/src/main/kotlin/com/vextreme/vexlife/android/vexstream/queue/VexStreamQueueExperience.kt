@@ -1,24 +1,21 @@
 package com.vextreme.vexlife.android.vexstream.queue
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.media3.common.Player
-import androidx.media3.session.MediaController
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackConnectionViewModel
 
 /**
- * Compose-facing membrane for the VexStream neighboring-item Queue behavior.
+ * Compose-facing membrane for Queue semantic meaning.
  *
- * Queue does not currently need an additional DisplayState classification: the Behavior Projection
- * already answers the view question used by Mini Player and Context Dock. This boundary owns no
- * Queue truth; it observes the current projection and carries Controls back to the Connection.
+ * The Player Store owns retained outside CURRENT; this Experience observes its bounded Queue
+ * projection and carries Controls to the semantic Queue Connection. It owns no provider listener.
  */
 internal interface VexStreamQueueExperience {
     val projection:
-        VexStreamQueueProjection?
+        VexStreamQueueProjection
 
     fun activate(
         control:
@@ -28,7 +25,7 @@ internal interface VexStreamQueueExperience {
 
 private class CurrentVexStreamQueueExperience(
     override val projection:
-        VexStreamQueueProjection?,
+        VexStreamQueueProjection,
     private val connection:
         VexStreamQueueConnection?,
 ) :
@@ -44,74 +41,34 @@ private class CurrentVexStreamQueueExperience(
 }
 
 @Composable
-internal fun rememberVexStreamQueueExperience(
-    controller:
-        MediaController?,
-): VexStreamQueueExperience {
+internal fun rememberVexStreamQueueExperience():
+    VexStreamQueueExperience {
+    val owner:
+        VexStreamPlaybackConnectionViewModel =
+        viewModel()
+    val queueCurrent by
+        owner
+            .playerStore
+            .queueCurrents
+            .collectAsStateWithLifecycle(
+                initialValue =
+                    owner
+                        .playerStore
+                        .currentQueue,
+            )
+    val projection =
+        remember(
+            queueCurrent,
+        ) {
+            queueCurrent
+                .toVexStreamQueueProjection()
+        }
     val connection =
-        remember(
-            controller,
-        ) {
-            controller?.let {
-                Media3VexStreamQueueConnection(
-                    it,
-                )
-            }
-        }
-
-    var projection by
-        remember(
-            connection,
-        ) {
-            mutableStateOf(
-                connection
-                    ?.currentProjection,
-            )
-        }
-
-    DisposableEffect(
-        controller,
-        connection,
-    ) {
-        if (
-            controller == null ||
-            connection == null
-        ) {
-            projection = null
-            return@DisposableEffect onDispose {}
-        }
-
-        val listener =
-            object :
-                Player.Listener {
-                override fun onEvents(
-                    player: Player,
-                    events:
-                        Player.Events,
-                ) {
-                    projection =
-                        connection
-                            .currentProjection
-                }
-            }
-
-        controller.addListener(
-            listener,
-        )
-        projection =
-            connection
-                .currentProjection
-
-        onDispose {
-            controller.removeListener(
-                listener,
-            )
-        }
-    }
+        owner.queueConnection
 
     return remember(
-        connection,
         projection,
+        connection,
     ) {
         CurrentVexStreamQueueExperience(
             projection =
@@ -122,4 +79,4 @@ internal fun rememberVexStreamQueueExperience(
     }
 }
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][QUEUE][PLAYER-PARTNER]

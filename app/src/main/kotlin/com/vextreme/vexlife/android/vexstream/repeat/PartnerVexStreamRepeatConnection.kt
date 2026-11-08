@@ -13,26 +13,34 @@ internal class PartnerVexStreamRepeatConnection(
         VexStreamRepeatEffectConnection,
 ) :
     VexStreamRepeatConnection {
-    private val behavior =
-        vexStreamRepeatBehavior()
-
-    private val controls =
-        behavior
-            .vexStreamRepeatControls()
-
     override val currentProjection:
         VexStreamRepeatProjection
         get() =
-            controls.projection(
-                currentState(),
+            (
+                store.current as?
+                    VexStreamPlayerPartner.Current.Available
             )
+                ?.repeat
+                .toVexStreamRepeatProjection()
 
     override fun activate(
         control:
             VexStreamRepeatControl,
     ) {
+        val signal =
+            (
+                store.current as?
+                    VexStreamPlayerPartner.Current.Available
+            )
+                ?.repeat
         val current =
-            currentState()
+            signal
+                .toVexStreamRepeatState()
+        val behavior =
+            vexStreamRepeatBehavior()
+        val controls =
+            behavior
+                .vexStreamRepeatControls()
         val act =
             controls.resolve(
                 current =
@@ -55,32 +63,36 @@ internal class PartnerVexStreamRepeatConnection(
             relationship.effect,
         )
     }
+}
 
-    private fun currentState():
-        VexStreamRepeatState {
-        val signal =
-            (
-                store.current as?
-                    VexStreamPlayerPartner.Current.Available
-            )
-                ?.repeat
-
-        return if (
-            signal?.enabled ==
-            true
-        ) {
-            VexStreamRepeatState.Enabled(
-                toggleAvailable =
-                    signal.toggleAvailable,
-            )
-        } else {
-            VexStreamRepeatState.Disabled(
-                toggleAvailable =
-                    signal?.toggleAvailable ==
-                        true,
-            )
-        }
+internal fun VexStreamPlayerPartner.Signal.Repeat?.toVexStreamRepeatState():
+    VexStreamRepeatState =
+    if (
+        this?.enabled ==
+        true
+    ) {
+        VexStreamRepeatState.Enabled(
+            toggleAvailable =
+                toggleAvailable,
+        )
+    } else {
+        VexStreamRepeatState.Disabled(
+            toggleAvailable =
+                this?.toggleAvailable ==
+                    true,
+        )
     }
+
+internal fun VexStreamPlayerPartner.Signal.Repeat?.toVexStreamRepeatProjection():
+    VexStreamRepeatProjection {
+    val behavior =
+        vexStreamRepeatBehavior()
+
+    return behavior
+        .vexStreamRepeatControls()
+        .projection(
+            toVexStreamRepeatState(),
+        )
 }
 
 // [VXG RealForever][VEXSTREAM][REPEAT][PLAYER-PARTNER]
