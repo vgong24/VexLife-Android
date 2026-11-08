@@ -6,9 +6,9 @@ import androidx.media3.session.MediaController
 /**
  * Media3 realization of accepted Playback Family Effects.
  *
- * This object does not own Playback State. It receives the process-shared [VexStreamPlaybackFamily],
- * re-reads current provider truth before activation, realizes the accepted Effect, then reconciles
- * Media3 truth back into that same Family.
+ * This object does not own Playback State or provider observation. It receives the process-shared
+ * [VexStreamPlaybackFamily], realizes its accepted Effect, and leaves continuous provider truth to
+ * the Service-hosted VexStream Player Partner Connection.
  */
 internal class Media3VexStreamPlaybackConnection(
     private val controller:
@@ -21,10 +21,6 @@ internal class Media3VexStreamPlaybackConnection(
         control:
             VexStreamPlaybackControl,
     ) {
-        observe(
-            controller,
-        )
-
         val effect =
             family
                 .activate(
@@ -33,38 +29,8 @@ internal class Media3VexStreamPlaybackConnection(
                 ?.effect
                 ?: return
 
-        try {
-            realize(
-                effect,
-            )
-        } catch (
-            failure:
-                Throwable
-        ) {
-            observe(
-                controller,
-            )
-            throw failure
-        }
-
-        observe(
-            controller,
-        )
-    }
-
-    private fun observe(
-        player:
-            Player,
-    ) {
-        family.observe(
-            reconcileVexStreamPlaybackObservation(
-                observed =
-                    player
-                        .toVexStreamPlaybackState(),
-                current =
-                    family
-                        .currentState,
-            ),
+        realize(
+            effect,
         )
     }
 
@@ -87,28 +53,6 @@ internal class Media3VexStreamPlaybackConnection(
             }
         }
     }
-}
-
-internal fun Player.toVexStreamPlaybackProjection(
-    family:
-        VexStreamPlaybackFamily,
-):
-    VexStreamPlaybackProjection {
-    val state =
-        reconcileVexStreamPlaybackObservation(
-            observed =
-                toVexStreamPlaybackState(),
-            current =
-                family
-                    .currentState,
-        )
-
-    family.observe(
-        state,
-    )
-
-    return family
-        .currentPlaybackProjection
 }
 
 internal fun Player.toVexStreamPlaybackState():
@@ -212,4 +156,8 @@ internal fun vexStreamPlaybackState(
     }
 }
 
+/*
+ * Player.toVexStreamPlaybackState remains only for the explicitly named Widget bootstrap bridge in
+ * VexStreamPlaybackReadState. It is not the canonical continuous provider-observation path.
+ */
 // [VXG RealForever][VEXSTREAM][PLAYBACK][MEDIA3-CONNECTION]

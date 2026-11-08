@@ -124,6 +124,36 @@ The concrete Relay should be boring to inspect:
 3. read `processState / processStates` to see the reconciliation law;
 4. read its output state to see what consumers are allowed to depend on.
 
+### Convergence kernel below Relay
+
+`VexConvergence<Update, Current>` owns only the small retained-current mechanism that Compound
+Relay and another rightful current owner may genuinely share:
+
+~~~text
+one admitted Update
++ one exact retained CURRENT
+-> serialized non-suspending convergence
+-> publish only when CURRENT meaning changes
+~~~
+
+It deliberately does **not** own Relay dependency semantics, InputState/OutputState, provider
+conversion, Partner identity, VexExecution lifetime, persistence, defensive-copy policy, or a rule
+that every consumer must recalculate every field.
+
+`VexCompoundRelay` uses this kernel while preserving its stronger existing law:
+
+~~~text
+incoming dependency patch
++ complete retained independent inputs
+-> full bounded relationship reevaluation
+-> complete Relay output
+~~~
+
+A non-Relay owner may reuse the kernel only when the same mechanical failure is present: several
+partial updates otherwise force each consumer to reconstruct and retain the same complete current
+truth. Reusing VexConvergence does not make that owner a Relay and does not import
+`vexObserveDependencies` or `processStates()` semantics into another root.
+
 ### Compound Relay / Convergence authoring context
 
 Within the [SCAE architecture](../behavior/README.md#scae-architecture), a Compound Convergence Relay

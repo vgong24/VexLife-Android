@@ -8,13 +8,16 @@ import androidx.media3.session.MediaSessionService
 import com.vextreme.vexlife.android.VexApplication
 import com.vextreme.vexlife.android.behavior.VexService
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
-import com.vextreme.vexlife.android.vexstream.playback.Media3VexStreamCurrentPlaybackObserver
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamCurrentPlaybackObserver
+import com.vextreme.vexlife.android.vexstream.player.Media3VexStreamPlayerConnection
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerObservationReceiver
+import com.vextreme.vexlife.android.vexstream.playback.toVexStreamCurrentPlaybackObservation
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackTrace
 import com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetUpdateExecution
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 /**
  * Android-native owner for VexStream audio playback realization lifetime.
@@ -52,8 +55,8 @@ class VexStreamPlaybackService :
             }
                 .currentState
 
-    private var currentPlaybackObserver:
-        VexStreamCurrentPlaybackObserver? =
+    private var currentPlayerConnection:
+        Media3VexStreamPlayerConnection? =
         null
     private var widgetUpdateExecution:
         VexStreamPlaybackWidgetUpdateExecution? =
@@ -78,6 +81,15 @@ class VexStreamPlaybackService :
                 )
         this.playbackFamily =
             playbackFamily
+
+        val playerStore =
+            vexApplication
+                .dependencies
+                .resolve(
+                    vexApplication
+                        .dependencyModule
+                        .playerStore,
+                )
 
         val dataSourceFactory =
             DefaultDataSource.Factory(
@@ -112,15 +124,22 @@ class VexStreamPlaybackService :
                 "looper=${player.applicationLooper.thread.name}",
         )
 
-        val playbackObserver =
-            Media3VexStreamCurrentPlaybackObserver(
-                player =
-                    player,
+        val playerReceiver =
+            VexStreamPlayerObservationReceiver(
+                store =
+                    playerStore,
                 playbackFamily =
                     playbackFamily,
             )
-        currentPlaybackObserver =
-            playbackObserver
+        val playerConnection =
+            Media3VexStreamPlayerConnection(
+                player =
+                    player,
+                receiver =
+                    playerReceiver,
+            )
+        currentPlayerConnection =
+            playerConnection
         widgetUpdateExecution =
             VexStreamPlaybackWidgetUpdateExecution(
                 root =
@@ -128,9 +147,20 @@ class VexStreamPlaybackService :
                 context =
                     applicationContext,
                 observations =
-                    playbackObserver
-                        .observations,
+                    playerStore
+                        .states
+                        .map { current ->
+                            current
+                                .toVexStreamCurrentPlaybackObservation(
+                                    playbackFamily,
+                                )
+                        }
+                        .distinctUntilChanged(),
             )
+        VexStreamPlaybackTrace.record(
+            stage =
+                "service.player-partner.attached",
+        )
         VexStreamPlaybackTrace.record(
             stage =
                 "service.widget-observer.attached",
@@ -147,9 +177,9 @@ class VexStreamPlaybackService :
             stage =
                 "service.destroy",
         )
-        currentPlaybackObserver
+        currentPlayerConnection
             ?.close()
-        currentPlaybackObserver =
+        currentPlayerConnection =
             null
         widgetUpdateExecution =
             null
@@ -161,13 +191,10 @@ class VexStreamPlaybackService :
         mediaSession = null
 
         /*
-         * The concrete Media3 realization is gone. Clear process semantic Playback truth so the
-         * shared Family no longer reports provider reality that this Service can no longer realize.
+         * Closing the Player Partner Connection admits Unavailable through the same outside-truth
+         * circuit used during normal operation; Service teardown does not manufacture a second
+         * semantic Playback path.
          */
-        playbackFamily
-            ?.observe(
-                VexStreamPlaybackState.NoMedia,
-            )
         playbackFamily =
             null
 

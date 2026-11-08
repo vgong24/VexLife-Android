@@ -16,6 +16,7 @@ import com.vextreme.vexlife.android.screens.shared.maps.VexNavigationSession
 import com.vextreme.vexlife.android.ui.SharedPreferencesThemeModeStore
 import com.vextreme.vexlife.android.ui.ThemeModeStore
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
 
 /**
  * Android process-lifetime composition root.
@@ -121,6 +122,9 @@ internal class VexApplicationDependencyModule(
     val playbackFamily =
         PlaybackFamilyProvider()
 
+    val playerStore =
+        PlayerStoreProvider()
+
     val navigationSession =
         NavigationSessionProvider()
 
@@ -143,6 +147,7 @@ internal class VexApplicationDependencyModule(
             themeModeStore,
             processExecutionRoot,
             playbackFamily,
+            playerStore,
             navigationSession,
             backgroundServiceRelay,
         )
@@ -231,6 +236,19 @@ internal class VexApplicationDependencyModule(
         ):
             VexExecutionRoot =
             VexExecutionRoot()
+    }
+
+    /** Process-current outside truth for the independently-owned VexStream Player Partner. */
+    internal class PlayerStoreProvider :
+        VexDependencyProvider<
+            VexStreamPlayerStore
+        >() {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexStreamPlayerStore =
+            VexStreamPlayerStore()
     }
 
     /** One semantic Playback Family shared by UI, Service, and Widget projections. */

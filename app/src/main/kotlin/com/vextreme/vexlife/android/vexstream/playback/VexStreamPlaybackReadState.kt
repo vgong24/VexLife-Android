@@ -10,13 +10,14 @@ import androidx.compose.runtime.remember
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueProjection
+import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueBehavior
+import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueControls
+import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueState
 import com.vextreme.vexlife.android.vexstream.queue.toVexStreamQueueProjection
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import java.util.concurrent.atomic.AtomicLong
-import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Provider-derived Playback read data used by view-facing DisplayState.
@@ -84,10 +85,11 @@ internal data class VexStreamPlaybackReadState(
 }
 
 /**
- * One provider-observed playback snapshot.
+ * One surface-ready playback observation projected from retained Player Partner CURRENT plus the
+ * process-shared Playback Family projection.
  *
- * Media3 Player / MediaSession remains canonical truth. This value only composes the read facts and
- * existing Playback / Queue projections that remote or in-app surfaces need to render one moment.
+ * This value owns no currentness. The Player Store owns outside CURRENT and Playback Family owns
+ * semantic Playback CURRENT.
  */
 internal data class VexStreamCurrentPlaybackObservation(
     val readState:
@@ -276,137 +278,115 @@ internal object VexStreamPlaybackTrace {
 }
 
 /**
- * Playback-lifetime observation interface.
+ * Project one retained Player Partner CURRENT for existing playback/widget read consumers.
  *
- * Consumers depend on the immutable observation stream rather than independently timing provider
- * reads. The observer owns only Media3 listener registration; it does not own playback State.
+ * No provider access occurs here.
  */
-internal interface VexStreamCurrentPlaybackObserver :
-    AutoCloseable {
-    val observations:
-        StateFlow<
-            VexStreamCurrentPlaybackObservation
-        >
+internal fun VexStreamPlayerPartner.Current.toVexStreamCurrentPlaybackObservation(
+    playbackFamily:
+        VexStreamPlaybackFamily,
+):
+    VexStreamCurrentPlaybackObservation =
+    VexStreamCurrentPlaybackObservation(
+        readState =
+            toVexStreamPlaybackReadState(),
+        playbackProjection =
+            playbackFamily
+                .currentPlaybackProjection,
+        queueProjection =
+            toVexStreamQueueProjection(),
+    )
+
+private fun VexStreamPlayerPartner.Current.toVexStreamPlaybackReadState():
+    VexStreamPlaybackReadState =
+    when (
+        this
+    ) {
+        VexStreamPlayerPartner.Current
+            .Unavailable ->
+            VexStreamPlaybackReadState
+                .Empty
+
+        is VexStreamPlayerPartner.Current
+            .Available ->
+            VexStreamPlaybackReadState(
+                currentMediaId =
+                    currentMedia.mediaId,
+                currentTitle =
+                    currentMedia.title,
+                currentArtist =
+                    currentMedia.artist,
+                currentArtworkUri =
+                    currentMedia.artworkUri,
+                queueMediaIds =
+                    queueItems.mediaIds,
+                currentIndex =
+                    queueNavigation.currentIndex,
+                currentPositionMs =
+                    timeline.positionMs,
+                durationMs =
+                    timeline.durationMs,
+                bufferedPositionMs =
+                    timeline.bufferedPositionMs,
+            )
+    }
+
+private fun VexStreamPlayerPartner.Current.toVexStreamQueueProjection():
+    VexStreamQueueProjection {
+    val state =
+        when (
+            this
+        ) {
+            VexStreamPlayerPartner.Current
+                .Unavailable ->
+                vexStreamQueueState(
+                    mediaItemCount =
+                        0,
+                    previousAvailable =
+                        false,
+                    nextAvailable =
+                        false,
+                    shuffleAvailable =
+                        false,
+                    clearAvailable =
+                        false,
+                )
+
+            is VexStreamPlayerPartner.Current
+                .Available ->
+                vexStreamQueueState(
+                    mediaItemCount =
+                        queueItems
+                            .mediaIds
+                            .size,
+                    previousAvailable =
+                        queueNavigation
+                            .previousAvailable,
+                    nextAvailable =
+                        queueNavigation
+                            .nextAvailable,
+                    shuffleAvailable =
+                        queueNavigation
+                            .shuffleAvailable,
+                    clearAvailable =
+                        queueNavigation
+                            .clearAvailable,
+                )
+        }
+
+    return vexStreamQueueBehavior()
+        .vexStreamQueueControls()
+        .projection(
+            state,
+        )
 }
 
 /**
- * Media3 realization of the current-playback observer.
+ * Temporary Widget bootstrap bridge.
  *
- * Player.Listener callbacks run on the Player application looper. Each callback reconciles provider
- * reality into the one process-shared Playback Family before projecting the complete observation.
- * UI, Widget, Service, and Relay consumers therefore see the same semantic State.
+ * Continuous Service observation no longer uses this provider->Family shortcut. The Widget
+ * bootstrap remains a named successor seam until it consumes the process Player Store directly.
  */
-internal class Media3VexStreamCurrentPlaybackObserver(
-    private val player:
-        Player,
-    private val playbackFamily:
-        VexStreamPlaybackFamily,
-) :
-    VexStreamCurrentPlaybackObserver {
-    private val mutableObservations =
-        MutableStateFlow(
-            player
-                .toVexStreamCurrentPlaybackObservation(
-                    playbackFamily,
-                ),
-        )
-
-    override val observations:
-        StateFlow<
-            VexStreamCurrentPlaybackObservation
-        > =
-        mutableObservations
-            .asStateFlow()
-
-    private val listener =
-        object :
-            Player.Listener {
-            override fun onEvents(
-                player: Player,
-                events: Player.Events,
-            ) {
-                val observed =
-                    player
-                        .toVexStreamCurrentPlaybackObservation(
-                            playbackFamily,
-                        )
-                val changed =
-                    mutableObservations.value !=
-                        observed
-
-                VexStreamPlaybackTrace.record(
-                    stage =
-                        "observer.event",
-                    mediaId =
-                        observed.readState
-                            .currentMediaId,
-                    title =
-                        observed.readState
-                            .currentTitle,
-                    artist =
-                        observed.readState
-                            .currentArtist,
-                    detail =
-                        "changed=$changed " +
-                            "index=${observed.readState.currentIndex} " +
-                            "playerState=${player.playbackState} " +
-                            "playWhenReady=${player.playWhenReady}",
-                )
-
-                if (
-                    changed
-                ) {
-                    mutableObservations.value =
-                        observed
-                    VexStreamPlaybackTrace.record(
-                        stage =
-                            "observer.emit",
-                        mediaId =
-                            observed.readState
-                                .currentMediaId,
-                        title =
-                            observed.readState
-                                .currentTitle,
-                        artist =
-                            observed.readState
-                                .currentArtist,
-                    )
-                }
-            }
-        }
-
-    init {
-        val initial =
-            mutableObservations.value
-        VexStreamPlaybackTrace.record(
-            stage =
-                "observer.start",
-            mediaId =
-                initial.readState
-                    .currentMediaId,
-            title =
-                initial.readState
-                    .currentTitle,
-            artist =
-                initial.readState
-                    .currentArtist,
-        )
-        player.addListener(
-            listener,
-        )
-    }
-
-    override fun close() {
-        VexStreamPlaybackTrace.record(
-            stage =
-                "observer.close",
-        )
-        player.removeListener(
-            listener,
-        )
-    }
-}
-
 internal fun Player.toVexStreamCurrentPlaybackObservation(
     playbackFamily:
         VexStreamPlaybackFamily,
