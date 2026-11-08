@@ -7,7 +7,10 @@ import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.primary.settings.SettingsScreen
 import com.vextreme.vexlife.android.screens.shared.conversation.VexFamilyConversationScreen
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
+import com.vextreme.vexlife.android.screens.shared.cgm.CgmPartnerLabScreen
 import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
+import com.vextreme.vexlife.android.screens.shared.insulin.InsulinPartnerLabScreen
+import com.vextreme.vexlife.android.screens.shared.partners.PartnersCircuitLabScreen
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsScreen
 import com.vextreme.vexlife.android.screens.shared.vex.TalkToVexScreen
@@ -36,6 +39,9 @@ class AppBlueprintTest {
         assertEquals(
             listOf(
                 DebugMenuScreen.screenId,
+                CgmPartnerLabScreen.screenId,
+                InsulinPartnerLabScreen.screenId,
+                PartnersCircuitLabScreen.screenId,
                 GalleryScreen.screenId,
                 UserProfileScreen.screenId,
                 VexFamilyConversationScreen.screenId,

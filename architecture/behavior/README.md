@@ -82,6 +82,155 @@ CURRENT State + incoming Control
 -> current State / execution
 ~~~
 
+## Partner circuit patient-zero candidate
+
+The CGM / connected-pen / insulin-pump walk now pressures a second independent reusable root through
+transport diversity, execution ordering, persistence and process restart:
+
+~~~text
+VexPartner<Partner>
+├─ Source<Partner>
+├─ Signal<Partner>
+└─ Connection<Partner, Signal>
+   ├─ Id<Partner>
+   ├─ Conversion<Input, Partner, Signal>
+   ├─ Observation<Partner, Signal>
+   └─ Receiver<Partner, Signal, exact Observation>
+~~~
+
+The tree is intentionally not a cloned Family. It has the same rooted/kinship grammar while owning
+different responsibilities.
+
+### Source is now earned
+
+CGM, connected pen and insulin pump each independently needed a Partner-owned origin coordinate:
+
+~~~text
+CgmPartner.Source
+ConnectedPenPartner.Source
+InsulinPumpPartner.Source
+~~~
+
+Each Source is carried by multiple Signals and remains independent of transport. Source answers which
+external origin/history a Partner statement belongs to; it is not a global Source root and it is not
+Connection.Id.
+
+### Conversion is the reusable provider boundary
+
+The reusable relationship no longer assumes every provider operation should be named Decoder:
+
+~~~text
+Input
+-> VexPartner.Connection.Conversion
+-> zero or more Partner Signals
+~~~
+
+Concrete realizations keep honest provider language:
+
+~~~text
+ByteArray              -> CgmPartner.Connection.BleDecoder  --\
+                                                              +-> CgmPartner.Signal
+HTTP-like response body -> CgmPartner.Connection.HttpDecoder --/
+
+Pen bytes  -> ConnectedPenPartner.Connection.Decoder -> Pen Signals
+Pump bytes -> InsulinPumpPartner.Connection.Decoder -> Pump Signals
+~~~
+
+CGM now proves two materially different provider representations can produce the same Source +
+Glucose/Temperature Signal values. After Conversion, both paths use the same Observation / Receiver /
+Store / Family circuit. Distinct Connection.Id values preserve which provider relationship delivered
+each otherwise-equivalent statement.
+
+Permanent:
+
+~~~text
+PROVIDER_REPRESENTATION != PARTNER_SIGNAL
+TRANSPORT_REALIZATION != PARTNER_SOURCE
+BLE_SIGNAL_MEANING == HTTP_SIGNAL_MEANING when source facts are equivalent
+CONNECTION_OCCURRENCE remains distinct
+~~~
+
+### Receiver and Store boundary
+
+Room pressure proved Receiver must be suspending and retain the exact Observation subtype:
+
+~~~text
+Connection.receive(Input)
+-> Conversion
+-> Signal(s)
+-> Observation(s)
+-> suspend Receiver.receive(exact Observation)
+-> Store.commit
+~~~
+
+Completion of Receiver means the concrete Store admission effect completed. It does not mean Family
+has already observed the Store Flow.
+
+### Execution sequencing
+
+Three coordinates remain distinct:
+
+~~~text
+Connection.Id
+    source / Observation provenance
+    != runtime execution identity
+
+inbound receipt/admission
+    live Connection owner
+    + private runtime RelationshipId
+    + Queued
+    -> ordered finite admission Jobs
+
+Store -> Family observation
+    exact Store Flow source
+    + live Family owner
+    -> VexExecution.observe(...)
+
+Family consequence
+    accepted Control relationship
+    + authored Begin Approach
+    -> Family-derived RelationshipId
+    -> Method Job(s)
+~~~
+
+Pump requests use Begin(Queued · Effect.RequestPumpDelivery): sequencing is authored by Family and
+consumed by launchWith()/VexExecution rather than re-decided by Method.
+
+### Room / restart
+
+CGM has one Store contract with in-memory and Room realizations. Room persists explicit historical
+Observation provenance and reconstructs Signal values on restart without running Conversion or
+Receiver again.
+
+~~~text
+ENTITY_RESTORED != PARTNER_SIGNAL_RECEIVED
+PROCESS_RESTART != NEW_SOURCE_HISTORY
+~~~
+
+The synthetic Source sequence resumes from durable Store truth inside the queued Connection admission
+lane.
+
+### Current proof boundary
+
+The pure Kotlin Partner/CGM Source + Conversion + generic Connection shape compiles in isolation.
+Source/readback tests also pressure BLE/HTTP Signal equivalence and distinct Connection occurrence.
+
+Still pending repository-owned proof:
+
+~~~text
+Gradle/KSP compile
+generated Room v6 schema / identity hash
+migration5To6 execution validation
+Android instrumentation execution
+repository-wide source-alignment/unit checks
+physical-device Screen proof
+~~~
+
+The next external pressure after repository proof is a concrete Local HTTP / BLE provider realization.
+The current synthetic BLE/HTTP forms prove vocabulary reuse, not networking/radio lifecycle.
+
+ThemeMode / VexStream migration and a first-class Partnership owner remain held.
+
 ## Current foundation state
 
 Two behavior foundations intentionally coexist today:
