@@ -426,9 +426,16 @@ class VexStreamPlayerStoreTest {
         queueItems:
             VexStreamPlayerPartner.Signal.QueueItems =
             VexStreamPlayerPartner.Signal.QueueItems(
-                mediaIds =
+                items =
                     listOf(
-                        "song-a",
+                        VexStreamPlayerPartner.Signal.QueueItems.Item(
+                            mediaId =
+                                "song-a",
+                            title =
+                                "Song A",
+                            artist =
+                                "Artist",
+                        ),
                     ),
             ),
     ):
