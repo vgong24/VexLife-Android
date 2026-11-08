@@ -32,7 +32,6 @@ internal fun VexStreamSearchSheet(
     runtime: VexRuntime,
     tracks: List<VexStreamTrackState>,
     offlineCopyConnection: VexStreamOfflineCopyConnection?,
-    controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
     query: String,
     onQueryChange: (String) -> Unit,
@@ -40,7 +39,6 @@ internal fun VexStreamSearchSheet(
 ) {
     val trackPlaybackConnection =
         rememberVexStreamTrackPlaybackConnection(
-            controller = controller,
             resolver = resolver,
         )
 

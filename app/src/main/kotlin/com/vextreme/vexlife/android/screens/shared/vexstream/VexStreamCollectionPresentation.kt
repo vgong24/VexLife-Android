@@ -70,7 +70,6 @@ internal fun VexStreamAlbumsPane(
     runtime: VexRuntime,
     tracks: List<VexStreamTrackState>,
     offlineCopyConnection: VexStreamOfflineCopyConnection?,
-    controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
     onVisitArtist: (String) -> Unit,
 ) {
@@ -120,7 +119,6 @@ internal fun VexStreamAlbumsPane(
         navigationLabel = "vexstream-album-depth",
         offlineCopyConnection =
             offlineCopyConnection,
-        controller = controller,
         resolver = resolver,
         onVisitArtist = onVisitArtist,
     )
@@ -131,7 +129,6 @@ internal fun VexStreamArtistsPane(
     runtime: VexRuntime,
     tracks: List<VexStreamTrackState>,
     offlineCopyConnection: VexStreamOfflineCopyConnection?,
-    controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
     requestedArtist: String?,
     onRequestedArtistConsumed: () -> Unit,
@@ -177,7 +174,6 @@ internal fun VexStreamArtistsPane(
         navigationLabel = "vexstream-artist-depth",
         offlineCopyConnection =
             offlineCopyConnection,
-        controller = controller,
         resolver = resolver,
         onVisitArtist = onVisitArtist,
         requestedDetailKey =
@@ -195,7 +191,6 @@ internal fun VexStreamPlaylistsPane(
     state: VexStreamMusicState,
     visibleTrackRefs: Set<VexStreamTrackRef>?,
     offlineCopyConnection: VexStreamOfflineCopyConnection?,
-    controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
     onVisitArtist: (String) -> Unit,
 ) {
@@ -251,7 +246,6 @@ internal fun VexStreamPlaylistsPane(
         navigationLabel = "vexstream-playlist-depth",
         offlineCopyConnection =
             offlineCopyConnection,
-        controller = controller,
         resolver = resolver,
         onVisitArtist = onVisitArtist,
     )
@@ -265,7 +259,6 @@ private fun VexStreamCollectionBrowserPane(
     emptyText: String,
     navigationLabel: String,
     offlineCopyConnection: VexStreamOfflineCopyConnection?,
-    controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
     onVisitArtist: (String) -> Unit,
     requestedDetailKey: String? = null,
@@ -389,8 +382,7 @@ private fun VexStreamCollectionBrowserPane(
                             tracks = selected.tracks,
                             offlineCopyConnection =
                                 offlineCopyConnection,
-                            controller = controller,
-                            resolver = resolver,
+                                            resolver = resolver,
                             onBack = trail::goBack,
                             onVisitArtist = onVisitArtist,
                         )
@@ -408,14 +400,12 @@ private fun VexStreamCollectionDetail(
     title: String,
     tracks: List<VexStreamTrackState>,
     offlineCopyConnection: VexStreamOfflineCopyConnection?,
-    controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
     onBack: () -> Unit,
     onVisitArtist: (String) -> Unit,
 ) {
     val trackPlaybackConnection =
         rememberVexStreamTrackPlaybackConnection(
-            controller = controller,
             resolver = resolver,
         )
     val offlinePlan =
@@ -484,8 +474,7 @@ private fun VexStreamCollectionDetail(
                         tracks = tracks,
                         offlinePlan = offlinePlan,
                         offlineCopyConnection = offlineCopyConnection,
-                        controller = controller,
-                        resolver = resolver,
+                                    resolver = resolver,
                     )
                 }
             }
@@ -643,13 +632,11 @@ private fun VexStreamCollectionActions(
     tracks: List<VexStreamTrackState>,
     offlinePlan: VexStreamOfflineCollectionPlan,
     offlineCopyConnection: VexStreamOfflineCopyConnection?,
-    controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
     modifier: Modifier = VexModifier,
 ) {
     val connection =
         rememberVexStreamCollectionPlaybackConnection(
-            controller = controller,
             resolver = resolver,
         )
     val playRequest =

@@ -2,13 +2,11 @@ package com.vextreme.vexlife.android.vexstream.playback
 
 import android.app.Application
 import android.content.ComponentName
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.vextreme.vexlife.android.VexApplication
@@ -86,14 +84,6 @@ internal class VexStreamPlaybackConnectionViewModel(
                 ),
             ),
         ).buildAsync()
-
-    var controller by
-        mutableStateOf<
-            MediaController?
-        >(
-            null,
-        )
-        private set
 
     var playerRequestConnection by
         mutableStateOf<
@@ -204,8 +194,6 @@ internal class VexStreamPlaybackConnectionViewModel(
                             playerConnection
                         progressConnection =
                             playerConnection
-                        controller =
-                            connected
                     }
                 }
             },
@@ -225,22 +213,11 @@ internal class VexStreamPlaybackConnectionViewModel(
         repeatConnection = null
         seekConnection = null
         progressConnection = null
-        controller = null
         MediaController.releaseFuture(
             controllerFuture,
         )
         super.onCleared()
     }
-}
-
-@Composable
-internal fun rememberVexStreamMediaController():
-    MediaController? {
-    val owner:
-        VexStreamPlaybackConnectionViewModel =
-        viewModel()
-
-    return owner.controller
 }
 
 // [VXG RealForever][VEXSTREAM][PLAYBACK][PROCESS-FAMILY]

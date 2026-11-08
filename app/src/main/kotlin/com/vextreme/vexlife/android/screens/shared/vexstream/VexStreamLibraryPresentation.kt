@@ -193,7 +193,6 @@ internal fun vexStreamLibraryPlaybackRequest(
 internal fun VexStreamLibraryFabActions(
     runtime: VexRuntime,
     tracks: List<VexStreamTrackState>,
-    controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver?,
 ) {
     val connection =
@@ -280,7 +279,6 @@ internal fun VexStreamSongsPane(
     tracks: List<VexStreamTrackState>,
     canShowTerminalEmptyState: Boolean = true,
     offlineCopyConnection: VexStreamOfflineCopyConnection?,
-    controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver?,
     onVisitArtist: (String) -> Unit,
 ) {
@@ -344,7 +342,6 @@ internal fun VexStreamDownloadsPane(
     tracks: List<VexStreamTrackState>,
     canShowTerminalEmptyState: Boolean = true,
     offlineCopyConnection: VexStreamOfflineCopyConnection?,
-    controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver?,
     onVisitArtist: (String) -> Unit,
 ) {
