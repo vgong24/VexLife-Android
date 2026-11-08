@@ -1337,6 +1337,33 @@ abstract class VexExecution protected constructor(
                         onEach,
                 )
 
+        fun <Value, Source : Flow<Value>> observe(
+            executionRoot:
+                VexExecutionRoot,
+            owner:
+                Any,
+            source:
+                KFunction0<Source>,
+            restartOnSourceFailure:
+                Boolean =
+                true,
+            onEach:
+                suspend (Value) -> Unit,
+        ):
+            Job =
+            executionRoot
+                .directExecution(
+                    owner,
+                )
+                .launchForCollect(
+                    source =
+                        source,
+                    restartOnSourceFailure =
+                        restartOnSourceFailure,
+                    onEach =
+                        onEach,
+                )
+
         fun <Argument, Result> begin(
             executionRoot:
                 VexExecutionRoot,

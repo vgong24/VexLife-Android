@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.screens.shared.maps.distribution
 
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsTravelMode
 import com.vextreme.vexlife.android.screens.shared.maps.VexNavigationRoute
 import com.vextreme.vexlife.android.screens.shared.maps.VexNavigationSessionPhase
@@ -18,6 +19,7 @@ import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteConnection
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteControl
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -138,8 +140,15 @@ class VexMapsDeliveryRouteNavigationConvergenceRelayTest {
                 >(
                     VexMapsDeliveryRouteLegAttempt.Idle,
                 )
+            val executionRoot =
+                VexExecutionRoot(
+                    dispatcher =
+                        Dispatchers.Unconfined,
+                )
             val relay =
                 VexMapsDeliveryRouteNavigationConvergenceRelay(
+                    executionRoot =
+                        executionRoot,
                     deliveryRouteProjections =
                         deliveryRoute.projections,
                     navigationStates =
@@ -151,10 +160,6 @@ class VexMapsDeliveryRouteNavigationConvergenceRelayTest {
                 )
 
             try {
-                relay.activate(
-                    this,
-                )
-
                 val ready =
                     withTimeout(
                         1_000L,
@@ -271,7 +276,9 @@ class VexMapsDeliveryRouteNavigationConvergenceRelayTest {
                     mismatch.request,
                 )
             } finally {
-                relay.deactivate()
+                executionRoot.joinStopAll(
+                    "Delivery route/navigation convergence test finished",
+                )
             }
         }
 
@@ -325,8 +332,15 @@ class VexMapsDeliveryRouteNavigationConvergenceRelayTest {
                 >(
                     VexMapsDeliveryRouteLegAttempt.Idle,
                 )
+            val executionRoot =
+                VexExecutionRoot(
+                    dispatcher =
+                        Dispatchers.Unconfined,
+                )
             val relay =
                 VexMapsDeliveryRouteNavigationConvergenceRelay(
+                    executionRoot =
+                        executionRoot,
                     deliveryRouteProjections =
                         deliveryRoute.projections,
                     navigationStates =
@@ -338,10 +352,6 @@ class VexMapsDeliveryRouteNavigationConvergenceRelayTest {
                 )
 
             try {
-                relay.activate(
-                    this,
-                )
-
                 withTimeout(
                     1_000L,
                 ) {
@@ -420,7 +430,9 @@ class VexMapsDeliveryRouteNavigationConvergenceRelayTest {
                 }
                 Unit
             } finally {
-                relay.deactivate()
+                executionRoot.joinStopAll(
+                    "Delivery route/navigation convergence test finished",
+                )
             }
         }
 
@@ -490,8 +502,15 @@ class VexMapsDeliveryRouteNavigationConvergenceRelayTest {
                 >(
                     VexMapsDeliveryRouteLegAttempt.Idle,
                 )
+            val executionRoot =
+                VexExecutionRoot(
+                    dispatcher =
+                        Dispatchers.Unconfined,
+                )
             val relay =
                 VexMapsDeliveryRouteNavigationConvergenceRelay(
+                    executionRoot =
+                        executionRoot,
                     deliveryRouteProjections =
                         deliveryRoute.projections,
                     navigationStates =
@@ -503,10 +522,6 @@ class VexMapsDeliveryRouteNavigationConvergenceRelayTest {
                 )
 
             try {
-                relay.activate(
-                    this,
-                )
-
                 val arrived =
                     withTimeout(
                         1_000L,
@@ -527,7 +542,9 @@ class VexMapsDeliveryRouteNavigationConvergenceRelayTest {
                     arrived.request,
                 )
             } finally {
-                relay.deactivate()
+                executionRoot.joinStopAll(
+                    "Delivery route/navigation convergence test finished",
+                )
             }
         }
 
@@ -569,8 +586,15 @@ class VexMapsDeliveryRouteNavigationConvergenceRelayTest {
                             "offline route unavailable",
                     ),
                 )
+            val executionRoot =
+                VexExecutionRoot(
+                    dispatcher =
+                        Dispatchers.Unconfined,
+                )
             val relay =
                 VexMapsDeliveryRouteNavigationConvergenceRelay(
+                    executionRoot =
+                        executionRoot,
                     deliveryRouteProjections =
                         deliveryRoute.projections,
                     navigationStates =
@@ -582,10 +606,6 @@ class VexMapsDeliveryRouteNavigationConvergenceRelayTest {
                 )
 
             try {
-                relay.activate(
-                    this,
-                )
-
                 withTimeout(
                     1_000L,
                 ) {
@@ -619,7 +639,9 @@ class VexMapsDeliveryRouteNavigationConvergenceRelayTest {
                     retry.request,
                 )
             } finally {
-                relay.deactivate()
+                executionRoot.joinStopAll(
+                    "Delivery route/navigation convergence test finished",
+                )
             }
         }
 }

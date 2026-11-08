@@ -28,11 +28,7 @@ import com.vextreme.vexlife.android.screens.shared.maps.distribution.session.Vex
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.session.VexMapsDistributionSession
 import java.io.File
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -111,12 +107,6 @@ class VexMapsDistributionSessionTest {
                 )
             val navigation =
                 FakeNavigation()
-            val owner =
-                SupervisorJob(
-                    coroutineContext[
-                        Job
-                    ],
-                )
             val executionRoot =
                 VexExecutionRoot(
                     dispatcher =
@@ -132,11 +122,6 @@ class VexMapsDistributionSessionTest {
                         navigation,
                     executionRoot =
                         executionRoot,
-                    relayScope =
-                        CoroutineScope(
-                            coroutineContext +
-                                owner,
-                        ),
                 )
 
             try {
@@ -220,7 +205,6 @@ class VexMapsDistributionSessionTest {
                 )
             } finally {
                 session.shutdown()
-                owner.cancelAndJoin()
             }
         }
 
@@ -239,12 +223,6 @@ class VexMapsDistributionSessionTest {
                 )
             val navigation =
                 FakeNavigation()
-            val owner =
-                SupervisorJob(
-                    coroutineContext[
-                        Job
-                    ],
-                )
             val executionRoot =
                 VexExecutionRoot(
                     dispatcher =
@@ -260,11 +238,6 @@ class VexMapsDistributionSessionTest {
                         navigation,
                     executionRoot =
                         executionRoot,
-                    relayScope =
-                        CoroutineScope(
-                            coroutineContext +
-                                owner,
-                        ),
                 )
 
             try {
@@ -349,7 +322,6 @@ class VexMapsDistributionSessionTest {
                 )
             } finally {
                 session.shutdown()
-                owner.cancelAndJoin()
             }
         }
 
@@ -368,12 +340,6 @@ class VexMapsDistributionSessionTest {
                 )
             val navigation =
                 FakeNavigation()
-            val owner =
-                SupervisorJob(
-                    coroutineContext[
-                        Job
-                    ],
-                )
             val executionRoot =
                 VexExecutionRoot(
                     dispatcher =
@@ -389,11 +355,6 @@ class VexMapsDistributionSessionTest {
                         navigation,
                     executionRoot =
                         executionRoot,
-                    relayScope =
-                        CoroutineScope(
-                            coroutineContext +
-                                owner,
-                        ),
                 )
 
             try {
@@ -459,7 +420,6 @@ class VexMapsDistributionSessionTest {
                 )
             } finally {
                 session.shutdown()
-                owner.cancelAndJoin()
             }
         }
 
@@ -481,12 +441,6 @@ class VexMapsDistributionSessionTest {
                     remainingStartFailures =
                         1,
                 )
-            val owner =
-                SupervisorJob(
-                    coroutineContext[
-                        Job
-                    ],
-                )
             val executionRoot =
                 VexExecutionRoot(
                     dispatcher =
@@ -502,11 +456,6 @@ class VexMapsDistributionSessionTest {
                         navigation,
                     executionRoot =
                         executionRoot,
-                    relayScope =
-                        CoroutineScope(
-                            coroutineContext +
-                                owner,
-                        ),
                 )
 
             try {
@@ -594,7 +543,6 @@ class VexMapsDistributionSessionTest {
                 )
             } finally {
                 session.shutdown()
-                owner.cancelAndJoin()
             }
         }
 
@@ -607,12 +555,6 @@ class VexMapsDistributionSessionTest {
                 )
             val navigation =
                 FakeNavigation()
-            val owner =
-                SupervisorJob(
-                    coroutineContext[
-                        Job
-                    ],
-                )
             val executionRoot =
                 VexExecutionRoot(
                     dispatcher =
@@ -632,11 +574,6 @@ class VexMapsDistributionSessionTest {
                         navigation,
                     executionRoot =
                         executionRoot,
-                    relayScope =
-                        CoroutineScope(
-                            coroutineContext +
-                                owner,
-                        ),
                 )
 
             try {
@@ -704,7 +641,6 @@ class VexMapsDistributionSessionTest {
                 )
             } finally {
                 session.shutdown()
-                owner.cancelAndJoin()
             }
         }
 
@@ -723,12 +659,6 @@ class VexMapsDistributionSessionTest {
                 )
             val navigation =
                 FakeNavigation()
-            val owner =
-                SupervisorJob(
-                    coroutineContext[
-                        Job
-                    ],
-                )
             val executionRoot =
                 VexExecutionRoot(
                     dispatcher =
@@ -744,11 +674,6 @@ class VexMapsDistributionSessionTest {
                         navigation,
                     executionRoot =
                         executionRoot,
-                    relayScope =
-                        CoroutineScope(
-                            coroutineContext +
-                                owner,
-                        ),
                 )
 
             try {
@@ -835,7 +760,6 @@ class VexMapsDistributionSessionTest {
                 Unit
             } finally {
                 session.shutdown()
-                owner.cancelAndJoin()
             }
         }
 
@@ -861,12 +785,6 @@ class VexMapsDistributionSessionTest {
                             true
                     }
                 }
-            val owner =
-                SupervisorJob(
-                    coroutineContext[
-                        Job
-                    ],
-                )
             val executionRoot =
                 VexExecutionRoot(
                     dispatcher =
@@ -882,11 +800,6 @@ class VexMapsDistributionSessionTest {
                         navigation,
                     executionRoot =
                         executionRoot,
-                    relayScope =
-                        CoroutineScope(
-                            coroutineContext +
-                                owner,
-                        ),
                 )
 
             try {
@@ -929,7 +842,6 @@ class VexMapsDistributionSessionTest {
                 )
             } finally {
                 session.shutdown()
-                owner.cancelAndJoin()
             }
         }
 
@@ -948,12 +860,6 @@ class VexMapsDistributionSessionTest {
                 )
             val navigation =
                 FakeNavigation()
-            val owner =
-                SupervisorJob(
-                    coroutineContext[
-                        Job
-                    ],
-                )
             val executionRoot =
                 VexExecutionRoot(
                     dispatcher =
@@ -969,11 +875,6 @@ class VexMapsDistributionSessionTest {
                         navigation,
                     executionRoot =
                         executionRoot,
-                    relayScope =
-                        CoroutineScope(
-                            coroutineContext +
-                                owner,
-                        ),
                 )
 
             try {
@@ -1043,7 +944,6 @@ class VexMapsDistributionSessionTest {
                 )
             } finally {
                 session.shutdown()
-                owner.cancelAndJoin()
             }
         }
 
@@ -1062,12 +962,6 @@ class VexMapsDistributionSessionTest {
                 )
             val navigation =
                 FakeNavigation()
-            val owner =
-                SupervisorJob(
-                    coroutineContext[
-                        Job
-                    ],
-                )
             val executionRoot =
                 VexExecutionRoot(
                     dispatcher =
@@ -1083,11 +977,6 @@ class VexMapsDistributionSessionTest {
                         navigation,
                     executionRoot =
                         executionRoot,
-                    relayScope =
-                        CoroutineScope(
-                            coroutineContext +
-                                owner,
-                        ),
                 )
 
             try {
@@ -1123,7 +1012,6 @@ class VexMapsDistributionSessionTest {
                 )
             } finally {
                 session.shutdown()
-                owner.cancelAndJoin()
             }
         }
 
@@ -1136,12 +1024,6 @@ class VexMapsDistributionSessionTest {
                 )
             val navigation =
                 FakeNavigation()
-            val owner =
-                SupervisorJob(
-                    coroutineContext[
-                        Job
-                    ],
-                )
             val executionRoot =
                 VexExecutionRoot(
                     dispatcher =
@@ -1161,11 +1043,6 @@ class VexMapsDistributionSessionTest {
                         navigation,
                     executionRoot =
                         executionRoot,
-                    relayScope =
-                        CoroutineScope(
-                            coroutineContext +
-                                owner,
-                        ),
                 )
 
             try {
@@ -1283,7 +1160,6 @@ class VexMapsDistributionSessionTest {
                 )
             } finally {
                 session.shutdown()
-                owner.cancelAndJoin()
             }
         }
 
@@ -1299,12 +1175,6 @@ class VexMapsDistributionSessionTest {
                 )
             val navigation =
                 FakeNavigation()
-            val owner =
-                SupervisorJob(
-                    coroutineContext[
-                        Job
-                    ],
-                )
             val executionRoot =
                 VexExecutionRoot(
                     dispatcher =
@@ -1324,11 +1194,6 @@ class VexMapsDistributionSessionTest {
                         navigation,
                     executionRoot =
                         executionRoot,
-                    relayScope =
-                        CoroutineScope(
-                            coroutineContext +
-                                owner,
-                        ),
                 )
 
             try {
@@ -1416,7 +1281,6 @@ class VexMapsDistributionSessionTest {
                 )
             } finally {
                 session.shutdown()
-                owner.cancelAndJoin()
             }
         }
 
@@ -1429,12 +1293,6 @@ class VexMapsDistributionSessionTest {
                 )
             val navigation =
                 FakeNavigation()
-            val owner =
-                SupervisorJob(
-                    coroutineContext[
-                        Job
-                    ],
-                )
             val executionRoot =
                 VexExecutionRoot(
                     dispatcher =
@@ -1454,11 +1312,6 @@ class VexMapsDistributionSessionTest {
                         navigation,
                     executionRoot =
                         executionRoot,
-                    relayScope =
-                        CoroutineScope(
-                            coroutineContext +
-                                owner,
-                        ),
                 )
 
             try {
@@ -1517,7 +1370,6 @@ class VexMapsDistributionSessionTest {
                 )
             } finally {
                 session.shutdown()
-                owner.cancelAndJoin()
             }
         }
 

@@ -1,11 +1,13 @@
 package com.vextreme.vexlife.android.screens.shared.maps.distribution
 
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionModeDeliveryRouteCoherence
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionModeDeliveryRouteConvergenceRelay
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeConnection
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeControl
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeState
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteConnection
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -21,8 +23,15 @@ class VexMapsDistributionModeDeliveryRouteConvergenceRelayTest {
                 VexMapsDistributionModeConnection()
             val deliveryRoute =
                 VexMapsDeliveryRouteConnection()
+            val executionRoot =
+                VexExecutionRoot(
+                    dispatcher =
+                        Dispatchers.Unconfined,
+                )
             val relay =
                 VexMapsDistributionModeDeliveryRouteConvergenceRelay(
+                    executionRoot =
+                        executionRoot,
                     modeProjections =
                         mode.projections,
                     deliveryRouteProjections =
@@ -30,10 +39,6 @@ class VexMapsDistributionModeDeliveryRouteConvergenceRelayTest {
                 )
 
             try {
-                relay.activate(
-                    this,
-                )
-
                 deliveryRoute.observeDraft(
                     revision = 1L,
                     stopRefs =
@@ -97,7 +102,9 @@ class VexMapsDistributionModeDeliveryRouteConvergenceRelayTest {
                     coherent.requestedModeControl,
                 )
             } finally {
-                relay.deactivate()
+                executionRoot.joinStopAll(
+                    "Distribution mode/delivery convergence test finished",
+                )
             }
         }
 }

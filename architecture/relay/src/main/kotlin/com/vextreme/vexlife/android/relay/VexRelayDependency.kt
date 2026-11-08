@@ -1,24 +1,62 @@
 package com.vextreme.vexlife.android.relay
 
+import com.vextreme.vexlife.android.execution.VexExecution
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collect
 
 /**
  * One continuously observed dependency of a Compound Relay.
  *
- * Each dependency is started in its own coroutine by [VexCompoundRelay.activate], so a feature
- * author cannot accidentally place two never-ending Flow.collect calls sequentially in one
- * coroutine and starve the second dependency.
+ * The dependency owns only its exact observable source + Value -> InputState mapping. VexExecution
+ * owns the maintained observation Job, cancellation, bounded source recovery, and root lifetime.
  */
-class VexRelayDependency<InputState : VexInputState<InputState>> internal constructor(
+abstract class VexRelayDependency<InputState : VexInputState<InputState>> internal constructor(
     val dependencyRef: String,
-    internal val collectInto: suspend (
-        send: (InputState) -> Unit,
-    ) -> Unit,
 ) {
     init {
         require(dependencyRef.isNotBlank()) {
             "dependencyRef must not be blank"
+        }
+    }
+
+    internal abstract fun observeWith(
+        executionRoot: VexExecutionRoot,
+        owner: Any,
+        send: (InputState) -> Unit,
+    )
+}
+
+private class VexFlowRelayDependency<
+    InputState : VexInputState<InputState>,
+    Value,
+>(
+    dependencyRef: String,
+    private val flow: Flow<Value>,
+    private val toInputState: (Value) -> InputState,
+) : VexRelayDependency<InputState>(
+        dependencyRef,
+    ) {
+    private fun sourceForExecution(): Flow<Value> =
+        flow
+
+    override fun observeWith(
+        executionRoot: VexExecutionRoot,
+        owner: Any,
+        send: (InputState) -> Unit,
+    ) {
+        VexExecution.observe(
+            executionRoot =
+                executionRoot,
+            owner =
+                owner,
+            source =
+                this::sourceForExecution,
+        ) { value ->
+            send(
+                toInputState(
+                    value,
+                ),
+            )
         }
     }
 }
@@ -27,7 +65,7 @@ class VexRelayDependency<InputState : VexInputState<InputState>> internal constr
  * Declarative dependency builder for one [VexCompoundRelay].
  *
  * Feature code names the dependency, names the observable source, and maps one observed value into
- * one partial Compound InputState. Coroutine launch/collect/send mechanics remain framework-owned.
+ * one partial Compound InputState. Execution custody stays with VexExecution.
  */
 class VexRelayDependencies<InputState : VexInputState<InputState>> internal constructor() {
     private val dependencies =
@@ -47,15 +85,14 @@ class VexRelayDependencies<InputState : VexInputState<InputState>> internal cons
         }
 
         dependencies +=
-            VexRelayDependency(
-                dependencyRef = dependencyRef,
-            ) { send ->
-                flow.collect { value ->
-                    send(
-                        toInputState(value),
-                    )
-                }
-            }
+            VexFlowRelayDependency(
+                dependencyRef =
+                    dependencyRef,
+                flow =
+                    flow,
+                toInputState =
+                    toInputState,
+            )
     }
 
     internal fun build(): List<VexRelayDependency<InputState>> =

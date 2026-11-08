@@ -455,8 +455,9 @@ live Family owner. Dependency construction owns lifetime/wiring only; it does no
 runtime meaning.
 
 VexLifeRelayGraph is now a projection-only session graph. Events and Conversation Relays are
-independently provided/activated nodes with their own readable prerequisite closures; the graph only
-projects which Relay owners participate in the VexLife lifetime.
+independently provided nodes whose declared observation dependencies enter the same session
+VexExecutionRoot during Relay construction; the graph only projects which Relay owners participate
+in the VexLife lifetime.
 
 ## Logger traceability refinement
 

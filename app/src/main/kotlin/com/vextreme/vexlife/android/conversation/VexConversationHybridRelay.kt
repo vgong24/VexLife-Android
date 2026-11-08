@@ -5,6 +5,7 @@ import com.vextreme.vexlife.android.relay.VexCompoundState
 import com.vextreme.vexlife.android.relay.VexDeepCopyable
 import com.vextreme.vexlife.android.relay.VexInputState
 import com.vextreme.vexlife.android.relay.VexOutputState
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.relay.vexObserveDependencies
 
 /**
@@ -108,7 +109,7 @@ internal data class VexConversationHybridOutputState(
  *
  * Read this class in the same four places as other Compound Relays:
  *
- * dependencies()   -> which long-lived feature truths are observed continuously?
+ * vexObserveDependencies -> which long-lived feature truths are observed continuously?
  * public methods   -> which explicit runtime/surface facts may enter?
  * processStates()  -> how do observed facts + Lab overrides become one effective meaning?
  * outputStates     -> what effective Conversation meaning may downstream consumers depend on?
@@ -137,6 +138,8 @@ internal data class VexConversationHybridOutputState(
  * relationship; do not predeclare categories merely for naming symmetry.
  */
 internal class VexConversationHybridRelay(
+    executionRoot:
+        VexExecutionRoot?,
     private val conversationRepository:
         VexConversationRepository?,
     private val conversationLab:
@@ -155,45 +158,51 @@ internal class VexConversationHybridRelay(
             VexConversationHybridInputState(),
         initialOutputState =
             VexConversationHybridOutputState(),
+        executionRoot =
+            executionRoot,
+        observedDependencies =
+            vexObserveDependencies<VexConversationHybridInputState> {
+                conversationRepository?.let { repository ->
+                    observe(
+                        dependencyRef =
+                            CONVERSATION_DEPENDENCY,
+                        flow =
+                            repository.state,
+                    ) { conversation ->
+                        VexConversationHybridInputState(
+                            conversation =
+                                conversation
+                                    .deepCopyForConversationHybrid(),
+                        )
+                    }
+                }
+
+                conversationLab?.let { lab ->
+                    observe(
+                        dependencyRef =
+                            LAB_DEPENDENCY,
+                        flow =
+                            lab.state,
+                    ) { labState ->
+                        VexConversationHybridInputState(
+                            lab =
+                                labState
+                                    .deepCopyForConversationHybrid(),
+                        )
+                    }
+                }
+            },
     ) {
     /** Pure reducer tests may drive exact facts without starting dependency observers. */
     internal constructor() : this(
+        executionRoot = null,
         conversationRepository = null,
         conversationLab = null,
     )
 
-    override fun dependencies() =
-        vexObserveDependencies<VexConversationHybridInputState> {
-            conversationRepository?.let { repository ->
-                observe(
-                    dependencyRef =
-                        CONVERSATION_DEPENDENCY,
-                    flow =
-                        repository.state,
-                ) { conversation ->
-                    VexConversationHybridInputState(
-                        conversation =
-                            conversation
-                                .deepCopyForConversationHybrid(),
-                    )
-                }
-            }
-
-            conversationLab?.let { lab ->
-                observe(
-                    dependencyRef =
-                        LAB_DEPENDENCY,
-                    flow =
-                        lab.state,
-                ) { labState ->
-                    VexConversationHybridInputState(
-                        lab =
-                            labState
-                                .deepCopyForConversationHybrid(),
-                    )
-                }
-            }
-        }
+    init {
+        startObservedDependencies()
+    }
 
     fun selectThread(
         threadRef:
@@ -257,7 +266,7 @@ internal class VexConversationHybridRelay(
 
     /*
      * Direct reducer seams remain internal for focused processStates tests. Production repository
-     * and Lab observation enter through dependencies() instead of UI forwarding.
+     * and Lab observation enter through constructor-declared dependencies instead of UI forwarding.
      */
     internal fun conversationChanged(
         conversation:

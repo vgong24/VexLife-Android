@@ -18,10 +18,12 @@ import com.vextreme.vexlife.android.data.events.VexExternalEventSourceSnapshot
 import com.vextreme.vexlife.android.data.userprofile.InMemoryUserProfileRepository
 import com.vextreme.vexlife.android.data.userprofile.UserProfile
 import com.vextreme.vexlife.android.data.userprofile.UserProfileRefs
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import java.time.Instant
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
@@ -577,6 +579,13 @@ class EventsConvergenceRelayTest {
 
     @Test
     fun declaredDependenciesObserveProfileNameChangeWithoutComposeForwarding() = runTest {
+        val executionRoot =
+            VexExecutionRoot(
+                dispatcher =
+                    StandardTestDispatcher(
+                        testScheduler,
+                    ),
+            )
         val events =
             RelayEventsRepository()
         val preferences =
@@ -595,79 +604,86 @@ class EventsConvergenceRelayTest {
             )
         val relay =
             EventsConvergenceRelay(
+                executionRoot =
+                    executionRoot,
                 eventsRepository = events,
                 attentionPreferences = preferences,
                 attentionLab = lab,
                 userProfile = profiles,
             )
 
-        relay.activate(backgroundScope)
-        relay.surfaceChanged(
-            screenId = EventsScreen.screenId,
-            transientBlocked = false,
-        )
-
-        withTimeout(1_000L) {
-            relay.inputStates.first { input ->
-                input.feed != null &&
-                    input.preferences != null &&
-                    input.profile?.profile?.displayName == "Victor"
-            }
-        }
-
-        // Initial observation establishes current profile truth. It is not itself a name-change event.
-        assertEquals(
-            emptyList<VexExternalEvent>(),
-            relay.currentOutput.events,
-        )
-
-        profiles.upsert(
-            initialProfile.copy(
-                displayName = "Vex",
-                updatedAt = Instant.parse("2026-10-12T18:01:00Z"),
-            ),
-        )
-
-        val changed =
-            withTimeout(1_000L) {
-                relay.outputStates.first { output ->
-                    output.latestProfileNameChange != null
-                }
-            }
-        val notice =
-            checkNotNull(
-                changed.latestProfileNameChange,
+        try {
+            relay.surfaceChanged(
+                screenId = EventsScreen.screenId,
+                transientBlocked = false,
             )
 
-        assertEquals(
-            VexExternalEventKind.SYSTEM,
-            notice.kind,
-        )
-        assertEquals(
-            "Profile name changed",
-            notice.title,
-        )
-        assertEquals(
-            "Victor → Vex",
-            notice.detail,
-        )
-        assertEquals(
-            notice,
-            changed.events.single(),
-        )
+            withTimeout(1_000L) {
+                relay.inputStates.first { input ->
+                    input.feed != null &&
+                        input.preferences != null &&
+                        input.profile?.profile?.displayName == "Victor"
+                }
+            }
 
-        relay.visibleTargetsChanged(
-            setOf(notice.eventRef),
-        )
+            // Initial observation establishes current profile truth. It is not itself a name-change event.
+            assertEquals(
+                emptyList<VexExternalEvent>(),
+                relay.currentOutput.events,
+            )
 
-        assertEquals(
-            notice.eventRef,
-            relay.currentOutput.candidate?.eventRef,
-        )
-        assertEquals(
-            EventsConvergenceAvailability.READY,
-            relay.currentOutput.availability,
-        )
+            profiles.upsert(
+                initialProfile.copy(
+                    displayName = "Vex",
+                    updatedAt = Instant.parse("2026-10-12T18:01:00Z"),
+                ),
+            )
+
+            val changed =
+                withTimeout(1_000L) {
+                    relay.outputStates.first { output ->
+                        output.latestProfileNameChange != null
+                    }
+                }
+            val notice =
+                checkNotNull(
+                    changed.latestProfileNameChange,
+                )
+
+            assertEquals(
+                VexExternalEventKind.SYSTEM,
+                notice.kind,
+            )
+            assertEquals(
+                "Profile name changed",
+                notice.title,
+            )
+            assertEquals(
+                "Victor → Vex",
+                notice.detail,
+            )
+            assertEquals(
+                notice,
+                changed.events.single(),
+            )
+
+            relay.visibleTargetsChanged(
+                setOf(notice.eventRef),
+            )
+
+            assertEquals(
+                notice.eventRef,
+                relay.currentOutput.candidate?.eventRef,
+            )
+            assertEquals(
+                EventsConvergenceAvailability.READY,
+                relay.currentOutput.availability,
+            )
+        } finally {
+            executionRoot.forceStopAll(
+                "Events convergence dependency test finished",
+            )
+        }
     }
 
     @Test

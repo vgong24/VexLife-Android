@@ -1,15 +1,10 @@
 package com.vextreme.vexlife.android.relay
 
-import kotlinx.coroutines.CoroutineName
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancelAndJoin
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 
 abstract class VexCompoundRelay<
     InputState : VexInputState<InputState>,
@@ -18,15 +13,36 @@ abstract class VexCompoundRelay<
     val relayRef: String,
     initialInputState: InputState,
     initialOutputState: OutputState,
+    private val executionRoot: VexExecutionRoot? = null,
+    private val observedDependencies: List<VexRelayDependency<InputState>> = emptyList(),
 ) : VexObservableRelay<VexCompoundState<InputState, OutputState>> {
     private val lock = Any()
     private var processing = false
 
-    private val dependencyLock = Any()
-    private var dependencyOwnerJob: Job? = null
+    private val observationLock = Any()
+    private var observationsStarted = false
 
     init {
         require(relayRef.isNotBlank()) { "relayRef must not be blank" }
+
+        require(
+            observedDependencies
+                .map { dependency ->
+                    dependency.dependencyRef
+                }
+                .distinct()
+                .size ==
+                observedDependencies.size,
+        ) {
+            "VexCompoundRelay observed dependencies must use unique dependencyRef values"
+        }
+
+        require(
+            observedDependencies.isEmpty() ||
+                executionRoot != null,
+        ) {
+            "VexCompoundRelay with observed dependencies requires VexExecutionRoot"
+        }
     }
 
     private val mutableCurrentState =
@@ -85,83 +101,50 @@ abstract class VexCompoundRelay<
             }
 
     /**
-     * Continuously observed truths used by this Compound relationship.
+     * Admit this Relay's constructor-declared observation dependencies into the canonical
+     * VexExecution lifetime.
      *
-     * The concrete Relay declares WHAT it observes. [activate] owns HOW those observations are
-     * launched: exactly one named child coroutine per dependency.
+     * Concrete observed Relays call this once from their own init block, after concrete fields are
+     * initialized. Callers constructing the Relay do not activate or supply a raw CoroutineScope.
      */
-    protected open fun dependencies(): List<VexRelayDependency<InputState>> =
-        emptyList()
-
-    /**
-     * Begins dependency observation under the supplied lifetime owner.
-     *
-     * Dependency observation is asynchronous; [processStates] deliberately is not. Every observed
-     * value becomes one small partial InputState and enters the same serialized [send] boundary.
-     */
-    fun activate(scope: CoroutineScope) {
-        val bindings =
-            dependencies()
-
-        require(
-            bindings.map { dependency ->
-                dependency.dependencyRef
-            }.distinct().size == bindings.size,
+    protected fun startObservedDependencies() {
+        if (
+            observedDependencies.isEmpty()
         ) {
-            "VexCompoundRelay dependencies must use unique dependencyRef values"
+            return
         }
 
-        synchronized(dependencyLock) {
-            check(dependencyOwnerJob == null) {
-                "VexCompoundRelay dependencies are already active: $relayRef"
+        synchronized(observationLock) {
+            check(
+                !observationsStarted,
+            ) {
+                "VexCompoundRelay observed dependencies are already started: $relayRef"
             }
 
-            val parentJob =
-                checkNotNull(scope.coroutineContext[Job]) {
-                    "VexCompoundRelay activation requires a CoroutineScope with a Job"
-                }
-            check(parentJob.isActive) {
-                "VexCompoundRelay cannot activate in an inactive CoroutineScope"
-            }
-
-            val ownerJob =
-                SupervisorJob(parentJob)
-            val dependencyScope =
-                CoroutineScope(
-                    scope.coroutineContext +
-                        ownerJob,
-                )
-
-            dependencyOwnerJob =
-                ownerJob
-
-            bindings.forEach { dependency ->
-                dependencyScope.launch(
-                    CoroutineName(
-                        "$relayRef/${dependency.dependencyRef}",
-                    ),
+            val root =
+                requireNotNull(
+                    executionRoot,
                 ) {
-                    dependency.collectInto { inputState ->
-                        send(inputState)
-                    }
+                    "VexCompoundRelay observed dependencies require VexExecutionRoot"
                 }
-            }
-        }
-    }
 
-    suspend fun deactivate() {
-        val ownerJob =
-            synchronized(dependencyLock) {
-                dependencyOwnerJob
+            observedDependencies.forEach { dependency ->
+                dependency.observeWith(
+                    executionRoot =
+                        root,
+                    owner =
+                        this,
+                    send = { inputState ->
+                        send(
+                            inputState,
+                        )
+                        Unit
+                    },
+                )
             }
-                ?: return
 
-        ownerJob.cancelAndJoin()
-
-        synchronized(dependencyLock) {
-            if (dependencyOwnerJob === ownerJob) {
-                dependencyOwnerJob = null
-            }
+            observationsStarted =
+                true
         }
     }
 

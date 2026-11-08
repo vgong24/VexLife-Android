@@ -204,8 +204,8 @@ private fun directSessionComponents(
         directRelayGraph(
             repositories =
                 repositories,
-            scope =
-                scope,
+            executionRoot =
+                executionRoot,
         )
     val appActions =
         createAppActions(
@@ -262,12 +262,14 @@ private fun directSessionComponents(
 private fun directRelayGraph(
     repositories:
         AppRepositories,
-    scope:
-        CoroutineScope,
+    executionRoot:
+        VexExecutionRoot,
 ):
     VexLifeRelayGraph {
     val events =
         EventsConvergenceRelay(
+            executionRoot =
+                executionRoot,
             eventsRepository =
                 repositories.events,
             attentionPreferences =
@@ -277,24 +279,16 @@ private fun directRelayGraph(
             userProfile =
                 repositories.userProfile,
         )
-            .also { relay ->
-                relay.activate(
-                    scope,
-                )
-            }
 
     val conversation =
         VexConversationHybridRelay(
+            executionRoot =
+                executionRoot,
             conversationRepository =
                 repositories.conversation,
             conversationLab =
                 null,
         )
-            .also { relay ->
-                relay.activate(
-                    scope,
-                )
-            }
 
     return VexLifeRelayGraph(
         events =
@@ -457,16 +451,16 @@ internal class VexLifeSessionDependencyModule(
         EventsRelayProvider(
             repositories =
                 applicationDependencies.repositories,
-            scope =
-                sessionScope,
+            executionRoot =
+                executionRoot,
         )
 
     val conversationRelay =
         ConversationRelayProvider(
             repositories =
                 applicationDependencies.repositories,
-            scope =
-                sessionScope,
+            executionRoot =
+                executionRoot,
         )
 
     val relayGraph =
@@ -701,14 +695,14 @@ internal class VexLifeSessionDependencyModule(
     internal class EventsRelayProvider(
         private val repositories:
             VexDependencyProvider<AppRepositories>,
-        private val scope:
-            VexDependencyProvider<CoroutineScope>,
+        private val executionRoot:
+            VexDependencyProvider<VexExecutionRoot>,
     ) :
         VexDependencyProvider<EventsConvergenceRelay>(
             dependencies =
                 listOf(
                     repositories,
-                    scope,
+                    executionRoot,
                 ),
         ) {
         override fun create(
@@ -717,6 +711,10 @@ internal class VexLifeSessionDependencyModule(
         ):
             EventsConvergenceRelay =
             EventsConvergenceRelay(
+                executionRoot =
+                    dependencies.require(
+                        executionRoot,
+                    ),
                 eventsRepository =
                     dependencies.require(
                         repositories,
@@ -738,26 +736,19 @@ internal class VexLifeSessionDependencyModule(
                     )
                         .userProfile,
             )
-                .also { relay ->
-                    relay.activate(
-                        dependencies.require(
-                            scope,
-                        ),
-                    )
-                }
     }
 
     internal class ConversationRelayProvider(
         private val repositories:
             VexDependencyProvider<AppRepositories>,
-        private val scope:
-            VexDependencyProvider<CoroutineScope>,
+        private val executionRoot:
+            VexDependencyProvider<VexExecutionRoot>,
     ) :
         VexDependencyProvider<VexConversationHybridRelay>(
             dependencies =
                 listOf(
                     repositories,
-                    scope,
+                    executionRoot,
                 ),
         ) {
         override fun create(
@@ -766,6 +757,10 @@ internal class VexLifeSessionDependencyModule(
         ):
             VexConversationHybridRelay =
             VexConversationHybridRelay(
+                executionRoot =
+                    dependencies.require(
+                        executionRoot,
+                    ),
                 conversationRepository =
                     dependencies.require(
                         repositories,
@@ -774,13 +769,6 @@ internal class VexLifeSessionDependencyModule(
                 conversationLab =
                     null,
             )
-                .also { relay ->
-                    relay.activate(
-                        dependencies.require(
-                            scope,
-                        ),
-                    )
-                }
     }
 
     internal class RelayGraphProvider(
