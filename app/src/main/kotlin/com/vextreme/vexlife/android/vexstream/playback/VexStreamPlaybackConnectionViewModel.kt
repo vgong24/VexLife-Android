@@ -13,6 +13,12 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.vextreme.vexlife.android.VexApplication
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackService
+import com.vextreme.vexlife.android.vexstream.player.Media3VexStreamPlayerControlConnection
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
+import com.vextreme.vexlife.android.vexstream.queue.PartnerVexStreamQueueConnection
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueConnection
+import com.vextreme.vexlife.android.vexstream.repeat.PartnerVexStreamRepeatConnection
+import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatConnection
 
 /**
  * Android configuration-lifetime owner for the concrete Playback Connection.
@@ -47,6 +53,16 @@ internal class VexStreamPlaybackConnectionViewModel(
                     .playbackFamily,
             )
 
+    val playerStore:
+        VexStreamPlayerStore =
+        vexApplication
+            .dependencies
+            .resolve(
+                vexApplication
+                    .dependencyModule
+                    .playerStore,
+            )
+
     private val controllerFuture =
         MediaController.Builder(
             application,
@@ -75,6 +91,30 @@ internal class VexStreamPlaybackConnectionViewModel(
         )
         private set
 
+    var queueConnection by
+        mutableStateOf<
+            VexStreamQueueConnection?
+        >(
+            null,
+        )
+        private set
+
+    var repeatConnection by
+        mutableStateOf<
+            VexStreamRepeatConnection?
+        >(
+            null,
+        )
+        private set
+
+    var seekConnection by
+        mutableStateOf<
+            VexStreamPlaybackSeekConnection?
+        >(
+            null,
+        )
+        private set
+
     init {
         controllerFuture.addListener(
             {
@@ -84,13 +124,34 @@ internal class VexStreamPlaybackConnectionViewModel(
                     if (
                         !cleared
                     ) {
+                        val playerConnection =
+                            Media3VexStreamPlayerControlConnection(
+                                connected,
+                            )
+
                         connection =
-                            Media3VexStreamPlaybackConnection(
-                                controller =
-                                    connected,
+                            PartnerVexStreamPlaybackConnection(
                                 family =
                                     family,
+                                effectConnection =
+                                    playerConnection,
                             )
+                        queueConnection =
+                            PartnerVexStreamQueueConnection(
+                                store =
+                                    playerStore,
+                                effectConnection =
+                                    playerConnection,
+                            )
+                        repeatConnection =
+                            PartnerVexStreamRepeatConnection(
+                                store =
+                                    playerStore,
+                                effectConnection =
+                                    playerConnection,
+                            )
+                        seekConnection =
+                            playerConnection
                         controller =
                             connected
                     }
@@ -105,6 +166,9 @@ internal class VexStreamPlaybackConnectionViewModel(
     override fun onCleared() {
         cleared = true
         connection = null
+        queueConnection = null
+        repeatConnection = null
+        seekConnection = null
         controller = null
         MediaController.releaseFuture(
             controllerFuture,
