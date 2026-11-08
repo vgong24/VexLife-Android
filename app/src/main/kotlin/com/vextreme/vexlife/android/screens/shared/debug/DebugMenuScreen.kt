@@ -180,6 +180,25 @@ object DebugMenuScreen : AppScreenBlueprint(
             }
 
 
+            /*
+             * Start with the integrated Partner feedback path, then expose the narrower CGM and
+             * insulin drills underneath it. All remain Debug-only synthetic architecture fixtures.
+             */
+            card("partners-circuit") {
+                text(
+                    id = "title",
+                    textRes = R.string.partners_circuit_lab_title,
+                    role = TextRole.Title,
+                )
+                button(OpenPartnersCircuitLab)
+                text(
+                    id = "helper",
+                    textRes = R.string.partners_circuit_lab_debug_helper,
+                    role = TextRole.Supporting,
+                )
+            }
+
+
             card("cgm-partner") {
                 text(
                     id = "title",
@@ -205,21 +224,6 @@ object DebugMenuScreen : AppScreenBlueprint(
                 text(
                     id = "helper",
                     textRes = R.string.insulin_partner_lab_debug_helper,
-                    role = TextRole.Supporting,
-                )
-            }
-
-
-            card("partners-circuit") {
-                text(
-                    id = "title",
-                    textRes = R.string.partners_circuit_lab_title,
-                    role = TextRole.Title,
-                )
-                button(OpenPartnersCircuitLab)
-                text(
-                    id = "helper",
-                    textRes = R.string.partners_circuit_lab_debug_helper,
                     role = TextRole.Supporting,
                 )
             }
