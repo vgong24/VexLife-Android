@@ -2,13 +2,13 @@ package com.vextreme.vexlife.android.vexstream.playback
 
 import com.vextreme.vexlife.android.behavior.VexFamily
 
-enum class VexStreamPlaybackPhase {
+internal enum class VexStreamPlaybackPhase {
     Idle,
     Buffering,
     Ready,
 }
 
-sealed interface VexStreamPlaybackState :
+internal sealed interface VexStreamPlaybackState :
     VexFamily.State<
         VexStreamPlaybackFamily
     > {
