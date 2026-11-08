@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.media.vexstream
 
 import android.content.ComponentName
+import android.os.Looper
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -45,6 +46,9 @@ class VexStreamPlaybackServiceArchitectureInstrumentedTest {
                         .playbackFamily,
                 )
 
+        val instrumentation =
+            InstrumentationRegistry
+                .getInstrumentation()
         val controllerFuture =
             MediaController
                 .Builder(
@@ -57,6 +61,9 @@ class VexStreamPlaybackServiceArchitectureInstrumentedTest {
                         ),
                     ),
                 )
+                .setApplicationLooper(
+                    Looper.getMainLooper(),
+                )
                 .buildAsync()
 
         val controller =
@@ -66,10 +73,13 @@ class VexStreamPlaybackServiceArchitectureInstrumentedTest {
             )
 
         try {
-            assertTrue(
-                "MediaController must connect to the production Playback MediaSessionService",
-                controller.isConnected,
-            )
+            instrumentation
+                .runOnMainSync {
+                    assertTrue(
+                        "MediaController must connect to the production Playback MediaSessionService",
+                        controller.isConnected,
+                    )
+                }
 
             val after =
                 application
@@ -86,7 +96,10 @@ class VexStreamPlaybackServiceArchitectureInstrumentedTest {
                 after,
             )
         } finally {
-            controller.release()
+            instrumentation
+                .runOnMainSync {
+                    controller.release()
+                }
         }
     }
 }
