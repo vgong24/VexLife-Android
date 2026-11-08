@@ -17,6 +17,10 @@ import androidx.core.content.ContextCompat
 import com.vextreme.vexlife.android.MainActivity
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.VexApplication
+import com.vextreme.vexlife.android.dependency.VexDependencyBuildScope
+import com.vextreme.vexlife.android.dependency.VexDependencyModule
+import com.vextreme.vexlife.android.dependency.VexDependencyProvider
+import com.vextreme.vexlife.android.dependency.VexServiceScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,11 +38,8 @@ import kotlinx.coroutines.launch
  */
 class VexMapsNavigationService :
     Service() {
-    private val serviceScope =
-        CoroutineScope(
-            SupervisorJob() +
-                Dispatchers.Main.immediate,
-        )
+    private lateinit var serviceScope:
+        CoroutineScope
 
     private lateinit var locationSource:
         VexDeviceLocationSource
@@ -61,13 +62,26 @@ class VexMapsNavigationService :
                 ?: error(
                     "VexMaps NavigationService requires VexApplication as the process composition root",
                 )
+        val serviceModule =
+            VexMapsNavigationServiceDependencyModule()
+        val serviceDependencies =
+            vexApplication
+                .dependencies
+                .child(
+                    serviceModule.module,
+                )
+        serviceScope =
+            serviceDependencies
+                .resolve(
+                    serviceModule
+                        .serviceScope,
+                )
 
         /*
-         * Navigation and Playback resolve the same process Relay. The Relay observes Navigation's
-         * already-existing process truth; this Service does not publish a duplicate service State.
+         * Navigation and Playback resolve the same Application-scoped Relay through sibling Service
+         * child lifetimes. No Service owns a private Relay or reaches into its sibling.
          */
-        vexApplication
-            .dependencies
+        serviceDependencies
             .resolve(
                 vexApplication
                     .dependencyModule
@@ -546,6 +560,39 @@ class VexMapsNavigationService :
                 ),
             )
         }
+    }
+}
+
+private class VexMapsNavigationServiceDependencyModule {
+    val serviceScope =
+        ServiceCoroutineScopeProvider()
+
+    val module:
+        VexDependencyModule<
+            VexServiceScope<
+                VexMapsNavigationService
+            >
+        > =
+        VexDependencyModule.of(
+            serviceScope,
+        )
+
+    private class ServiceCoroutineScopeProvider :
+        VexDependencyProvider<
+            VexServiceScope<
+                VexMapsNavigationService
+            >,
+            CoroutineScope
+        >() {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            CoroutineScope =
+            CoroutineScope(
+                SupervisorJob() +
+                    Dispatchers.Main.immediate,
+            )
     }
 }
 
