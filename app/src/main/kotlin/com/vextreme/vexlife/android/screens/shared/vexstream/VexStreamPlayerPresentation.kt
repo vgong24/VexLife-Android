@@ -69,7 +69,6 @@ import com.vextreme.vexlife.android.vexstream.repeat.rememberVexStreamRepeatExpe
  */
 @Composable
 internal fun VexStreamMiniPlayer(
-    controller: androidx.media3.session.MediaController?,
     playbackExperience: VexStreamPlaybackExperience,
     runtime: VexRuntime,
 ) {
@@ -273,7 +272,6 @@ internal fun VexStreamMiniPlayer(
 @Composable
 internal fun VexStreamFullPlayerSheet(
     state: com.vextreme.vexlife.android.data.vexstream.VexStreamMusicState,
-    controller: androidx.media3.session.MediaController?,
     playbackExperience: VexStreamPlaybackExperience,
     runtime: VexRuntime,
 ) {

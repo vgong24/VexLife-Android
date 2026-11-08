@@ -153,7 +153,6 @@ internal fun VexStreamLibrarySurface(
 
                 is VexStreamPlaybackDisplayState.Transitioning -> {
                     VexStreamMiniPlayer(
-                        controller = controller,
                         playbackExperience =
                             requireNotNull(
                                 playbackExperience,
@@ -164,7 +163,6 @@ internal fun VexStreamLibrarySurface(
 
                 is VexStreamPlaybackDisplayState.Active -> {
                     VexStreamMiniPlayer(
-                        controller = controller,
                         playbackExperience =
                             requireNotNull(
                                 playbackExperience,
@@ -333,7 +331,6 @@ internal fun VexStreamLibrarySurface(
     ) {
         VexStreamFullPlayerSheet(
             state = state,
-            controller = controller,
             playbackExperience = playbackExperience,
             runtime = runtime,
         )
