@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.vexstream.player
 
 import com.vextreme.vexlife.android.behavior.VexPartner
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * One independently-owned outside VexStream player participant.
@@ -136,7 +137,39 @@ internal object VexStreamPlayerPartner :
         ) :
             VexPartner.Connection.Id<
                 VexStreamPlayerPartner
-            >
+            > {
+            companion object {
+                private val nextOccurrence =
+                    AtomicLong(
+                        1L,
+                    )
+
+                fun next(
+                    prefix:
+                        String,
+                ):
+                    Id {
+                    require(
+                        prefix.isNotBlank(),
+                    ) {
+                        "Player Connection prefix must not be blank"
+                    }
+
+                    val occurrence =
+                        nextOccurrence
+                            .getAndIncrement()
+
+                    return Id(
+                        value =
+                            prefix +
+                                "-" +
+                                occurrence,
+                        occurrence =
+                            occurrence,
+                    )
+                }
+            }
+        }
 
         data class Observation(
             override val connectionId:

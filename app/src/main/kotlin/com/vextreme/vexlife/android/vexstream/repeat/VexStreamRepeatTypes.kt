@@ -21,3 +21,11 @@ internal typealias VexStreamRepeatProjection =
     >
 
 // [VXG RealForever]
+
+/** Concrete outside-player realization of one already-resolved Repeat Effect. */
+internal fun interface VexStreamRepeatEffectConnection {
+    fun realize(
+        effect:
+            VexStreamRepeatEffect,
+    )
+}

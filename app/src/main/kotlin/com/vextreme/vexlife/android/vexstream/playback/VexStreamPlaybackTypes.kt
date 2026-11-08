@@ -6,6 +6,14 @@ package com.vextreme.vexlife.android.vexstream.playback
  * The connection does not own semantic State. It receives the shared Playback Family and realizes
  * accepted Effects against one concrete Media3 controller.
  */
+internal fun interface VexStreamPlaybackEffectConnection {
+    fun realize(
+        effect:
+            VexStreamPlaybackEffect,
+    )
+}
+
+/** Semantic Control -> accepted Playback Effect boundary. */
 internal interface VexStreamPlaybackConnection {
     fun activate(
         control:

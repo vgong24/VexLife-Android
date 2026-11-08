@@ -21,3 +21,11 @@ internal typealias VexStreamQueueProjection =
     >
 
 // [VXG RealForever]
+
+/** Concrete outside-player realization of one already-resolved Queue Effect. */
+internal fun interface VexStreamQueueEffectConnection {
+    fun realize(
+        effect:
+            VexStreamQueueEffect,
+    )
+}
