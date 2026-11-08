@@ -614,7 +614,7 @@ class VexExecutionTest {
                 }
 
                 val projection =
-                    execution.currentProjection
+                    execution.currentExecution
 
                 assertEquals(
                     2,
@@ -684,7 +684,7 @@ class VexExecutionTest {
                 }
 
                 val current =
-                    VexExecution.currentProjection(
+                    VexExecution.currentExecution(
                         executionRoot =
                             root,
                         owner =
@@ -723,7 +723,7 @@ class VexExecutionTest {
                 )
                 assertEquals(
                     0,
-                    VexExecution.currentProjection(
+                    VexExecution.currentExecution(
                         executionRoot =
                             root,
                         owner =

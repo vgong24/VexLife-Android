@@ -46,7 +46,7 @@ VEX_EXECUTION_OWNER
 ~~~
 
 There is no public execution InstanceId, SourceRef, Handle, completed Snapshot registry, or
-root-level activeExecutions registry. The read-only CurrentProjection described below is derived
+root-level activeExecutions registry. The read-only CurrentProjection exposed through currentExecution described below is derived
 directly from canonical custody and owns no second active-work truth.
 
 ## Authoring surface
@@ -347,6 +347,9 @@ OPERATION FAILURE
 VexExecution exposes one read-only projection derived directly from its canonical current custody:
 
 ~~~text
+VexExecutionProjectionOwner
+    currentExecution
+        ↓
 VexExecution
     ownedJobs
     jobsBySource
@@ -384,7 +387,7 @@ read-only consumer may project current custody without learning private Job fiel
 For an already-existing direct execution owner:
 
 ~~~kotlin
-VexExecution.currentProjection(
+VexExecution.currentExecution(
     executionRoot = root,
     owner = service,
 )
