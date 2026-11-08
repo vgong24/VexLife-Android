@@ -1,10 +1,10 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
-import com.vextreme.vexlife.android.behavior.VexBehaviorFamily
+import com.vextreme.vexlife.android.behavior.VexFamily
 
-/** Runtime playback transformations selected by semantic Acts. */
+/** Runtime Media3 transformation requested by one lawful Playback Family Act. */
 sealed interface VexStreamPlaybackEffect :
-    VexBehaviorFamily.Effect<
+    VexFamily.Effect<
         VexStreamPlaybackFamily
     > {
     data object RequestPlay :
@@ -17,4 +17,4 @@ sealed interface VexStreamPlaybackEffect :
         VexStreamPlaybackEffect
 }
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][PLAYBACK][DIRECT-FAMILY]
