@@ -61,6 +61,14 @@ class VexStreamPlaybackService : MediaSessionService() {
                 )
         this.playbackFamily =
             playbackFamily
+        val playbackWidgetExecution =
+            vexApplication
+                .dependencies
+                .resolve(
+                    vexApplication
+                        .dependencyModule
+                        .playbackWidgetExecution,
+                )
 
         /*
          * Resolve the one process-lived background convergence owner. A Navigation or future
@@ -125,6 +133,8 @@ class VexStreamPlaybackService : MediaSessionService() {
                 observations =
                     playbackObserver
                         .observations,
+                widgetExecution =
+                    playbackWidgetExecution,
             )
         VexStreamPlaybackTrace.record(
             stage =

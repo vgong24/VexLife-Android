@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android
 
 import android.app.Application
+import android.os.Looper
 import com.vextreme.vexlife.android.background.BackgroundServiceRelay
 import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.data.AppRepositoryFactory
@@ -9,6 +10,7 @@ import com.vextreme.vexlife.android.dependency.VexDependencyFactory
 import com.vextreme.vexlife.android.dependency.VexDependencyModule
 import com.vextreme.vexlife.android.dependency.VexDependencyProvider
 import com.vextreme.vexlife.android.elements.UIBlueprintRegistry
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsNavigationProcess
 import com.vextreme.vexlife.android.screens.shared.maps.VexNavigationSession
@@ -17,6 +19,7 @@ import com.vextreme.vexlife.android.ui.SharedPreferencesThemeModeStore
 import com.vextreme.vexlife.android.ui.ThemeModeStore
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
+import com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetExecution
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -119,6 +122,14 @@ internal class VexApplicationDependencyModule(
     val playbackFamily =
         PlaybackFamilyProvider()
 
+    val playbackWidgetExecution =
+        PlaybackWidgetExecutionProvider(
+            application =
+                androidApplication,
+            playbackFamily =
+                playbackFamily,
+        )
+
     val navigationSession =
         NavigationSessionProvider()
 
@@ -142,6 +153,7 @@ internal class VexApplicationDependencyModule(
             themeModeStore,
             processScope,
             playbackFamily,
+            playbackWidgetExecution,
             navigationSession,
             backgroundServiceRelay,
         )
@@ -246,6 +258,61 @@ internal class VexApplicationDependencyModule(
         ):
             VexStreamPlaybackFamily =
             VexStreamPlaybackFamily()
+    }
+
+    /**
+     * Process-lived execution owner for bounded widget provider/filesystem work.
+     *
+     * Execution policy is selected here at the process composition boundary. Feature/widget code
+     * receives the owner and does not manufacture Dispatchers, CoroutineScopes, or Media3 thread
+     * switching ad hoc.
+     */
+    internal class PlaybackWidgetExecutionProvider(
+        private val application:
+            VexDependencyProvider<Application>,
+        private val playbackFamily:
+            VexDependencyProvider<
+                VexStreamPlaybackFamily
+            >,
+    ) :
+        VexDependencyProvider<
+            VexStreamPlaybackWidgetExecution
+        >(
+            dependencies =
+                listOf(
+                    application,
+                    playbackFamily,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexStreamPlaybackWidgetExecution {
+            val controllerLooper =
+                Looper.getMainLooper()
+
+            return VexStreamPlaybackWidgetExecution(
+                root =
+                    VexExecutionRoot(
+                        dispatcher =
+                            Dispatchers.IO,
+                    ),
+                context =
+                    dependencies.require(
+                        application,
+                    )
+                        .applicationContext,
+                playbackFamily =
+                    dependencies.require(
+                        playbackFamily,
+                    ),
+                controllerApplicationLooper =
+                    controllerLooper,
+                controllerDispatcher =
+                    Dispatchers.Main.immediate,
+            )
+        }
     }
 
     /**
