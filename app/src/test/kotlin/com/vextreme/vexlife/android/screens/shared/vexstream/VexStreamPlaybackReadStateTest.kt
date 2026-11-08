@@ -7,10 +7,9 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import androidx.media3.common.Player
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamCurrentPlaybackObservation
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackReadState
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackTrace
-import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackBehavior
-import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackControls
 import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
 import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueBehavior
@@ -95,23 +94,25 @@ class VexStreamPlaybackReadStateTest {
                     "Artist",
                 currentIndex = 0,
             )
+        val playbackState =
+            vexStreamPlaybackState(
+                mediaItemCount = 1,
+                playWhenReady = false,
+                playbackState =
+                    Player.STATE_READY,
+                playPauseAvailable = true,
+                restartAvailable = true,
+            )
         val observation =
             VexStreamCurrentPlaybackObservation(
                 readState =
                     readState,
                 playbackProjection =
-                    vexStreamPlaybackBehavior()
-                        .vexStreamPlaybackControls()
-                        .projection(
-                            vexStreamPlaybackState(
-                                mediaItemCount = 1,
-                                playWhenReady = false,
-                                playbackState =
-                                    Player.STATE_READY,
-                                playPauseAvailable = true,
-                                restartAvailable = true,
-                            ),
-                        ),
+                    VexStreamPlaybackFamily(
+                        playbackState,
+                    ).playbackProjectionFor(
+                        playbackState,
+                    ),
                 queueProjection =
                     vexStreamQueueBehavior()
                         .vexStreamQueueControls()
@@ -132,10 +133,8 @@ class VexStreamPlaybackReadStateTest {
         )
         assertTrue(
             observation
-                .playbackProjection[
-                    com.vextreme.vexlife.android.vexstream.playback
-                        .VexStreamPlaybackControl.PlayPause
-                ].isAvailable,
+                .playbackProjection
+                .playPauseAvailable,
         )
         assertEquals(
             false,

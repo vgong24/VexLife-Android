@@ -16,6 +16,7 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.vextreme.vexlife.android.MainActivity
 import com.vextreme.vexlife.android.R
+import com.vextreme.vexlife.android.VexApplication
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -53,6 +54,26 @@ class VexMapsNavigationService :
 
     override fun onCreate() {
         super.onCreate()
+
+        val vexApplication =
+            application as?
+                VexApplication
+                ?: error(
+                    "VexMaps NavigationService requires VexApplication as the process composition root",
+                )
+
+        /*
+         * Navigation and Playback resolve the same process Relay. The Relay observes Navigation's
+         * already-existing process truth; this Service does not publish a duplicate service State.
+         */
+        vexApplication
+            .dependencies
+            .resolve(
+                vexApplication
+                    .dependencyModule
+                    .backgroundServiceRelay,
+            )
+
         locationSource =
             VexDeviceLocationSource(this)
         navigationSpeech =

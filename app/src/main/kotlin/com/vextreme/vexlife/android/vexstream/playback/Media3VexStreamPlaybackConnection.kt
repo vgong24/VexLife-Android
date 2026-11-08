@@ -2,189 +2,79 @@ package com.vextreme.vexlife.android.vexstream.playback
 
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Android Media3 realization of the reusable VexPortFlow contract.
+ * Media3 realization of accepted Playback Family Effects.
  *
- * The concrete implementation keeps an ordinary Connection name. VexPortFlow is the generic
- * reusable interface boundary it fulfills.
+ * This object does not own Playback State. It receives the process-shared [VexStreamPlaybackFamily],
+ * re-reads current provider truth before activation, realizes the accepted Effect, then reconciles
+ * Media3 truth back into that same Family.
  */
 internal class Media3VexStreamPlaybackConnection(
-    private val controller: MediaController,
+    private val controller:
+        MediaController,
+    private val family:
+        VexStreamPlaybackFamily,
 ) :
-    VexStreamPlaybackConnectionFlow,
-    AutoCloseable {
-    private val behavior =
-        vexStreamPlaybackBehavior()
-
-    private val controls =
-        behavior.vexStreamPlaybackControls()
-
-    private var pending =
-        VexStreamPlaybackPending()
-
-    private val mutableProjections =
-        MutableStateFlow(
-            controls.projection(
-                currentSemanticState(
-                    controller,
-                ),
-            ),
-        )
-
-    override val projections:
-        StateFlow<
-            VexStreamPlaybackProjection
-        > =
-        mutableProjections.asStateFlow()
-
-    private val listener =
-        object : Player.Listener {
-            override fun onEvents(
-                player: Player,
-                events: Player.Events,
-            ) {
-                publishObserved(
-                    player,
-                )
-            }
-        }
-
-    init {
-        controller.addListener(
-            listener,
-        )
-    }
-
+    VexStreamPlaybackConnection {
     override fun activate(
-        control: VexStreamPlaybackControl,
+        control:
+            VexStreamPlaybackControl,
     ) {
-        val current =
-            currentSemanticState(
-                controller,
-            )
-
-        publish(
-            current,
+        observe(
+            controller,
         )
-
-        val act =
-            controls.resolve(
-                current = current,
-                control = control,
-            )?.act
-                ?: return
-
-        val relationship =
-            behavior.resolve(
-                current = current,
-                act = act,
-            )
-                ?: return
 
         val effect =
-            relationship.effect
-
-        pending =
-            pending.after(
-                effect,
-            )
-
-        val admitted =
-            current.afterIntent(
-                effect,
-            )
-
-        check(
-            relationship.admittedStateKind
-                .isInstance(
-                    admitted,
-                ),
-        ) {
-            "admitted State value " +
-                admitted::class.simpleName +
-                " does not match behavior admission " +
-                relationship.admittedStateKind.simpleName
-        }
-
-        publish(
-            admitted,
-        )
+            family
+                .activate(
+                    control,
+                )
+                ?.effect
+                ?: return
 
         try {
             realize(
                 effect,
             )
-        } catch (failure: Throwable) {
-            pending =
-                VexStreamPlaybackPending()
-            publishObserved(
+        } catch (
+            failure:
+                Throwable
+        ) {
+            observe(
                 controller,
             )
             throw failure
         }
 
-        publishObserved(
+        observe(
             controller,
         )
     }
 
-    override fun close() {
-        controller.removeListener(
-            listener,
-        )
-    }
-
-    private fun currentSemanticState(
-        player: Player,
-    ): VexStreamPlaybackState {
-        val reconciled =
+    private fun observe(
+        player:
+            Player,
+    ) {
+        family.observe(
             reconcileVexStreamPlaybackObservation(
                 observed =
-                    player.toVexStreamPlaybackState(),
-                pending = pending,
-            )
-
-        pending =
-            reconciled.pending
-
-        return reconciled.state
-    }
-
-    private fun publishObserved(
-        player: Player,
-    ) {
-        publish(
-            currentSemanticState(
-                player,
+                    player
+                        .toVexStreamPlaybackState(),
+                current =
+                    family
+                        .currentState,
             ),
         )
     }
 
-    private fun publish(
-        state: VexStreamPlaybackState,
-    ) {
-        val projection =
-            controls.projection(
-                state,
-            )
-
-        if (
-            mutableProjections.value !=
-            projection
-        ) {
-            mutableProjections.value =
-                projection
-        }
-    }
-
     private fun realize(
-        effect: VexStreamPlaybackEffect,
+        effect:
+            VexStreamPlaybackEffect,
     ) {
-        when (effect) {
+        when (
+            effect
+        ) {
             VexStreamPlaybackEffect.RequestPlay ->
                 controller.play()
 
@@ -199,15 +89,29 @@ internal class Media3VexStreamPlaybackConnection(
     }
 }
 
-internal fun Player.toVexStreamPlaybackProjection():
-    VexStreamPlaybackProjection =
-    vexStreamPlaybackBehavior()
-        .vexStreamPlaybackControls()
-        .projection(
-            toVexStreamPlaybackState(),
+internal fun Player.toVexStreamPlaybackProjection(
+    family:
+        VexStreamPlaybackFamily,
+):
+    VexStreamPlaybackProjection {
+    val state =
+        reconcileVexStreamPlaybackObservation(
+            observed =
+                toVexStreamPlaybackState(),
+            current =
+                family
+                    .currentState,
         )
 
-private fun Player.toVexStreamPlaybackState():
+    family.observe(
+        state,
+    )
+
+    return family
+        .currentPlaybackProjection
+}
+
+internal fun Player.toVexStreamPlaybackState():
     VexStreamPlaybackState =
     vexStreamPlaybackState(
         mediaItemCount = mediaItemCount,
@@ -227,56 +131,78 @@ private fun Player.toVexStreamPlaybackState():
     )
 
 internal fun vexStreamPlaybackState(
-    mediaItemCount: Int,
-    playWhenReady: Boolean,
-    playbackState: Int,
-    playPauseAvailable: Boolean,
-    restartAvailable: Boolean,
-): VexStreamPlaybackState {
-    require(mediaItemCount >= 0) {
+    mediaItemCount:
+        Int,
+    playWhenReady:
+        Boolean,
+    playbackState:
+        Int,
+    playPauseAvailable:
+        Boolean,
+    restartAvailable:
+        Boolean,
+):
+    VexStreamPlaybackState {
+    require(
+        mediaItemCount >=
+            0,
+    ) {
         "mediaItemCount must not be negative"
     }
 
-    if (mediaItemCount == 0) {
-        return VexStreamPlaybackState.NoMedia
+    if (
+        mediaItemCount ==
+        0
+    ) {
+        return VexStreamPlaybackState
+            .NoMedia
     }
 
-    return when (playbackState) {
+    return when (
+        playbackState
+    ) {
         Player.STATE_ENDED ->
-            VexStreamPlaybackState.Ended(
-                restartAvailable =
-                    restartAvailable,
-            )
+            VexStreamPlaybackState
+                .Ended(
+                    restartAvailable =
+                        restartAvailable,
+                )
 
         Player.STATE_IDLE ->
-            VexStreamPlaybackState.Media(
-                playRequested =
-                    playWhenReady,
-                phase =
-                    VexStreamPlaybackPhase.Idle,
-                playPauseAvailable =
-                    playPauseAvailable,
-            )
+            VexStreamPlaybackState
+                .Media(
+                    playRequested =
+                        playWhenReady,
+                    phase =
+                        VexStreamPlaybackPhase
+                            .Idle,
+                    playPauseAvailable =
+                        playPauseAvailable,
+                )
 
         Player.STATE_BUFFERING ->
-            VexStreamPlaybackState.Media(
-                playRequested =
-                    playWhenReady,
-                phase =
-                    VexStreamPlaybackPhase.Buffering,
-                playPauseAvailable =
-                    playPauseAvailable,
-            )
+            VexStreamPlaybackState
+                .Media(
+                    playRequested =
+                        playWhenReady,
+                    phase =
+                        VexStreamPlaybackPhase
+                            .Buffering,
+                    playPauseAvailable =
+                        playPauseAvailable,
+                )
 
         Player.STATE_READY ->
-            VexStreamPlaybackState.Media(
-                playRequested =
-                    playWhenReady,
-                phase =
-                    VexStreamPlaybackPhase.Ready,
-                playPauseAvailable =
-                    playPauseAvailable,
-            )
+            VexStreamPlaybackState
+                .Media(
+                    playRequested =
+                        playWhenReady,
+                    phase =
+                        VexStreamPlaybackPhase
+                            .Ready,
+                    playPauseAvailable =
+                        playPauseAvailable,
+                )
 
         else ->
             error(
@@ -286,4 +212,4 @@ internal fun vexStreamPlaybackState(
     }
 }
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][PLAYBACK][MEDIA3-CONNECTION]

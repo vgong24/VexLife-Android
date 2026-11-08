@@ -1,35 +1,12 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
-import com.vextreme.vexlife.android.behavior.VexBehaviorBlueprint
-import com.vextreme.vexlife.android.behavior.VexBehaviorControlBlueprint
-import com.vextreme.vexlife.android.behavior.VexBehaviorFamily
+import com.vextreme.vexlife.android.behavior.VexFamily
 
-enum class VexStreamPlaybackControl :
-    VexBehaviorFamily.Control<
+internal enum class VexStreamPlaybackControl :
+    VexFamily.Control<
         VexStreamPlaybackFamily
     > {
     PlayPause,
 }
 
-internal fun VexBehaviorBlueprint<
-    VexStreamPlaybackFamily,
-    VexStreamPlaybackState,
-    VexStreamPlaybackAct,
-    VexStreamPlaybackEffect
->.vexStreamPlaybackControls():
-    VexBehaviorControlBlueprint<
-        VexStreamPlaybackFamily,
-        VexStreamPlaybackState,
-        VexStreamPlaybackAct,
-        VexStreamPlaybackEffect,
-        VexStreamPlaybackControl
-    > =
-    controls<VexStreamPlaybackControl> {
-        control(
-            VexStreamPlaybackControl.PlayPause,
-            VexStreamPlaybackAct.Play,
-            VexStreamPlaybackAct.Pause,
-        )
-    }
-
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][PLAYBACK][DIRECT-FAMILY]

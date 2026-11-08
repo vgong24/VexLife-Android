@@ -26,6 +26,33 @@ consumer
     -> receives concrete object explicitly
 ~~~
 
+## Current process / Service composition pressure
+
+The current background-Service convergence uses the existing parent-reuse law directly:
+
+~~~text
+VexApplication dependency lifetime
+    PlaybackFamily
+    Navigation process truth
+    BackgroundServiceRelay
+
+PlaybackService composition
+    -> reuses the exact parent PlaybackFamily
+    -> resolves the exact parent BackgroundServiceRelay
+    -> owns Media3/Player realization privately
+
+NavigationService composition
+    -> reuses the exact parent BackgroundServiceRelay
+    -> owns location/speech realization privately
+~~~
+
+The shared parent object is not copied into each Service. A Service keeps its concrete behavior alive;
+the Family remains the semantic State owner and the Relay remains the relationship owner.
+
+The next dependency-foundation pressure is to make scope ancestry compiler-visible so Application,
+retained Session, and Service sibling relationships do not rely on naming or code placement. That
+typed-scope refinement is not claimed by the current factory merely because parent reuse already works.
+
 ## Identity
 
 Provider declaration **object identity** is the construction coordinate.
