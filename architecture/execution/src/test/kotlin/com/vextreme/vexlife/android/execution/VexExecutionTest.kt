@@ -647,6 +647,52 @@ class VexExecutionTest {
         }
 
     @Test
+    fun directOwnerProjectionIsEmptyBeforeWorkAndSourceStopIsNoOp() =
+        runBlocking {
+            val root =
+                VexExecutionRoot()
+            val repository =
+                TestRepository()
+            val owner =
+                Any()
+
+            try {
+                val current =
+                    VexExecution.currentExecution(
+                        executionRoot =
+                            root,
+                        owner =
+                            owner,
+                    )
+
+                assertEquals(
+                    0,
+                    current.activeJobCount,
+                )
+                assertTrue(
+                    current.sources.isEmpty(),
+                )
+                assertTrue(
+                    current.relationships.isEmpty(),
+                )
+                assertFalse(
+                    VexExecution.forceStop(
+                        executionRoot =
+                            root,
+                        owner =
+                            owner,
+                        source =
+                            repository::states,
+                    ),
+                )
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
+            }
+        }
+
+    @Test
     fun directOwnerProjectionAndSourceStopReuseCanonicalCustody() =
         runBlocking {
             val root =

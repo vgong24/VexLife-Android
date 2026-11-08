@@ -370,7 +370,14 @@ CurrentProjection
         activeJobCount
 ~~~
 
-The projection is deliberately lossy and non-authoritative.
+The projection is deliberately lossy and non-authoritative. Reading it is also non-creating:
+asking for a direct owner's current execution before that owner has admitted work returns an empty
+projection and does not register a new execution owner.
+
+~~~text
+READ_CURRENT_EXECUTION
+!= CREATE_EXECUTION_OWNER
+~~~
 
 ~~~text
 CURRENT_PROJECTION

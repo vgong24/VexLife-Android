@@ -1475,17 +1475,31 @@ abstract class VexExecution protected constructor(
             owner:
                 Any,
         ):
-            CurrentProjection =
-            executionRoot
-                .directExecution(
+            CurrentProjection {
+            val ownerLabel =
+                owner::class.qualifiedName
+                    ?: owner::class.simpleName
+                    ?: "VexExecutionOwner"
+
+            return executionRoot
+                .currentDirectExecution(
                     owner,
                 )
-                .currentExecution(
+                ?.currentExecution(
                     ownerLabel =
-                        owner::class.qualifiedName
-                            ?: owner::class.simpleName
-                            ?: "VexExecutionOwner",
+                        ownerLabel,
                 )
+                ?: CurrentProjection(
+                    ownerLabel =
+                        ownerLabel,
+                    activeJobCount =
+                        0,
+                    sources =
+                        emptyList(),
+                    relationships =
+                        emptyList(),
+                )
+        }
 
         /**
          * Stop CURRENT work admitted from one exact source for a direct execution owner.
@@ -1506,15 +1520,16 @@ abstract class VexExecution protected constructor(
         ):
             Boolean =
             executionRoot
-                .directExecution(
+                .currentDirectExecution(
                     owner,
                 )
-                .forceStop(
+                ?.forceStop(
                     reference =
                         source,
                     reason =
                         reason,
                 )
+                ?: false
 
         fun <Value, Source : Flow<Value>> observe(
             executionRoot:
