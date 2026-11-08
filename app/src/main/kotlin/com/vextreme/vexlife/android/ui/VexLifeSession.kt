@@ -17,6 +17,8 @@ import com.vextreme.vexlife.android.dependency.VexDependencyBuildScope
 import com.vextreme.vexlife.android.dependency.VexDependencyFactory
 import com.vextreme.vexlife.android.dependency.VexDependencyModule
 import com.vextreme.vexlife.android.dependency.VexDependencyProvider
+import com.vextreme.vexlife.android.dependency.VexApplicationScope
+import com.vextreme.vexlife.android.dependency.VexSessionScope
 import com.vextreme.vexlife.android.elements.UIBlueprintRegistry
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
@@ -544,7 +546,9 @@ internal class VexLifeSessionDependencyModule(
         )
 
     val module:
-        VexDependencyModule =
+        VexDependencyModule<
+            VexSessionScope
+        > =
         VexDependencyModule.of(
             sessionScope,
             executionRoot,
@@ -565,7 +569,7 @@ internal class VexLifeSessionDependencyModule(
         private val scope:
             CoroutineScope,
     ) :
-        VexDependencyProvider<CoroutineScope>() {
+        VexDependencyProvider<VexSessionScope, CoroutineScope>() {
         override fun create(
             dependencies:
                 VexDependencyBuildScope,
@@ -575,7 +579,7 @@ internal class VexLifeSessionDependencyModule(
     }
 
     internal class ExecutionRootProvider :
-        VexDependencyProvider<VexExecutionRoot>() {
+        VexDependencyProvider<VexSessionScope, VexExecutionRoot>() {
         override fun create(
             dependencies:
                 VexDependencyBuildScope,
@@ -589,11 +593,11 @@ internal class VexLifeSessionDependencyModule(
 
     internal class LogPersistenceProvider(
         private val repositories:
-            VexDependencyProvider<AppRepositories>,
+            VexDependencyProvider<VexApplicationScope, AppRepositories>,
         private val scope:
-            VexDependencyProvider<CoroutineScope>,
+            VexDependencyProvider<VexSessionScope, CoroutineScope>,
     ) :
-        VexDependencyProvider<LogHistoryPersistenceQueue>(
+        VexDependencyProvider<VexSessionScope, LogHistoryPersistenceQueue>(
             dependencies =
                 listOf(
                     repositories,
@@ -620,11 +624,11 @@ internal class VexLifeSessionDependencyModule(
 
     internal class LoggerProvider(
         private val logPersistence:
-            VexDependencyProvider<LogHistoryPersistenceQueue>,
+            VexDependencyProvider<VexSessionScope, LogHistoryPersistenceQueue>,
         private val blueprintRegistry:
-            VexDependencyProvider<UIBlueprintRegistry>,
+            VexDependencyProvider<VexApplicationScope, UIBlueprintRegistry>,
     ) :
-        VexDependencyProvider<VexLogger>(
+        VexDependencyProvider<VexSessionScope, VexLogger>(
             dependencies =
                 listOf(
                     logPersistence,
@@ -652,13 +656,13 @@ internal class VexLifeSessionDependencyModule(
         private val initialThemeMode:
             ThemeMode,
         private val store:
-            VexDependencyProvider<ThemeModeStore>,
+            VexDependencyProvider<VexApplicationScope, ThemeModeStore>,
         private val executionRoot:
-            VexDependencyProvider<VexExecutionRoot>,
+            VexDependencyProvider<VexSessionScope, VexExecutionRoot>,
         private val logger:
-            VexDependencyProvider<VexLogger>,
+            VexDependencyProvider<VexSessionScope, VexLogger>,
     ) :
-        VexDependencyProvider<ThemeModeFamily>(
+        VexDependencyProvider<VexSessionScope, ThemeModeFamily>(
             dependencies =
                 listOf(
                     store,
@@ -700,11 +704,11 @@ internal class VexLifeSessionDependencyModule(
 
     internal class EventsRelayProvider(
         private val repositories:
-            VexDependencyProvider<AppRepositories>,
+            VexDependencyProvider<VexApplicationScope, AppRepositories>,
         private val scope:
-            VexDependencyProvider<CoroutineScope>,
+            VexDependencyProvider<VexSessionScope, CoroutineScope>,
     ) :
-        VexDependencyProvider<EventsConvergenceRelay>(
+        VexDependencyProvider<VexSessionScope, EventsConvergenceRelay>(
             dependencies =
                 listOf(
                     repositories,
@@ -749,11 +753,11 @@ internal class VexLifeSessionDependencyModule(
 
     internal class ConversationRelayProvider(
         private val repositories:
-            VexDependencyProvider<AppRepositories>,
+            VexDependencyProvider<VexApplicationScope, AppRepositories>,
         private val scope:
-            VexDependencyProvider<CoroutineScope>,
+            VexDependencyProvider<VexSessionScope, CoroutineScope>,
     ) :
-        VexDependencyProvider<VexConversationHybridRelay>(
+        VexDependencyProvider<VexSessionScope, VexConversationHybridRelay>(
             dependencies =
                 listOf(
                     repositories,
@@ -785,11 +789,11 @@ internal class VexLifeSessionDependencyModule(
 
     internal class RelayGraphProvider(
         private val events:
-            VexDependencyProvider<EventsConvergenceRelay>,
+            VexDependencyProvider<VexSessionScope, EventsConvergenceRelay>,
         private val conversation:
-            VexDependencyProvider<VexConversationHybridRelay>,
+            VexDependencyProvider<VexSessionScope, VexConversationHybridRelay>,
     ) :
-        VexDependencyProvider<VexLifeRelayGraph>(
+        VexDependencyProvider<VexSessionScope, VexLifeRelayGraph>(
             dependencies =
                 listOf(
                     events,
@@ -815,21 +819,21 @@ internal class VexLifeSessionDependencyModule(
 
     internal class AppActionsProvider(
         private val repositories:
-            VexDependencyProvider<AppRepositories>,
+            VexDependencyProvider<VexApplicationScope, AppRepositories>,
         private val scope:
-            VexDependencyProvider<CoroutineScope>,
+            VexDependencyProvider<VexSessionScope, CoroutineScope>,
         private val logger:
-            VexDependencyProvider<VexLogger>,
+            VexDependencyProvider<VexSessionScope, VexLogger>,
         private val logPersistence:
-            VexDependencyProvider<LogHistoryPersistenceQueue>,
+            VexDependencyProvider<VexSessionScope, LogHistoryPersistenceQueue>,
         private val themeModeFamily:
-            VexDependencyProvider<ThemeModeFamily>,
+            VexDependencyProvider<VexSessionScope, ThemeModeFamily>,
         private val themeModeStore:
-            VexDependencyProvider<ThemeModeStore>,
+            VexDependencyProvider<VexApplicationScope, ThemeModeStore>,
         private val executionRoot:
-            VexDependencyProvider<VexExecutionRoot>,
+            VexDependencyProvider<VexSessionScope, VexExecutionRoot>,
     ) :
-        VexDependencyProvider<AppActionRegistrations>(
+        VexDependencyProvider<VexSessionScope, AppActionRegistrations>(
             dependencies =
                 listOf(
                     repositories,
@@ -880,13 +884,13 @@ internal class VexLifeSessionDependencyModule(
 
     internal class RuntimeProvider(
         private val blueprintRegistry:
-            VexDependencyProvider<UIBlueprintRegistry>,
+            VexDependencyProvider<VexApplicationScope, UIBlueprintRegistry>,
         private val logger:
-            VexDependencyProvider<VexLogger>,
+            VexDependencyProvider<VexSessionScope, VexLogger>,
         private val appActions:
-            VexDependencyProvider<AppActionRegistrations>,
+            VexDependencyProvider<VexSessionScope, AppActionRegistrations>,
     ) :
-        VexDependencyProvider<VexRuntime>(
+        VexDependencyProvider<VexSessionScope, VexRuntime>(
             dependencies =
                 listOf(
                     blueprintRegistry,
@@ -926,23 +930,23 @@ internal class VexLifeSessionDependencyModule(
 
     internal class SessionProvider(
         private val repositories:
-            VexDependencyProvider<AppRepositories>,
+            VexDependencyProvider<VexApplicationScope, AppRepositories>,
         private val scope:
-            VexDependencyProvider<CoroutineScope>,
+            VexDependencyProvider<VexSessionScope, CoroutineScope>,
         private val logPersistence:
-            VexDependencyProvider<LogHistoryPersistenceQueue>,
+            VexDependencyProvider<VexSessionScope, LogHistoryPersistenceQueue>,
         private val logger:
-            VexDependencyProvider<VexLogger>,
+            VexDependencyProvider<VexSessionScope, VexLogger>,
         private val themeModeFamily:
-            VexDependencyProvider<ThemeModeFamily>,
+            VexDependencyProvider<VexSessionScope, ThemeModeFamily>,
         private val relayGraph:
-            VexDependencyProvider<VexLifeRelayGraph>,
+            VexDependencyProvider<VexSessionScope, VexLifeRelayGraph>,
         private val appActions:
-            VexDependencyProvider<AppActionRegistrations>,
+            VexDependencyProvider<VexSessionScope, AppActionRegistrations>,
         private val runtime:
-            VexDependencyProvider<VexRuntime>,
+            VexDependencyProvider<VexSessionScope, VexRuntime>,
     ) :
-        VexDependencyProvider<VexLifeSession>(
+        VexDependencyProvider<VexSessionScope, VexLifeSession>(
             dependencies =
                 listOf(
                     repositories,
@@ -998,11 +1002,11 @@ internal class VexLifeSessionDependencyModule(
 
     internal class VexStreamStartupProvider(
         private val repositories:
-            VexDependencyProvider<AppRepositories>,
+            VexDependencyProvider<VexApplicationScope, AppRepositories>,
         private val executionRoot:
-            VexDependencyProvider<VexExecutionRoot>,
+            VexDependencyProvider<VexSessionScope, VexExecutionRoot>,
     ) :
-        VexDependencyProvider<VexStreamStartupExecution>(
+        VexDependencyProvider<VexSessionScope, VexStreamStartupExecution>(
             dependencies =
                 listOf(
                     repositories,
@@ -1032,13 +1036,13 @@ internal class VexLifeSessionDependencyModule(
 
     internal class VexStreamArtworkProvider(
         private val repositories:
-            VexDependencyProvider<AppRepositories>,
+            VexDependencyProvider<VexApplicationScope, AppRepositories>,
         private val executionRoot:
-            VexDependencyProvider<VexExecutionRoot>,
+            VexDependencyProvider<VexSessionScope, VexExecutionRoot>,
         private val application:
-            VexDependencyProvider<Application>,
+            VexDependencyProvider<VexApplicationScope, Application>,
     ) :
-        VexDependencyProvider<VexStreamArtworkExecution>(
+        VexDependencyProvider<VexSessionScope, VexStreamArtworkExecution>(
             dependencies =
                 listOf(
                     repositories,
@@ -1109,7 +1113,9 @@ internal class VexLifeViewModel(
         )
 
     private val dependencies:
-        VexDependencyFactory =
+        VexDependencyFactory<
+            VexSessionScope
+        > =
         vexApplication.dependencies
             .child(
                 dependencyModule.module,
