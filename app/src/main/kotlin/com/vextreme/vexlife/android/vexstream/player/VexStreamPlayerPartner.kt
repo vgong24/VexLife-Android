@@ -5,6 +5,8 @@ import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackEffectCo
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackProgressConnection
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackSeekConnection
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueEffectConnection
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueuePlayConnection
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueReorderConnection
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatEffectConnection
 import java.util.concurrent.atomic.AtomicLong
 
@@ -45,10 +47,25 @@ internal object VexStreamPlayerPartner :
             Signal
 
         data class QueueItems(
-            val mediaIds:
-                List<String>,
+            val items:
+                List<Item>,
         ) :
-            Signal
+            Signal {
+            data class Item(
+                val mediaId:
+                    String,
+                val title:
+                    String,
+                val artist:
+                    String,
+            )
+
+            val mediaIds:
+                List<String> =
+                items.map(
+                    Item::mediaId,
+                )
+        }
 
         data class QueueNavigation(
             val currentIndex:
@@ -187,6 +204,8 @@ internal object VexStreamPlayerPartner :
             VexStreamPlaybackEffectConnection,
             VexStreamQueueEffectConnection,
             VexStreamRepeatEffectConnection,
+            VexStreamQueuePlayConnection,
+            VexStreamQueueReorderConnection,
             VexStreamPlaybackSeekConnection
 
         /**

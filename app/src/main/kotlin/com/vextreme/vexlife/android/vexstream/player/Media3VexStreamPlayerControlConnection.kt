@@ -17,6 +17,12 @@ import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackProgress
 import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackSeekTarget
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueEffect
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueEffectConnection
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueuePlayConnection
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueuePlayRequest
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueReorderConnection
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueReorderRequest
+import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueuePlayTargetIndex
+import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueReorderTargetIndex
 import com.vextreme.vexlife.android.vexstream.queue.shuffleVexStreamFutureQueue
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatEffect
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatEffectConnection
@@ -104,6 +110,102 @@ internal class Media3VexStreamPlayerControlConnection(
                 controller.repeatMode =
                     Player.REPEAT_MODE_OFF
         }
+    }
+
+    override val isPlayAvailable:
+        Boolean
+        get() =
+            controller.isCommandAvailable(
+                Player.COMMAND_SEEK_TO_MEDIA_ITEM,
+            ) &&
+                controller.isCommandAvailable(
+                    Player.COMMAND_PLAY_PAUSE,
+                )
+
+    override fun play(
+        request:
+            VexStreamQueuePlayRequest,
+    ):
+        Boolean {
+        val currentMediaIds =
+            (0 until controller.mediaItemCount)
+                .map { index ->
+                    controller
+                        .getMediaItemAt(
+                            index,
+                        )
+                        .mediaId
+                }
+        val targetIndex =
+            vexStreamQueuePlayTargetIndex(
+                request =
+                    request,
+                currentMediaIds =
+                    currentMediaIds,
+                seekAvailable =
+                    controller.isCommandAvailable(
+                        Player.COMMAND_SEEK_TO_MEDIA_ITEM,
+                    ),
+                playAvailable =
+                    controller.isCommandAvailable(
+                        Player.COMMAND_PLAY_PAUSE,
+                    ),
+            )
+                ?: return false
+
+        if (
+            targetIndex !=
+            controller.currentMediaItemIndex
+        ) {
+            controller.seekToDefaultPosition(
+                targetIndex,
+            )
+        }
+        controller.play()
+        return true
+    }
+
+    override val isReorderAvailable:
+        Boolean
+        get() =
+            controller.mediaItemCount >
+                1 &&
+                controller.isCommandAvailable(
+                    Player.COMMAND_CHANGE_MEDIA_ITEMS,
+                )
+
+    override fun move(
+        request:
+            VexStreamQueueReorderRequest,
+    ):
+        Boolean {
+        val currentMediaIds =
+            (0 until controller.mediaItemCount)
+                .map { index ->
+                    controller
+                        .getMediaItemAt(
+                            index,
+                        )
+                        .mediaId
+                }
+        val targetIndex =
+            vexStreamQueueReorderTargetIndex(
+                request =
+                    request,
+                currentMediaIds =
+                    currentMediaIds,
+                changeAvailable =
+                    controller.isCommandAvailable(
+                        Player.COMMAND_CHANGE_MEDIA_ITEMS,
+                    ),
+            )
+                ?: return false
+
+        controller.moveMediaItem(
+            request.occurrence.index,
+            targetIndex,
+        )
+        return true
     }
 
     override val isPlaying:

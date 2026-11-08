@@ -381,12 +381,28 @@ private fun Player.toVexStreamPlayerPlaybackSignal():
 private fun Player.toVexStreamPlayerQueueItemsSignal():
     VexStreamPlayerPartner.Signal.QueueItems =
     VexStreamPlayerPartner.Signal.QueueItems(
-        mediaIds =
+        items =
             (0 until mediaItemCount)
                 .map { index ->
-                    getMediaItemAt(
-                        index,
-                    ).mediaId
+                    val item =
+                        getMediaItemAt(
+                            index,
+                        )
+
+                    VexStreamPlayerPartner.Signal.QueueItems.Item(
+                        mediaId =
+                            item.mediaId,
+                        title =
+                            item.mediaMetadata
+                                .title
+                                ?.toString()
+                                .orEmpty(),
+                        artist =
+                            item.mediaMetadata
+                                .artist
+                                ?.toString()
+                                .orEmpty(),
+                    )
                 },
     )
 
