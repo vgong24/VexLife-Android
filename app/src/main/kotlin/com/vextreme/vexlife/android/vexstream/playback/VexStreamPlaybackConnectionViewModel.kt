@@ -115,6 +115,14 @@ internal class VexStreamPlaybackConnectionViewModel(
         )
         private set
 
+    var progressConnection by
+        mutableStateOf<
+            VexStreamPlaybackProgressConnection?
+        >(
+            null,
+        )
+        private set
+
     init {
         controllerFuture.addListener(
             {
@@ -152,6 +160,8 @@ internal class VexStreamPlaybackConnectionViewModel(
                             )
                         seekConnection =
                             playerConnection
+                        progressConnection =
+                            playerConnection
                         controller =
                             connected
                     }
@@ -169,6 +179,7 @@ internal class VexStreamPlaybackConnectionViewModel(
         queueConnection = null
         repeatConnection = null
         seekConnection = null
+        progressConnection = null
         controller = null
         MediaController.releaseFuture(
             controllerFuture,

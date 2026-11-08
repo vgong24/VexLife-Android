@@ -6,6 +6,8 @@ import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackEffect
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackEffectConnection
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackSeekConnection
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackSeekRequest
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackProgress
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackProgressConnection
 import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackSeekTarget
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueEffect
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueEffectConnection
@@ -27,7 +29,8 @@ internal class Media3VexStreamPlayerControlConnection(
     VexStreamPlaybackEffectConnection,
     VexStreamQueueEffectConnection,
     VexStreamRepeatEffectConnection,
-    VexStreamPlaybackSeekConnection {
+    VexStreamPlaybackSeekConnection,
+    VexStreamPlaybackProgressConnection {
     override val id =
         VexStreamPlayerPartner.Connection.Id
             .next(
@@ -94,6 +97,66 @@ internal class Media3VexStreamPlayerControlConnection(
                 controller.repeatMode =
                     Player.REPEAT_MODE_OFF
         }
+    }
+
+    override val isPlaying:
+        Boolean
+        get() =
+            controller.isPlaying
+
+    override fun readProgress():
+        VexStreamPlaybackProgress {
+        val durationMs =
+            controller.duration
+                .takeIf {
+                    it >
+                    0L
+                } ?: 0L
+        val positionMs =
+            controller
+                .currentPosition
+                .coerceAtLeast(
+                    0L,
+                )
+                .let { position ->
+                    if (
+                        durationMs >
+                        0L
+                    ) {
+                        position.coerceAtMost(
+                            durationMs,
+                        )
+                    } else {
+                        position
+                    }
+                }
+        val bufferedMs =
+            controller
+                .bufferedPosition
+                .coerceAtLeast(
+                    0L,
+                )
+                .let { buffered ->
+                    if (
+                        durationMs >
+                        0L
+                    ) {
+                        buffered.coerceAtMost(
+                            durationMs,
+                        )
+                    } else {
+                        buffered
+                    }
+                }
+
+        return VexStreamPlaybackProgress(
+            positionMs =
+                positionMs,
+            durationMs =
+                durationMs,
+            bufferedPositionMs =
+                bufferedMs,
+        )
     }
 
     override val isAvailable:
