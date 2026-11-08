@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence
 
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.relay.VexCompoundRelay
 import com.vextreme.vexlife.android.relay.VexCompoundState
 import com.vextreme.vexlife.android.relay.VexInputState
@@ -235,6 +236,8 @@ internal data class VexMapsDeliveryRouteNavigationOutput(
  * full human walk as remaining proof debt.
  */
 internal class VexMapsDeliveryRouteNavigationConvergenceRelay(
+    executionRoot:
+        VexExecutionRoot,
     private val deliveryRouteProjections:
         StateFlow<VexMapsDeliveryRouteProjection>,
     private val navigationStates:
@@ -272,9 +275,10 @@ internal class VexMapsDeliveryRouteNavigationConvergenceRelay(
                 legAttempt =
                     legAttempts.value,
             ),
-    ) {
-    override fun dependencies() =
-        vexObserveDependencies<
+        executionRoot =
+            executionRoot,
+        observedDependencies =
+            vexObserveDependencies<
             VexMapsDeliveryRouteNavigationInputState
         > {
             observe(
@@ -324,7 +328,11 @@ internal class VexMapsDeliveryRouteNavigationConvergenceRelay(
                         attempt,
                 )
             }
-        }
+        },
+    ) {
+    init {
+        startObservedDependencies()
+    }
 
     override fun processStates(
         inputState:

@@ -67,7 +67,7 @@ ack/preference -----/
 
 The concrete Relay should be boring to inspect:
 
-1. read `dependencies()` to see what continuously changes around it;
+1. read constructor `vexObserveDependencies` to see what continuously changes around it;
 2. read its public intention/surface methods to see what callers may explicitly ask;
 3. read `processState / processStates` to see the reconciliation law;
 4. read its output state to see what consumers are allowed to depend on.
@@ -173,23 +173,39 @@ actually supplies rather than normalizing both into the same documentation story
 
 ### Declarative Compound dependencies
 
-A Compound Relay may declare continuously observed Flows:
+A Compound Relay may declare continuously observed Flows as constructor dependencies:
 
 ~~~kotlin
-override fun dependencies() =
-    vexObserveDependencies<ExampleInputState> {
-        observe(
-            dependencyRef = "feed",
-            flow = repository.states,
-        ) { feed ->
-            ExampleInputState(feed = feed)
-        }
+class ExampleRelay(
+    executionRoot: VexExecutionRoot,
+    feed: Flow<Feed>,
+) : VexCompoundRelay<ExampleInputState, ExampleOutputState>(
+    relayRef = "relay.example",
+    initialInputState = ExampleInputState(),
+    initialOutputState = ExampleOutputState(),
+    executionRoot = executionRoot,
+    observedDependencies =
+        vexObserveDependencies {
+            observe(
+                dependencyRef = "feed",
+                flow = feed,
+            ) { currentFeed ->
+                ExampleInputState(feed = currentFeed)
+            }
+        },
+) {
+    init {
+        startObservedDependencies()
     }
+}
 ~~~
 
-`activate(scope)` starts exactly one named child coroutine per declared dependency. Feature authors
-therefore do not write launch/collect/send plumbing and cannot accidentally place two never-ending
-`collect` calls sequentially in one coroutine.
+The concrete Relay starts those constructor-declared observations once during its own formation,
+after concrete fields are initialized. Each observation is admitted through `VexExecution`; callers
+do not supply a raw `CoroutineScope`, remember `activate(scope)`, create another SupervisorJob, or
+own parallel collector cancellation. Feature authors therefore do not write launch/collect/send
+plumbing and cannot accidentally place two never-ending `collect` calls sequentially in one
+coroutine.
 
 The boundary is intentional:
 
@@ -421,8 +437,8 @@ The module still does **not** own provider lifecycle, repository history, Compos
 or Journey execution.
 
 Events now earns the smallest reusable dependency-binding layer: named Flow dependencies are
-declared by the Compound Relay and activated under a supplied owner scope. This does not turn Relay
-into a scheduler, operation system, service host, or readiness framework. More execution machinery
-still requires a real consumer.
+declared by the Compound Relay and admitted through its explicitly supplied VexExecutionRoot during
+Relay formation. Callers do not supply or activate a parallel CoroutineScope. This does not turn
+Relay into a scheduler, operation system, service host, or readiness framework.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][EVENTS-CONVERGENCE-PRACTICUM][EAP-00][RELAY] -->

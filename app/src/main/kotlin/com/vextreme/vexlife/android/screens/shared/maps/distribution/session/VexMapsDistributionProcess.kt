@@ -16,9 +16,7 @@ import com.vextreme.vexlife.android.screens.shared.maps.distribution.planning.Ve
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.planning.VexMapsDistributionPreparationSnapshot
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.planning.VexMapsDistributionValhallaCostProvider
 import java.util.IdentityHashMap
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -31,11 +29,6 @@ import kotlinx.coroutines.flow.StateFlow
 internal object VexMapsDistributionProcess {
     private val lock =
         Any()
-    private val scope =
-        CoroutineScope(
-            SupervisorJob() +
-                Dispatchers.Main.immediate,
-        )
     private var productionSession:
         VexMapsDistributionSession? =
         null
@@ -104,8 +97,6 @@ internal object VexMapsDistributionProcess {
                     dispatcher =
                         Dispatchers.Main.immediate,
                 ),
-            relayScope =
-                scope,
         )
 }
 

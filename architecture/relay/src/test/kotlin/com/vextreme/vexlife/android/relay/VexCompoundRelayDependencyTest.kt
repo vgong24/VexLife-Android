@@ -1,5 +1,7 @@
 package com.vextreme.vexlife.android.relay
 
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -24,14 +26,16 @@ class VexCompoundRelayDependencyTest {
     }
 
     private class DependencyRelay(
-        private val left: MutableStateFlow<Int>,
-        private val right: MutableStateFlow<Int>,
+        executionRoot: VexExecutionRoot,
+        left: MutableStateFlow<Int>,
+        right: MutableStateFlow<Int>,
     ) : VexCompoundRelay<DependencyInput, DependencyOutput>(
         relayRef = "relay.test.dependencies",
         initialInputState = DependencyInput(),
         initialOutputState = DependencyOutput(),
-    ) {
-        override fun dependencies() =
+        executionRoot =
+            executionRoot,
+        observedDependencies =
             vexObserveDependencies<DependencyInput> {
                 observe(
                     dependencyRef = "left",
@@ -50,7 +54,11 @@ class VexCompoundRelayDependencyTest {
                         right = value,
                     )
                 }
-            }
+            },
+    ) {
+        init {
+            startObservedDependencies()
+        }
 
         override fun processStates(
             inputState: DependencyInput,
@@ -82,20 +90,27 @@ class VexCompoundRelayDependencyTest {
     }
 
     @Test
-    fun eachDeclaredDependencyCollectsIndependentlyAndConvergesAtomically() = runBlocking {
+    fun constructionStartsEachDeclaredDependencyThroughVexExecution() = runBlocking {
+        val executionRoot =
+            VexExecutionRoot(
+                dispatcher =
+                    Dispatchers.Unconfined,
+            )
         val left =
             MutableStateFlow(10)
         val right =
             MutableStateFlow(32)
         val relay =
             DependencyRelay(
-                left = left,
-                right = right,
+                executionRoot =
+                    executionRoot,
+                left =
+                    left,
+                right =
+                    right,
             )
 
         try {
-            relay.activate(this)
-
             val initial =
                 withTimeout(1_000L) {
                     relay.states.first { state ->
@@ -119,7 +134,9 @@ class VexCompoundRelayDependencyTest {
 
             assertEquals(12, changed.outputState.sum)
         } finally {
-            relay.deactivate()
+            executionRoot.joinStopAll(
+                "Compound Relay dependency test finished",
+            )
         }
     }
 }

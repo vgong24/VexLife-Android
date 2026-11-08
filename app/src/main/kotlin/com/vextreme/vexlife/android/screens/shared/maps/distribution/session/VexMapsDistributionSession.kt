@@ -33,7 +33,6 @@ import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryrou
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteProjection
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteState
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -144,10 +143,8 @@ internal class VexMapsDistributionSession(
         VexMapsDistributionRouting,
     private val navigation:
         VexMapsDistributionNavigationPort,
-    executionRoot:
+    private val executionRoot:
         VexExecutionRoot,
-    private val relayScope:
-        CoroutineScope,
     private val mode:
         VexMapsDistributionModeConnection =
         VexMapsDistributionModeConnection(),
@@ -201,6 +198,8 @@ internal class VexMapsDistributionSession(
 
     private val modeDeliveryRouteRelay =
         VexMapsDistributionModeDeliveryRouteConvergenceRelay(
+            executionRoot =
+                executionRoot,
             modeProjections =
                 mode.projections,
             deliveryRouteProjections =
@@ -209,6 +208,8 @@ internal class VexMapsDistributionSession(
 
     private val navigationRelay =
         VexMapsDeliveryRouteNavigationConvergenceRelay(
+            executionRoot =
+                executionRoot,
             deliveryRouteProjections =
                 deliveryRoute.projections,
             navigationStates =
@@ -233,13 +234,6 @@ internal class VexMapsDistributionSession(
         null
 
     init {
-        modeDeliveryRouteRelay.activate(
-            relayScope,
-        )
-        navigationRelay.activate(
-            relayScope,
-        )
-
         launchForCollect(
             source =
                 ::modeDeliveryRouteOutputsForExecution,
@@ -264,11 +258,9 @@ internal class VexMapsDistributionSession(
     }
 
     internal suspend fun shutdown() {
-        joinStopOwned(
+        executionRoot.joinStopAll(
             "VexMaps Distribution execution shut down",
         )
-        modeDeliveryRouteRelay.deactivate()
-        navigationRelay.deactivate()
     }
 
     fun toggleMode() {

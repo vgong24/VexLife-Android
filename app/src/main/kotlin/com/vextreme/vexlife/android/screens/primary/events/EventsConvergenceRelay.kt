@@ -13,6 +13,7 @@ import com.vextreme.vexlife.android.data.events.VexExternalEventKind
 import com.vextreme.vexlife.android.data.userprofile.UserProfile
 import com.vextreme.vexlife.android.data.userprofile.UserProfileRefs
 import com.vextreme.vexlife.android.data.userprofile.UserProfileRepository
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.relay.VexCompoundRelay
 import com.vextreme.vexlife.android.relay.VexCompoundState
 import com.vextreme.vexlife.android.relay.VexDeepCopyable
@@ -246,15 +247,16 @@ data class EventsConvergenceOutputState(
  *
  * Read this class in four places:
  *
- * dependencies()   -> what continuously changes around Events?
+ * vexObserveDependencies -> what continuously changes around Events?
  * public methods   -> what intentions/surface facts may enter?
  * processStates()  -> what does the latest combination mean?
  * outputStates     -> what may Home/Events/other consumers observe?
  *
- * Dependency collectors are framework-owned and asynchronous. processStates remains a synchronous,
+ * Dependency observations are VexExecution-owned and asynchronous. processStates remains a synchronous,
  * serialized reducer over already-observed facts.
  */
 class EventsConvergenceRelay internal constructor(
+    executionRoot: VexExecutionRoot?,
     private val eventsRepository: EventsRepository?,
     private val attentionPreferences: EventsAttentionPreferenceRepository?,
     private val attentionLab: EventsAttentionLabRepository?,
@@ -263,16 +265,9 @@ class EventsConvergenceRelay internal constructor(
     relayRef = "relay.events.convergence",
     initialInputState = EventsConvergenceInputState(),
     initialOutputState = EventsConvergenceOutputState(),
-) {
-    /** Pure reducer tests may drive partial inputs directly without starting dependency observers. */
-    internal constructor() : this(
-        eventsRepository = null,
-        attentionPreferences = null,
-        attentionLab = null,
-        userProfile = null,
-    )
-
-    override fun dependencies() =
+    executionRoot =
+        executionRoot,
+    observedDependencies =
         vexObserveDependencies<EventsConvergenceInputState> {
             eventsRepository?.let { repository ->
                 observe(
@@ -320,7 +315,20 @@ class EventsConvergenceRelay internal constructor(
                     )
                 }
             }
-        }
+        },
+) {
+    /** Pure reducer tests may drive partial inputs directly without starting dependency observers. */
+    internal constructor() : this(
+        executionRoot = null,
+        eventsRepository = null,
+        attentionPreferences = null,
+        attentionLab = null,
+        userProfile = null,
+    )
+
+    init {
+        startObservedDependencies()
+    }
 
     /**
      * Current semantic Screen + global transient occupancy arrive from the UI/runtime boundary.
@@ -392,7 +400,7 @@ class EventsConvergenceRelay internal constructor(
 
     /*
      * Direct reducer seams remain internal for focused processStates tests. Production repository
-     * observation enters through dependencies() instead of Compose forwarding.
+     * observation enters through constructor-declared dependencies instead of Compose forwarding.
      */
     internal fun screenChanged(screenId: String) {
         require(screenId.isNotBlank())

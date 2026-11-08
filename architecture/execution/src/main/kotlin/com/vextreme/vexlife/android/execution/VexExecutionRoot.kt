@@ -93,6 +93,19 @@ class VexExecutionRoot(
             DirectExecution
         >()
 
+    internal fun currentDirectExecution(
+        owner:
+            Any,
+    ):
+        VexExecution? =
+        synchronized(
+            lock,
+        ) {
+            directExecutions[
+                owner
+            ]
+        }
+
     internal fun directExecution(
         owner:
             Any,

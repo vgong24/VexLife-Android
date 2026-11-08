@@ -17,14 +17,13 @@ caller
 -> concrete Family.act(CURRENT State, Control)
 -> Act?
    -> admitted State?
-   -> Begin?
-      -> Effect
+   -> Effect?
       -> Independent / Earliest / Latest / Queued
 -> immediate State admission
 -> Act returned
 
 later realization boundary
--> Act.Begin + Act.relationshipId
+-> Act.effect + Act.approach + Act.relationshipId
 -> bound Act.Method
    -> specializes VexMethod
 -> VexExecution
@@ -55,8 +54,8 @@ Control
 Act
     lawful result of exact CURRENT State + Control
 
-Act.Begin
-    inert authored execution consequence
+Act.effect + Act.approach
+    inert authored runtime consequence
     Effect + overlap Approach
 
 Effect
@@ -89,25 +88,27 @@ override fun act(
     when (control) {
         is Control.Select -> {
             val save =
-                beginLatest(
-                    Effect.Save(
-                        control.mode,
-                    ),
+                Effect.Save(
+                    control.mode,
                 )
 
             if (currentState == control.mode.mode) {
-                stay(save)
+                stay(
+                    effect = save,
+                    approach = VexExecution.Approach.Latest,
+                )
             } else {
                 admit(
                     state = control.mode.mode,
-                    begin = save,
+                    effect = save,
+                    approach = VexExecution.Approach.Latest,
                 )
             }
         }
     }
 ~~~
 
-begin / beginEarliest / beginLatest / beginQueued do not launch work inside act(...).
+Effect + Approach authoring does not launch work inside act(...).
 isAvailable(...) can inspect the same relationship without starting a Job, calling a Store, or
 emitting Logger facts.
 
@@ -176,11 +177,8 @@ CURRENT State + Control
 
 Act
 -> optional admitted State
--> optional Begin
-
-Begin
--> Effect
--> Approach
+-> optional Effect
+-> Approach when Effect exists
 ~~~
 
 Approach is authored here because overlap is part of the consequence relationship, not because
@@ -210,7 +208,8 @@ For ThemeMode:
 Parameter.Mode(Dark)
 -> Control.Select(the same Parameter.Mode)
 -> immediate ThemeMode.Dark semantic admission
--> beginLatest(Effect.Save(the same Parameter.Mode))
+-> Effect.Save(the same Parameter.Mode)
+   + Approach.Latest
 
 realization boundary
 -> Act.Method.Save(
@@ -233,13 +232,13 @@ is a runtime consequence even when semantic State does not change.
 
 ## #207 result-admission distinction
 
-#207 carried a richer Begin grammar where execution Success / Failure could directly author a later
-State decision, including a decision against exact CURRENT State.
+#207 carried a richer runtime-consequence wrapper where execution Success / Failure could directly
+author a later State decision, including a decision against exact CURRENT State.
 
 The current direct Family intentionally keeps a smaller relationship:
 
 ~~~text
-Act.Begin
+Act
     Effect
     Approach
     accepted maintained RelationshipId
@@ -422,8 +421,7 @@ Family itself remains semantic and does not receive Store/provider mechanics dir
 Family
     Control + CURRENT State
     -> Act
-    -> optional Begin
-       -> Effect + Approach
+    -> optional Effect + Approach
 
 realization boundary
     -> realizes Effect through Store under rightful VexExecution custody
@@ -441,7 +439,7 @@ owner rather than supplied as generic construction arguments:
 ~~~text
 Control.Select
 -> accepted Act carries one Select RelationshipId
--> beginLatest authors the overlap Approach
+-> Effect.Save + Approach.Latest author the runtime consequence
 
 Light / Dark
 -> operation payload
@@ -505,7 +503,8 @@ Debug Menu action
 -> ThemeModeFamily.activate(Control.Select(the same Mode))
 -> Act
    -> immediate State?
-   -> beginLatest(Effect.Save(the same Mode))
+   -> Effect.Save(the same Mode)
+   -> Approach.Latest
 -> Act.Method.Save(ThemeModeStore, the same Mode)
 -> Act.launchWith(VexExecutionRoot).method(Method.Save)
    -> returns one VexMethod Result form: Success / Failure / Error
@@ -577,7 +576,7 @@ Focused Family tests protect:
 - exact State/Control kinship;
 - pure act resolution;
 - immediate State admission;
-- inert Begin/Effect return without execution during act resolution;
+- inert Effect + Approach return without execution during act resolution;
 - availability without side effect;
 - already-semantic observe(...);
 - exact Projection/DisplayState pairing;

@@ -134,8 +134,7 @@ class ThemeModeTest {
         )
         assertEquals(
             VexExecution.Approach.Latest,
-            darkAct?.begin
-                ?.approach,
+            darkAct?.approach,
         )
 
         val sameAct =

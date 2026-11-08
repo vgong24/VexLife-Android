@@ -45,8 +45,7 @@ Family.activate(Control)
 -> concrete Family.act(CURRENT State, Control)
 -> Act?
    -> admitted State?
-   -> Begin?
-      -> Effect
+   -> Effect?
       -> Independent / Earliest / Latest / Queued
 -> immediate semantic State admission
 -> Act returned
@@ -89,7 +88,7 @@ VexMethod
     does NOT own Family State or VexExecution custody
 
 VexFamily
-    owns Family-scoped Parameter / State / Control / Act / Begin / Effect semantic relationships
+    owns Family-scoped Parameter / State / Control / Act / Effect semantic relationships
     owns current semantic State
     binds maintained RelationshipId and live Family execution owner onto the accepted Act
     exposes Act.Method as the Family specialization of VexMethod
@@ -108,7 +107,7 @@ ThemeMode is the PR #209 patient zero:
 ~~~text
 Parameter.Mode(mode)
 -> Control.Select(the same Parameter.Mode)
--> beginLatest(Effect.Save(the same Parameter.Mode))
+-> Effect.Save(the same Parameter.Mode) + Approach.Latest
 -> Act.Method.Save(ThemeModeStore, the same Parameter.Mode)
 -> Act.launchWith(VexExecutionRoot).method(Method.Save)
    consumes live Family owner + Approach + RelationshipId from the accepted Act
@@ -448,15 +447,16 @@ opaque Session provider. Preview/test direct construction remains an explicit al
 route.
 
 Current refinement keeps construction reusable without creating a peer feature owner to bridge
-existing relationships. ThemeModeFamily authors Select -> beginLatest(Save), ThemeModeStore remains
+existing relationships. ThemeModeFamily authors Select -> Effect.Save + Approach.Latest, ThemeModeStore remains
 the outside-truth boundary, and the session composition supplies VexExecutionRoot/VexLogger to the
 existing realization callsite. Store observation uses direct VexExecution observation under the same
 live Family owner. Dependency construction owns lifetime/wiring only; it does not acquire feature
 runtime meaning.
 
 VexLifeRelayGraph is now a projection-only session graph. Events and Conversation Relays are
-independently provided/activated nodes with their own readable prerequisite closures; the graph only
-projects which Relay owners participate in the VexLife lifetime.
+independently provided nodes whose declared observation dependencies enter the same session
+VexExecutionRoot during Relay construction; the graph only projects which Relay owners participate
+in the VexLife lifetime.
 
 ## Logger traceability refinement
 

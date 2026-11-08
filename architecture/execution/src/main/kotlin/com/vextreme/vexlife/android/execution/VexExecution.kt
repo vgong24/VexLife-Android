@@ -105,6 +105,42 @@ abstract class VexExecution protected constructor(
             linkedSetOf(),
     )
 
+    /**
+     * Read-only projection of CURRENT custody for one exact execution owner.
+     *
+     * This is derived from the canonical in-memory Job/source/relationship custody below. It is not
+     * a second registry, history ledger, or authority surface. Human/debug labels are readable
+     * coordinates only and must not be fed back as execution or semantic identity.
+     */
+    data class CurrentProjection(
+        val ownerLabel:
+            String,
+        val activeJobCount:
+            Int,
+        val sources:
+            List<SourceProjection>,
+        val relationships:
+            List<RelationshipProjection>,
+    )
+
+    data class SourceProjection(
+        val sourceLabel:
+            String,
+        val activeJobCount:
+            Int,
+        val maintainedObservation:
+            Boolean,
+    )
+
+    data class RelationshipProjection(
+        val relationshipTypeLabel:
+            String,
+        val approach:
+            Approach,
+        val activeJobCount:
+            Int,
+    )
+
     private val lock =
         Any()
 
@@ -149,6 +185,111 @@ abstract class VexExecution protected constructor(
             this::class.qualifiedName
                 ?: this::class.simpleName
                 ?: "VexExecution"
+
+    /**
+     * CURRENT active-work projection for this execution owner.
+     *
+     * Completed work disappears from this projection; chronology belongs to VexLogger. Source and
+     * relationship labels are presentation/debug aids only:
+     *
+     *     SOURCE_LABEL != RELATIONSHIP_IDENTITY != JOB_OCCURRENCE
+     */
+    val currentExecution:
+        CurrentProjection
+        get() =
+            currentExecution(
+                ownerLabel =
+                    executionName,
+            )
+
+    private fun currentExecution(
+        ownerLabel:
+            String,
+    ):
+        CurrentProjection =
+        synchronized(
+            lock,
+        ) {
+            CurrentProjection(
+                ownerLabel =
+                    ownerLabel,
+                activeJobCount =
+                    ownedJobs.count { job ->
+                        !job.isCompleted
+                    },
+                sources =
+                    jobsBySource
+                        .mapNotNull { (source, jobs) ->
+                            val activeCount =
+                                jobs.count { job ->
+                                    !job.isCompleted
+                                }
+
+                            if (
+                                activeCount ==
+                                0
+                            ) {
+                                null
+                            } else {
+                                SourceProjection(
+                                    sourceLabel =
+                                        source.name,
+                                    activeJobCount =
+                                        activeCount,
+                                    maintainedObservation =
+                                        observationBySource[
+                                            source
+                                        ]
+                                            ?.isCompleted ==
+                                        false,
+                                )
+                            }
+                        }
+                        .sortedBy { source ->
+                            source.sourceLabel
+                        },
+                relationships =
+                    relationships
+                        .mapNotNull { (relationshipId, lane) ->
+                            val activeCount =
+                                lane.jobs.count { job ->
+                                    !job.isCompleted
+                                }
+
+                            if (
+                                activeCount ==
+                                0
+                            ) {
+                                null
+                            } else {
+                                RelationshipProjection(
+                                    relationshipTypeLabel =
+                                        relationshipId::class
+                                            .qualifiedName
+                                            ?: relationshipId::class
+                                                .simpleName
+                                            ?: "RelationshipId",
+                                    approach =
+                                        lane.approach,
+                                    activeJobCount =
+                                        activeCount,
+                                )
+                            }
+                        }
+                        .sortedWith(
+                            compareBy<
+                                RelationshipProjection
+                            >(
+                                { relationship ->
+                                    relationship.relationshipTypeLabel
+                                },
+                                { relationship ->
+                                    relationship.approach.name
+                                },
+                            ),
+                        ),
+            )
+        }
 
     /**
      * Source-addressed finite work.
@@ -1310,6 +1451,74 @@ abstract class VexExecution protected constructor(
      * Control/request values as execution scope. RelationshipId remains semantic work identity.
      */
     companion object {
+        /**
+         * Read CURRENT custody for an already-existing live owner using direct VexExecution entry.
+         *
+         * The owner label is descriptive only. Object identity remains the in-memory direct-owner
+         * coordinate and is never serialized or replaced by this label.
+         */
+        fun currentExecution(
+            executionRoot:
+                VexExecutionRoot,
+            owner:
+                Any,
+        ):
+            CurrentProjection {
+            val ownerLabel =
+                owner::class.qualifiedName
+                    ?: owner::class.simpleName
+                    ?: "VexExecutionOwner"
+
+            return executionRoot
+                .currentDirectExecution(
+                    owner,
+                )
+                ?.currentExecution(
+                    ownerLabel =
+                        ownerLabel,
+                )
+                ?: CurrentProjection(
+                    ownerLabel =
+                        ownerLabel,
+                    activeJobCount =
+                        0,
+                    sources =
+                        emptyList(),
+                    relationships =
+                        emptyList(),
+                )
+        }
+
+        /**
+         * Stop CURRENT work admitted from one exact source for a direct execution owner.
+         *
+         * This is the direct-owner counterpart of protected [forceStop]; callers still address the
+         * exact callable source rather than storing/managing a parallel Job field.
+         */
+        fun forceStop(
+            executionRoot:
+                VexExecutionRoot,
+            owner:
+                Any,
+            source:
+                KCallable<*>,
+            reason:
+                String =
+                "direct execution source force stopped",
+        ):
+            Boolean =
+            executionRoot
+                .currentDirectExecution(
+                    owner,
+                )
+                ?.forceStop(
+                    reference =
+                        source,
+                    reason =
+                        reason,
+                )
+                ?: false
+
         fun <Value, Source : Flow<Value>> observe(
             executionRoot:
                 VexExecutionRoot,
@@ -1317,6 +1526,33 @@ abstract class VexExecution protected constructor(
                 Any,
             source:
                 KProperty0<Source>,
+            restartOnSourceFailure:
+                Boolean =
+                true,
+            onEach:
+                suspend (Value) -> Unit,
+        ):
+            Job =
+            executionRoot
+                .directExecution(
+                    owner,
+                )
+                .launchForCollect(
+                    source =
+                        source,
+                    restartOnSourceFailure =
+                        restartOnSourceFailure,
+                    onEach =
+                        onEach,
+                )
+
+        fun <Value, Source : Flow<Value>> observe(
+            executionRoot:
+                VexExecutionRoot,
+            owner:
+                Any,
+            source:
+                KFunction0<Source>,
             restartOnSourceFailure:
                 Boolean =
                 true,

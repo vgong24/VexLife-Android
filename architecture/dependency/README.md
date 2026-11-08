@@ -99,7 +99,7 @@ dependency graph
     constructs / memoizes
 
 Family
-    authors State / Control / Act / Begin / Effect relationship
+    authors State / Control / Act / Effect + Approach relationship
 
 VexExecution
     owns active Job custody

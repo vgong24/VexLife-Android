@@ -6,8 +6,8 @@ import com.vextreme.vexlife.android.screens.primary.events.EventsConvergenceRela
 /**
  * Readable session projection of independently-owned Relay nodes.
  *
- * This graph does not construct, activate, or semantically own its members. Their exact dependency
- * providers do that work before this projection is assembled.
+ * This graph does not construct, start observation, or semantically own its members. Their exact
+ * dependency providers construct already-live Relay owners before this projection is assembled.
  */
 internal class VexLifeRelayGraph(
     val events:
