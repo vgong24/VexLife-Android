@@ -90,6 +90,14 @@ class VexStreamPlaybackService :
                         .dependencyModule
                         .playerStore,
                 )
+        val processExecutionRoot =
+            vexApplication
+                .dependencies
+                .resolve(
+                    vexApplication
+                        .dependencyModule
+                        .processExecutionRoot,
+                )
 
         val dataSourceFactory =
             DefaultDataSource.Factory(
@@ -137,6 +145,8 @@ class VexStreamPlaybackService :
                     player,
                 receiver =
                     playerReceiver,
+                executionRoot =
+                    processExecutionRoot,
             )
         currentPlayerConnection =
             playerConnection

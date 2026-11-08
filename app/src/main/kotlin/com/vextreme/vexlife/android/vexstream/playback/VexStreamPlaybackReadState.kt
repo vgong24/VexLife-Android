@@ -278,9 +278,11 @@ internal object VexStreamPlaybackTrace {
 }
 
 /**
- * Project one retained Player Partner CURRENT for existing playback/widget read consumers.
+ * Project retained Player Partner CURRENT for consumers that do not need a live progress clock.
  *
- * No provider access occurs here.
+ * Position/duration/buffered progress is intentionally not claimed by Player CURRENT because normal
+ * Media3 playback time advances without a Player.Events occurrence. The existing UI progress reader
+ * remains an explicit provider-read seam until a truthful maintained observation is formed.
  */
 internal fun VexStreamPlayerPartner.Current.toVexStreamCurrentPlaybackObservation(
     playbackFamily:
@@ -323,11 +325,11 @@ private fun VexStreamPlayerPartner.Current.toVexStreamPlaybackReadState():
                 currentIndex =
                     queueNavigation.currentIndex,
                 currentPositionMs =
-                    timeline.positionMs,
+                    0L,
                 durationMs =
-                    timeline.durationMs,
+                    0L,
                 bufferedPositionMs =
-                    timeline.bufferedPositionMs,
+                    0L,
             )
     }
 

@@ -66,6 +66,7 @@ kotlin {
 
 dependencies {
     implementation(project(":architecture:behavior"))
+    implementation(project(":architecture:convergence"))
     implementation(project(":architecture:dependency"))
     implementation(project(":architecture:elements"))
     implementation(project(":architecture:execution"))
