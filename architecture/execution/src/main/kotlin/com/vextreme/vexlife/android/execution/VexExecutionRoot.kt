@@ -3,6 +3,7 @@ package com.vextreme.vexlife.android.execution
 import java.util.IdentityHashMap
 import java.util.concurrent.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -132,6 +133,27 @@ class VexExecutionRoot(
             suspend () -> Unit,
     ):
         Job =
+        createDeferred(
+            name =
+                name,
+            action =
+                action,
+        )
+
+    /**
+     * Result-bearing form of the same admitted root work.
+     *
+     * VexExecution uses this when a rightful owner needs one bounded operation to stay under the
+     * root's cancellation/custody policy while the caller also needs the operation's actual result.
+     * The Deferred is the Job occurrence; this does not create another semantic result or identity.
+     */
+    internal fun <Result> createDeferred(
+        name:
+            String,
+        action:
+            suspend () -> Result,
+    ):
+        Deferred<Result> =
         synchronized(
             lock,
         ) {

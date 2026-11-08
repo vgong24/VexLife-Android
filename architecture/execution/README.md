@@ -154,6 +154,33 @@ CALLABLE NAME / REFLECTED TYPE NAME
     != RelationshipId
 ~~~
 
+### Bounded awaited work
+
+When the rightful runtime owner needs one finite operation **and needs its returned value**, use
+`execute(...)` rather than creating an ad-hoc CoroutineScope, dispatcher hop, callback latch, or
+second result bus:
+
+~~~text
+execute(exact callable)
+    -> one Job admitted under this VexExecution owner/root
+    -> operation runs under the root's execution policy
+    -> optional handoff(providerDispatcher) stays inside that admitted occurrence
+    -> caller awaits the same occurrence
+    -> operation result returns directly
+~~~
+
+`execute` does not create a maintained RelationshipId. It is source-addressed finite work whose
+result is immediately needed by the caller. If unfinished work needs Earliest / Latest / Queued
+coordination, use the existing relationship-addressed APIs instead.
+
+~~~text
+EXECUTE RESULT
+!= Family State
+!= VexMethod.Result
+!= Logger history
+!= new execution identity
+~~~
+
 ### Maintained observation
 
 ~~~text

@@ -11,6 +11,7 @@ import kotlin.reflect.KSuspendFunction0
 import kotlin.reflect.KSuspendFunction1
 import kotlin.reflect.KSuspendFunction2
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -281,6 +282,52 @@ abstract class VexExecution protected constructor(
             action(
                 first,
                 second,
+            )
+        }
+
+    /**
+     * One bounded source-addressed operation whose actual result is required by the caller.
+     *
+     * The operation is admitted under this exact VexExecution owner and VexExecutionRoot before it
+     * runs. The caller awaits the same Deferred/Job occurrence and receives only the operation's
+     * returned value; no peer Result wrapper, execution identity, or callback state bus is created.
+     *
+     * Use this when the semantic/runtime owner simply needs:
+     *
+     *     run this owned operation
+     *     -> await it
+     *     -> return what came back
+     *
+     * Long-lived observation and maintained semantic relationships keep their existing APIs.
+     */
+    protected suspend fun <Result> execute(
+        action:
+            KSuspendFunction0<Result>,
+    ):
+        Result =
+        executeSource(
+            source =
+                action,
+        ) {
+            action()
+        }
+
+    protected suspend fun <Argument, Result> execute(
+        action:
+            KSuspendFunction1<
+                Argument,
+                Result
+            >,
+        argument:
+            Argument,
+    ):
+        Result =
+        executeSource(
+            source =
+                action,
+        ) {
+            action(
+                argument,
             )
         }
 
@@ -853,6 +900,29 @@ abstract class VexExecution protected constructor(
                 job.start()
             }
 
+    private suspend fun <Result> executeSource(
+        source:
+            KCallable<*>,
+        action:
+            suspend () -> Result,
+    ):
+        Result {
+        val deferred =
+            synchronized(
+                lock,
+            ) {
+                admitSourceDeferredLocked(
+                    source =
+                        source,
+                    action =
+                        action,
+                )
+            }
+
+        deferred.start()
+        return deferred.await()
+    }
+
     private fun <Value> launchObservation(
         sourceKey:
             KCallable<*>,
@@ -910,9 +980,23 @@ abstract class VexExecution protected constructor(
         action:
             suspend () -> Unit,
     ):
-        Job {
-        val job =
-            executionRoot.createJob(
+        Job =
+        admitSourceDeferredLocked(
+            source =
+                source,
+            action =
+                action,
+        )
+
+    private fun <Result> admitSourceDeferredLocked(
+        source:
+            KCallable<*>,
+        action:
+            suspend () -> Result,
+    ):
+        Deferred<Result> {
+        val deferred =
+            executionRoot.createDeferred(
                 name =
                     executionName +
                         "." +
@@ -922,21 +1006,21 @@ abstract class VexExecution protected constructor(
             )
 
         ownedJobs +=
-            job
+            deferred
         jobsBySource
             .getOrPut(
                 source,
             ) {
                 linkedSetOf()
             } +=
-            job
+            deferred
 
-        job.invokeOnCompletion {
+        deferred.invokeOnCompletion {
             synchronized(
                 lock,
             ) {
                 ownedJobs.remove(
-                    job,
+                    deferred,
                 )
 
                 jobsBySource[
@@ -944,7 +1028,7 @@ abstract class VexExecution protected constructor(
                 ]
                     ?.let { jobs ->
                         jobs.remove(
-                            job,
+                            deferred,
                         )
                         if (
                             jobs.isEmpty()
@@ -959,7 +1043,7 @@ abstract class VexExecution protected constructor(
                     observationBySource[
                         source
                     ] ===
-                    job
+                    deferred
                 ) {
                     observationBySource.remove(
                         source,
@@ -968,7 +1052,7 @@ abstract class VexExecution protected constructor(
             }
         }
 
-        return job
+        return deferred
     }
 
     private fun <Result> beginRelationship(

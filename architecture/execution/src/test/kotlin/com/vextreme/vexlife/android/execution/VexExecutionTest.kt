@@ -253,6 +253,50 @@ class VexExecutionTest {
                 },
             )
 
+        suspend fun executeResult(
+            value:
+                String,
+        ):
+            String =
+            execute(
+                action =
+                    repository::successfulResult,
+                argument =
+                    value,
+            )
+
+        suspend fun executeHandoff(
+            capture:
+                HandoffCapture,
+        ):
+            String =
+            execute(
+                action =
+                    ::executeHandoffForExecution,
+                argument =
+                    capture,
+            )
+
+        private suspend fun executeHandoffForExecution(
+            capture:
+                HandoffCapture,
+        ):
+            String {
+            capture.workerThread.complete(
+                Thread.currentThread().name,
+            )
+            return handoff(
+                requireNotNull(
+                    handoffDispatcher,
+                ),
+            ) {
+                capture.providerThread.complete(
+                    Thread.currentThread().name,
+                )
+                "provider-result"
+            }
+        }
+
         fun runHandoff(capture: HandoffCapture): Job =
             launch(::handoffForExecution, capture)
 
@@ -708,6 +752,113 @@ class VexExecutionTest {
                 assertTrue(job.isCompleted)
             } finally {
                 root.joinStopAll("test complete")
+                workerDispatcher.close()
+                providerDispatcher.close()
+                workerExecutor.shutdownNow()
+                providerExecutor.shutdownNow()
+            }
+        }
+
+    @Test
+    fun executeReturnsTheOwnedOperationResult() =
+        runBlocking {
+            val root =
+                VexExecutionRoot()
+            val execution =
+                TestExecution(
+                    root =
+                        root,
+                    repository =
+                        TestRepository(),
+                )
+
+            try {
+                assertEquals(
+                    "owned-result",
+                    execution.executeResult(
+                        "owned-result",
+                    ),
+                )
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
+            }
+        }
+
+    @Test
+    fun executeCanHandoffToProviderAffinityAndReturnTheProviderResult() =
+        runBlocking {
+            val workerExecutor =
+                Executors.newSingleThreadExecutor { runnable ->
+                    Thread(
+                        runnable,
+                        "vex-execute-worker",
+                    )
+                }
+            val providerExecutor =
+                Executors.newSingleThreadExecutor { runnable ->
+                    Thread(
+                        runnable,
+                        "vex-execute-provider",
+                    )
+                }
+            val workerDispatcher =
+                workerExecutor
+                    .asCoroutineDispatcher()
+            val providerDispatcher =
+                providerExecutor
+                    .asCoroutineDispatcher()
+            val root =
+                VexExecutionRoot(
+                    dispatcher =
+                        workerDispatcher,
+                )
+            val execution =
+                TestExecution(
+                    root =
+                        root,
+                    repository =
+                        TestRepository(),
+                    handoffDispatcher =
+                        providerDispatcher,
+                )
+            val capture =
+                HandoffCapture(
+                    workerThread =
+                        CompletableDeferred(),
+                    providerThread =
+                        CompletableDeferred(),
+                )
+
+            try {
+                val result =
+                    execution.executeHandoff(
+                        capture,
+                    )
+
+                assertEquals(
+                    "provider-result",
+                    result,
+                )
+                assertTrue(
+                    capture.workerThread
+                        .await()
+                        .startsWith(
+                            "vex-execute-worker",
+                        ),
+                )
+                assertTrue(
+                    capture.providerThread
+                        .await()
+                        .startsWith(
+                            "vex-execute-provider",
+                        ),
+                )
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
                 workerDispatcher.close()
                 providerDispatcher.close()
                 workerExecutor.shutdownNow()
