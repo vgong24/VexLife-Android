@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.map
  * An Observation is outside-participant evidence. ConnectionClosed is deliberately separate:
  * connection teardown is relationship/lifecycle evidence, not a statement the Partner communicated.
  */
-private sealed interface VexStreamPlayerStoreUpdate {
+internal sealed interface VexStreamPlayerStoreUpdate {
     data class Observed(
         val observation:
             VexStreamPlayerPartner.Connection.Observation,
@@ -30,7 +30,7 @@ private sealed interface VexStreamPlayerStoreUpdate {
         VexStreamPlayerStoreUpdate
 }
 
-private data class VexStreamPlayerRetainedCurrent(
+internal data class VexStreamPlayerRetainedCurrent(
     val connectionId:
         VexStreamPlayerPartner.Connection.Id?,
     val current:
