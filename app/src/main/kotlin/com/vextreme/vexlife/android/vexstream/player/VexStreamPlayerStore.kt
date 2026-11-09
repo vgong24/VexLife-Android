@@ -590,7 +590,7 @@ internal class VexStreamPlayerObservationReceiver(
                 reconcileVexStreamPlaybackObservation(
                     observed =
                         signal
-                            .toObservedPlaybackState(),
+                            .toVexStreamObservedPlaybackState(),
                     current =
                         playbackFamily
                             .currentState,
@@ -599,7 +599,7 @@ internal class VexStreamPlayerObservationReceiver(
     }
 }
 
-private fun VexStreamPlayerPartner.Signal.Playback.toObservedPlaybackState():
+internal fun VexStreamPlayerPartner.Signal.Playback.toVexStreamObservedPlaybackState():
     VexStreamPlaybackState {
     if (
         !hasMedia

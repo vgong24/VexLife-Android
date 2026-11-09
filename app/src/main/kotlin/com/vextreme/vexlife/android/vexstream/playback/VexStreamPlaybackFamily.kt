@@ -99,13 +99,8 @@ internal class VexStreamPlaybackFamily(
             VexStreamPlaybackState,
     ):
         VexStreamPlaybackProjection =
-        VexStreamPlaybackProjection(
-            state =
-                state,
-            playPauseAvailable =
-                isPlayPauseAvailable(
-                    state,
-                ),
+        vexStreamPlaybackProjectionFor(
+            state,
         )
 
     val currentPlaybackProjection:
@@ -120,19 +115,42 @@ internal class VexStreamPlaybackFamily(
             VexStreamPlaybackState,
     ):
         Boolean =
-        when (
-            state
-        ) {
-            VexStreamPlaybackState.NoMedia ->
-                false
-
-            is VexStreamPlaybackState.Media ->
-                state.playPauseAvailable
-
-            is VexStreamPlaybackState.Ended ->
-                state.restartAvailable &&
-                    !state.restartPending
-        }
+        vexStreamPlaybackPlayPauseAvailable(
+            state,
+        )
 }
+
+internal fun vexStreamPlaybackProjectionFor(
+    state:
+        VexStreamPlaybackState,
+):
+    VexStreamPlaybackProjection =
+    VexStreamPlaybackProjection(
+        state =
+            state,
+        playPauseAvailable =
+            vexStreamPlaybackPlayPauseAvailable(
+                state,
+            ),
+    )
+
+private fun vexStreamPlaybackPlayPauseAvailable(
+    state:
+        VexStreamPlaybackState,
+):
+    Boolean =
+    when (
+        state
+    ) {
+        VexStreamPlaybackState.NoMedia ->
+            false
+
+        is VexStreamPlaybackState.Media ->
+            state.playPauseAvailable
+
+        is VexStreamPlaybackState.Ended ->
+            state.restartAvailable &&
+                !state.restartPending
+    }
 
 // [VXG RealForever][VEXSTREAM][PLAYBACK][DIRECT-FAMILY]

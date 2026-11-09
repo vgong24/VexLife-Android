@@ -16,11 +16,9 @@ import com.vextreme.vexlife.android.screens.shared.maps.VexNavigationSession
 import com.vextreme.vexlife.android.ui.SharedPreferencesThemeModeStore
 import com.vextreme.vexlife.android.ui.ThemeModeStore
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
-import com.vextreme.vexlife.android.vexstream.playback.toVexStreamCurrentPlaybackObservation
-import com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetUpdateExecution
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
+import com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetRelay
+import com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetUpdateExecution
 
 /**
  * Android process-lifetime composition root.
@@ -145,16 +143,24 @@ internal class VexApplicationDependencyModule(
                 navigationSession,
         )
 
-    val playbackWidgetUpdateExecution =
-        PlaybackWidgetUpdateExecutionProvider(
-            application =
-                androidApplication,
+    val playbackWidgetRelay =
+        PlaybackWidgetRelayProvider(
             executionRoot =
                 processExecutionRoot,
             playerStore =
                 playerStore,
             playbackFamily =
                 playbackFamily,
+        )
+
+    val playbackWidgetUpdateExecution =
+        PlaybackWidgetUpdateExecutionProvider(
+            application =
+                androidApplication,
+            executionRoot =
+                processExecutionRoot,
+            playbackWidgetRelay =
+                playbackWidgetRelay,
         )
 
     val module:
@@ -169,6 +175,7 @@ internal class VexApplicationDependencyModule(
             playerStore,
             navigationSession,
             backgroundServiceRelay,
+            playbackWidgetRelay,
             playbackWidgetUpdateExecution,
         )
 
@@ -360,16 +367,12 @@ internal class VexApplicationDependencyModule(
     }
 
     /**
-     * Process-lived Widget publication over process-current Player/Playback truth.
+     * Process-lived Widget relationship convergence over bounded Player + Playback Family truth.
      *
-     * This execution does not belong to MediaSessionService lifetime. Service teardown changes the
-     * truth it observes; it must not kill the consumer before that terminal truth is published.
+     * The Relay owns only the Widget-facing relationship current. Player Store and Playback Family
+     * remain the rightful owners of their source truths.
      */
-    internal class PlaybackWidgetUpdateExecutionProvider(
-        private val application:
-            VexDependencyProvider<
-                Application
-            >,
+    internal class PlaybackWidgetRelayProvider(
         private val executionRoot:
             VexDependencyProvider<
                 VexExecutionRoot
@@ -384,11 +387,10 @@ internal class VexApplicationDependencyModule(
             >,
     ) :
         VexDependencyProvider<
-            VexStreamPlaybackWidgetUpdateExecution
+            VexStreamPlaybackWidgetRelay
         >(
             dependencies =
                 listOf(
-                    application,
                     executionRoot,
                     playerStore,
                     playbackFamily,
@@ -398,17 +400,59 @@ internal class VexApplicationDependencyModule(
             dependencies:
                 VexDependencyBuildScope,
         ):
-            VexStreamPlaybackWidgetUpdateExecution {
-            val family =
-                dependencies.require(
-                    playbackFamily,
-                )
-            val store =
-                dependencies.require(
-                    playerStore,
-                )
+            VexStreamPlaybackWidgetRelay =
+            VexStreamPlaybackWidgetRelay(
+                executionRoot =
+                    dependencies.require(
+                        executionRoot,
+                    ),
+                playerStore =
+                    dependencies.require(
+                        playerStore,
+                    ),
+                playbackFamily =
+                    dependencies.require(
+                        playbackFamily,
+                    ),
+            )
+    }
 
-            return VexStreamPlaybackWidgetUpdateExecution(
+    /**
+     * Process-lived publication of already-converged Widget Relay output.
+     *
+     * This execution does not belong to MediaSessionService lifetime. Service teardown changes the
+     * upstream truths; the Widget Relay owns the bounded relationship current consumed here.
+     */
+    internal class PlaybackWidgetUpdateExecutionProvider(
+        private val application:
+            VexDependencyProvider<
+                Application
+            >,
+        private val executionRoot:
+            VexDependencyProvider<
+                VexExecutionRoot
+            >,
+        private val playbackWidgetRelay:
+            VexDependencyProvider<
+                VexStreamPlaybackWidgetRelay
+            >,
+    ) :
+        VexDependencyProvider<
+            VexStreamPlaybackWidgetUpdateExecution
+        >(
+            dependencies =
+                listOf(
+                    application,
+                    executionRoot,
+                    playbackWidgetRelay,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexStreamPlaybackWidgetUpdateExecution =
+            VexStreamPlaybackWidgetUpdateExecution(
                 root =
                     dependencies.require(
                         executionRoot,
@@ -418,18 +462,12 @@ internal class VexApplicationDependencyModule(
                         application,
                     )
                         .applicationContext,
-                observations =
-                    store
-                        .states
-                        .map { current ->
-                            current
-                                .toVexStreamCurrentPlaybackObservation(
-                                    family,
-                                )
-                        }
-                        .distinctUntilChanged(),
+                relayStates =
+                    dependencies.require(
+                        playbackWidgetRelay,
+                    )
+                        .outputStates,
             )
-        }
     }
 
 }

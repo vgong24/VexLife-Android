@@ -9,12 +9,35 @@ product State owner or effect runtime.
 
 The first real consumer is VexStream playback, but this module does not contain music vocabulary.
 
+## Rooted Widget coordinate
+
+Widget has earned its own reusable root because a remotely hosted interactive surface owns a distinct
+responsibility: durable presentation custody, remote-host realization and stable interaction
+doorways over truth owned elsewhere.
+
+```text
+VexWidget
+├─ Relay
+├─ SurfaceState
+├─ Projection
+└─ Action
+   └─ Ref
+```
+
+The root does not make Widget a product-State owner. A concrete `Widget.Relay` may reuse
+`VexCompoundRelay` when that Widget genuinely needs to converge bounded CURRENT from independent
+owners. Relay remains the relationship mechanism; Widget remains the remote-surface owner.
+
 ## Current architecture
 
 ```text
 product-owned State / provider truth
         |
-        | feature-owned pure mapping
+        | concrete Widget.Relay when independent owners must converge
+        v
+bounded Widget Relay output
+        |
+        | feature-owned surface mapping
         v
 typed VexWidgetSurfaceState
         |
@@ -117,6 +140,11 @@ Controls still return through the rightful product family. SurfaceState is remot
 custody only.
 
 ## Source roles
+
+`VexWidget`
+: recursive root coordinate for the remote-surface responsibility. Its children make Relay,
+SurfaceState, Projection and Action/Ref kinship source-readable without absorbing Family, Partner,
+Service, Execution or Relay ownership.
 
 `VexWidgetSurfaceState`
 : marker for typed durable widget surface snapshots.
