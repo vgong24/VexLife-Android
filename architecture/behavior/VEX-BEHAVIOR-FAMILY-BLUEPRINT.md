@@ -121,10 +121,13 @@ A concrete Connection must answer:
 3. What currentness/revision gates must it preserve?
 4. What concurrency/serialization guarantees must it preserve?
 
-A Connection may implement `VexPort` or `VexPortFlow`, but keeps an ordinary concrete role name:
+A Connection may implement `VexPort` or `VexPortFlow`, but keeps an ordinary concrete role name.
+Current VexStream pressure now separates semantic and provider-side connections rather than making
+one Media3 class own both directions:
 
 ~~~text
-Media3VexStreamPlaybackConnection
+PartnerVexStreamPlaybackConnection
+Media3VexStreamPlayerControlConnection
 VexMapsLocationConnection
 ~~~
 
@@ -890,17 +893,23 @@ app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/
 | Family | [VexStreamPlaybackFamily](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackFamily.kt) |
 | State | [VexStreamPlaybackState](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackState.kt) |
 | Control | [VexStreamPlaybackControl](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackControl.kt) |
-| Act | [VexStreamPlaybackAct](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackAct.kt) |
+| Act | generic accepted VexFamily.Act<VexStreamPlaybackFamily,...>; no peer feature Act type |
 | Effect | [VexStreamPlaybackEffect](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackEffect.kt) |
-| Behavior | [vexStreamPlaybackBehavior()](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackBehavior.kt) |
-| Connection | [Media3VexStreamPlaybackConnection](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/Media3VexStreamPlaybackConnection.kt) |
-| Lifetime host | [VexStreamPlaybackConnectionViewModel](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackConnectionViewModel.kt) |
+| Ordered Family admission | [VexStreamPlaybackAdmission](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackAdmission.kt) |
+| Family -> Partner connection | [PartnerVexStreamPlaybackConnection](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/PartnerVexStreamPlaybackConnection.kt) |
+| Outside Partner | [VexStreamPlayerPartner](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/player/VexStreamPlayerPartner.kt) |
+| Outside CURRENT | [VexStreamPlayerStore](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/player/VexStreamPlayerStore.kt) |
+| Media3 request realization | [Media3VexStreamPlayerControlConnection](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/player/Media3VexStreamPlayerControlConnection.kt) |
+| Sustained Media3 observation | [Media3VexStreamPlayerConnection](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/player/Media3VexStreamPlayerConnection.kt) |
+| Request/progress lifetime host | [VexStreamPlayerConnectionViewModel](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/player/VexStreamPlayerConnectionViewModel.kt) |
 | Pending reconciliation | [VexStreamPlaybackPending](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackPending.kt) |
 | UI membrane | [VexStreamPlaybackExperience](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackExperience.kt) |
 | Provider read data | [VexStreamPlaybackReadState](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackReadState.kt) |
 | Display classification | [VexStreamPlaybackDisplayState](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackDisplayState.kt) |
+| Widget relationship | [VexStreamPlaybackWidgetRelay](../../app/src/main/kotlin/com/vextreme/vexlife/android/widget/vexstream/VexStreamPlaybackWidgetRelay.kt) |
+| Remote surface | [VexStreamPlaybackWidget](../../app/src/main/kotlin/com/vextreme/vexlife/android/widget/vexstream/VexStreamPlaybackWidget.kt) |
 | Presentation | [VexStreamPlaybackControlPresentation](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackPresentation.kt) |
-| Human-facing aliases | [VexStreamPlaybackConnection / Flow / Projection](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackTypes.kt) |
+| Human-facing Playback connection / projection aliases | [VexStreamPlaybackTypes](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackTypes.kt) |
 
 Important: VexStream Playback demonstrates the meta-blueprint.
 
