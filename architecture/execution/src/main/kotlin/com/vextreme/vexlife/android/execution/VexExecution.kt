@@ -105,6 +105,13 @@ abstract class VexExecution protected constructor(
             linkedSetOf(),
     )
 
+    private data class RelationshipAdmission(
+        val job:
+            Job,
+        val createdNewOccurrence:
+            Boolean,
+    )
+
     private val lock =
         Any()
 
@@ -1019,11 +1026,11 @@ abstract class VexExecution protected constructor(
         onFailure:
             (Throwable) -> Unit,
     ):
-        Job =
+        RelationshipAdmission =
         synchronized(
             lock,
         ) {
-                val existingLane =
+            val existingLane =
                     relationships[
                         relationshipId
                     ]
@@ -1061,7 +1068,12 @@ abstract class VexExecution protected constructor(
                     Approach.Earliest &&
                     activeJobs.isNotEmpty()
                 ) {
-                    return@synchronized activeJobs.first()
+                    return@synchronized RelationshipAdmission(
+                        job =
+                            activeJobs.first(),
+                        createdNewOccurrence =
+                            false,
+                    )
                 }
 
                 val lane =
@@ -1196,8 +1208,13 @@ abstract class VexExecution protected constructor(
                     }
                 }
 
-                admitted
-            }
+            RelationshipAdmission(
+                job =
+                    admitted,
+                createdNewOccurrence =
+                    true,
+            )
+        }
 
     private fun <Result> beginRelationship(
         approach:
@@ -1215,26 +1232,33 @@ abstract class VexExecution protected constructor(
         onFailure:
             (Throwable) -> Unit,
     ):
-        Job =
-        admitRelationship(
-            approach =
-                approach,
-            relationshipId =
-                relationshipId,
-            source =
-                source,
-            operation =
-                operation,
-            beforeOperation =
-                beforeOperation,
-            onResult =
-                onResult,
-            onFailure =
-                onFailure,
-        )
-            .also { job ->
-                job.start()
-            }
+        Job {
+        val admission =
+            admitRelationship(
+                approach =
+                    approach,
+                relationshipId =
+                    relationshipId,
+                source =
+                    source,
+                operation =
+                    operation,
+                beforeOperation =
+                    beforeOperation,
+                onResult =
+                    onResult,
+                onFailure =
+                    onFailure,
+            )
+
+        if (
+            admission.createdNewOccurrence
+        ) {
+            admission.job.start()
+        }
+
+        return admission.job
+    }
 
     private suspend fun <Value> collectWithRecovery(
         restartOnSourceFailure:
@@ -1437,8 +1461,10 @@ abstract class VexExecution protected constructor(
          *
          * This is a foundation handoff primitive for an owner that must commit its own accepted
          * relationship state after Job custody exists but before Method code or completion callbacks
-         * can run. The returned Job is already registered under the supplied owner / Approach /
-         * RelationshipId and remains lazy until its caller invokes Job.start().
+         * can run. The returned Job is a newly admitted occurrence already registered under the
+         * supplied owner / Approach / RelationshipId and remains lazy until its caller invokes
+         * Job.start(). Earliest reuse is intentionally rejected here: whether another realization is
+         * required belongs to the semantic owner before this custody-admission boundary.
          *
          * Ordinary product code should use [begin]; admission/start separation does not grant another
          * semantic decision point.
@@ -1490,29 +1516,40 @@ abstract class VexExecution protected constructor(
                 Approach.Earliest,
                 Approach.Latest,
                 Approach.Queued,
-                ->
-                    execution.admitRelationship(
-                        approach =
-                            approach,
-                        relationshipId =
-                            requireNotNull(
-                                relationshipId,
-                            ) {
-                                approach.name +
-                                    " execution requires RelationshipId"
+                -> {
+                    val admission =
+                        execution.admitRelationship(
+                            approach =
+                                approach,
+                            relationshipId =
+                                requireNotNull(
+                                    relationshipId,
+                                ) {
+                                    approach.name +
+                                        " execution requires RelationshipId"
+                                },
+                            source =
+                                operation,
+                            operation = {
+                                operation()
                             },
-                        source =
-                            operation,
-                        operation = {
-                            operation()
-                        },
-                        beforeOperation =
-                            beforeOperation,
-                        onResult =
-                            onResult,
-                        onFailure =
-                            onFailure,
-                    )
+                            beforeOperation =
+                                beforeOperation,
+                            onResult =
+                                onResult,
+                            onFailure =
+                                onFailure,
+                        )
+
+                    check(
+                        admission.createdNewOccurrence,
+                    ) {
+                        "VexExecution.admit requires a new runtime occurrence; " +
+                            "Earliest relationship already has active custody"
+                    }
+
+                    admission.job
+                }
             }
         }
 
