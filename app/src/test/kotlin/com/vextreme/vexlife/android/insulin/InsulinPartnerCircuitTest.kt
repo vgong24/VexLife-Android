@@ -2,6 +2,7 @@
 
 package com.vextreme.vexlife.android.insulin
 
+import com.vextreme.vexlife.android.execution.VexExecution
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -11,6 +12,12 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * Full reusable circuit pressure for two external Partners and one insulin semantic owner.
+ *
+ * These tests are not disposable synthetic-provider tests. They preserve the architecture contract a
+ * future real Pen/Pump realization must continue to satisfy while provider mechanics evolve.
+ */
 class InsulinPartnerCircuitTest {
     @Test
     fun familyCarriesTheSameInsulinAmountFromControlThroughEffectIntoBoundMethod() {
@@ -54,9 +61,8 @@ class InsulinPartnerCircuitTest {
                 method.parameter,
             )
             assertEquals(
-                com.vextreme.vexlife.android.execution.VexExecution.Approach.Queued,
-                act.begin
-                    ?.approach,
+                VexExecution.Approach.Queued,
+                act.approach,
             )
             assertNotNull(
                 act.relationshipId,
@@ -73,6 +79,11 @@ class InsulinPartnerCircuitTest {
                     ),
                 )
 
+            assertEquals(
+                VexExecution.Approach.Queued,
+                secondAct
+                    ?.approach,
+            )
             assertEquals(
                 act.relationshipId,
                 secondAct
