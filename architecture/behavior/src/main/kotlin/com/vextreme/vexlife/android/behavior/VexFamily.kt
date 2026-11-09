@@ -18,13 +18,13 @@ import kotlinx.coroutines.flow.asStateFlow
  * It owns that meaning and the one current semantic State holder.
  *
  * WHAT IT RELATES TO
- * [act] authors pure semantic meaning. [activate] accepts that meaning into this live Family,
- * applying immediate State and binding the runtime responsibility coordinates required by the
- * authored [Act.Begin]. A caller may then bind that Begin's exact Effect to one Family-owned
- * executable [Act.Method] and use [Act.launch] to entrust the accepted, prepared consequence to
- * VexExecution Job custody. Already-reconciled semantic reality returns through [observe].
- * Dependency construction may create a Family, but Family does not know that a dependency system
- * exists.
+ * [act] authors pure semantic meaning as an [Act]. [activate] accepts that exact authored Act into
+ * this live Family as [Act.Accepted], applies immediate State, binds the maintained relationship
+ * coordinate when required, and exposes [Act.Accepted.realizationBegin] only while that authored
+ * consequence still requires a new runtime occurrence. A caller binds that exact Effect to one
+ * Family-owned executable [Act.Method] and uses [Act.Accepted.launch] to cross into VexExecution
+ * custody. Already-reconciled semantic reality returns through [observe]. Dependency construction
+ * may create a Family, but Family does not know that a dependency system exists.
  *
  * WHAT IT ADDRESSES / WHY THIS SHAPE EXISTS
  * Keeping State + Control -> Act in one synchronous semantic owner prevents provider mechanics,
@@ -35,11 +35,14 @@ import kotlinx.coroutines.flow.asStateFlow
  * Core loop:
  *
  *     Control + CURRENT State
- *     -> Act?
- *     -> admitted State? + Begin?
- *        -> Effect + execution Approach
+ *     -> authored Act?
+ *        -> admitted State? + Begin?
+ *           -> Effect + execution Approach
+ *     -> Act.Accepted
+ *        -> maintained RelationshipId when required
+ *        -> realizationBegin?   # live remaining realization
  *
- *     accepted Act + bound Method
+ *     Act.Accepted + bound Method
  *     -> VexExecution custody
  *     -> Method realization
  *     -> VexMethod.Result.Success / Failure / Error
