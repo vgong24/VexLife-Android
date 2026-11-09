@@ -48,9 +48,11 @@ package com.vextreme.vexlife.android.vexstream.playback
  *
  * Provider acknowledgement/outcome returns only through Player observation.
  *
- * Playback keeps one feature-specific provider/current-Control reconciliation fence because a stale
- * provider statement must not erase a newer pending Play/Pause intent. This is not a second State
- * owner.
+ * Playback owns the feature-specific reconciliation meaning because a stale provider statement
+ * must not erase a newer pending Play/Pause intent. [VexStreamPlaybackFamily.observePlayer] enters
+ * that decision through VexFamily's protected admitCurrent boundary, so provider reconciliation and
+ * ordinary Control activation serialize against the same exact Family CURRENT without a second lock
+ * or State owner.
  *
  * ## Provider read facts
  *

@@ -32,55 +32,25 @@ internal class VexStreamPlaybackFamily(
         initialState =
             initialState,
     ) {
-    /*
-     * Playback-specific currentness fence, following the accepted ThemeModeFamily pattern.
-     *
-     * Provider reconciliation depends on exact CURRENT semantic intent while a Play/Pause Control
-     * may be admitted concurrently. Keep that feature-specific race inside the Family that owns the
-     * meaning rather than wrapping Family in another admission/coordinator object.
-     */
-    private val providerCurrentnessLock =
-        Any()
-
-    internal fun activatePlayback(
-        control:
-            VexStreamPlaybackControl,
-    ):
-        VexFamily.Act<
-            VexStreamPlaybackFamily,
-            VexStreamPlaybackState,
-            VexStreamPlaybackEffect
-        >? =
-        synchronized(
-            providerCurrentnessLock,
-        ) {
-            activate(
-                control,
-            )
-        }
-
     internal fun observePlayer(
         observed:
             VexStreamPlayerPartner.Signal.Playback?,
     ):
-        VexStreamPlaybackState =
-        synchronized(
-            providerCurrentnessLock,
-        ) {
-            val observedState =
-                observed
-                    ?.toVexStreamPlaybackState()
-                    ?: VexStreamPlaybackState.NoMedia
+        VexStreamPlaybackState {
+        val observedState =
+            observed
+                ?.toVexStreamPlaybackState()
+                ?: VexStreamPlaybackState.NoMedia
 
-            observe(
-                reconcileVexStreamPlaybackObservation(
-                    observed =
-                        observedState,
-                    current =
-                        currentState,
-                ),
+        return admitCurrent { current ->
+            reconcileVexStreamPlaybackObservation(
+                observed =
+                    observedState,
+                current =
+                    current,
             )
         }
+    }
 
     override fun act(
         currentState:
@@ -227,7 +197,7 @@ internal fun activateVexStreamPlayback(
 ):
     Job? {
     val act =
-        family.activatePlayback(
+        family.activate(
             control,
         )
             ?: return null

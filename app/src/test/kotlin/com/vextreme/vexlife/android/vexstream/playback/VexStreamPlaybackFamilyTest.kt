@@ -131,7 +131,7 @@ class VexStreamPlaybackFamilyTest {
                 ),
             )
 
-        family.activatePlayback(
+        family.activate(
             VexStreamPlaybackControl.PlayPause,
         )
 

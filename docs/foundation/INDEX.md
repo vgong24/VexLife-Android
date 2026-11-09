@@ -618,7 +618,8 @@ Snapshot truth. Playback / Queue / Repeat own their separate semantic State / Co
 questions. Media3 Player / MediaSession / MediaController are realization/access mechanisms around
 the same external Source, not separate semantic owners.
 
-Playback's stale-provider/pending-Control reconciliation remains feature-specific inside its Family.
+Playback's stale-provider/pending-Control reconciliation remains feature-specific inside its Family,
+while protected `VexFamily.admitCurrent` supplies the shared exact-CURRENT serialization boundary.
 Queue and Repeat now use Direct VexFamily rather than VexPort/SCAE wrappers. Track and Collection
 playback remain payload/source-resolution workflows because they have not earned independent semantic
 State/Control questions; their former channel/sequence schedulers are replaced by canonical
