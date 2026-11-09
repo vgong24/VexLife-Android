@@ -2,22 +2,33 @@ package com.vextreme.vexlife.android.insulin
 
 import com.vextreme.vexlife.android.behavior.VexFamily
 import com.vextreme.vexlife.android.behavior.VexMethod
+import com.vextreme.vexlife.android.execution.VexExecution
 
 /**
  * Semantic owner for the shared insulin-domain Store patient zero.
  *
- * Two independent Partners contribute durable truth into one Store:
+ * This is a retained architecture fixture, not disposable placeholder logic. A future real BLE,
+ * radio, SDK, or network realization may replace the synthetic provider edge while preserving the
+ * source-readable Family / Partner / Store relationships proved here.
+ *
+ * Two independent Partners contribute evidence to one insulin-domain Store:
  *
  *     ConnectedPenPartner
  *     InsulinPumpPartner
  *              \
  *               -> InsulinStore -> InsulinFamily
  *
+ * That convergence belongs to the Store because both Partners contribute observations to one
+ * insulin-domain truth. It is not a Compound Relay between independently complete Family currents.
+ *
  * The outbound pump path reuses the established Family grammar:
  *
- *     Parameter -> Control -> Effect -> Act.Method -> Pump Partner Connection
+ *     Parameter -> Control -> Effect + Approach -> Act.Method -> VexExecution
+ *               -> Pump Partner Connection
  *
- * and deliberately does NOT admit a delivered-insulin State from provider acknowledgement.
+ * Provider acknowledgement is a Method result only. It deliberately does NOT admit a
+ * delivered-insulin State; physical/durable delivery truth returns later through a Pump Partner
+ * Signal -> Observation -> Receiver -> Store -> Family path.
  */
 internal class InsulinFamily :
     VexFamily<
@@ -101,6 +112,8 @@ internal class InsulinFamily :
              *
              * The same Family Parameter instance is carried through Control -> Effect -> Method.
              * The Method knows the concrete Pump Connection, while the Family itself does not.
+             * VexExecution supplies Job custody and consumes the Family-authored Queued relationship;
+             * this Method does not choose overlap policy again.
              */
             class RequestPumpDelivery(
                 private val connection:
@@ -162,6 +175,12 @@ internal class InsulinFamily :
             DisplayState
     }
 
+    /**
+     * Admit one already-coherent Store snapshot as insulin semantic current.
+     *
+     * Partner Conversion/Observation and Store admission have already happened before this boundary;
+     * Family does not decode transport values or decide Connection provenance here.
+     */
     fun observeStore(
         snapshot:
             InsulinStore.Snapshot,
@@ -229,6 +248,13 @@ internal class InsulinFamily :
                 )
         }
 
+    /**
+     * Request meaning is currently identical for Empty and Admitted State: every accepted delivery
+     * request remains meaningful and must preserve admission order, so the Family authors Queued.
+     *
+     * Do not add State branches until insulin current truth actually changes whether this Control is
+     * lawful or changes the Effect it requests.
+     */
     override fun act(
         currentState:
             State,
@@ -241,37 +267,18 @@ internal class InsulinFamily :
             Effect
         > =
         when (
-            currentState
+            control
         ) {
-            State.Empty ->
-                when (
-                    control
-                ) {
-                    is Control.RequestPumpDelivery ->
-                        stay(
-                            beginQueued(
-                                Effect.RequestPumpDelivery(
-                                    amount =
-                                        control.amount,
-                                ),
-                            ),
-                        )
-                }
-
-            is State.Admitted ->
-                when (
-                    control
-                ) {
-                    is Control.RequestPumpDelivery ->
-                        stay(
-                            beginQueued(
-                                Effect.RequestPumpDelivery(
-                                    amount =
-                                        control.amount,
-                                ),
-                            ),
-                        )
-                }
+            is Control.RequestPumpDelivery ->
+                stay(
+                    effect =
+                        Effect.RequestPumpDelivery(
+                            amount =
+                                control.amount,
+                        ),
+                    approach =
+                        VexExecution.Approach.Queued,
+                )
         }
 }
 
