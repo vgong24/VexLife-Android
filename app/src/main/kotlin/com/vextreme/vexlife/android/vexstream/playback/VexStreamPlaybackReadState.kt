@@ -1,6 +1,5 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
-import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerConnectionViewModel
 import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -8,11 +7,6 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueProjection
-import com.vextreme.vexlife.android.vexstream.queue.toVexStreamQueueProjection
 import kotlinx.coroutines.delay
 import java.util.concurrent.atomic.AtomicLong
 
@@ -52,9 +46,9 @@ internal data class VexStreamPlaybackReadState(
     val currentTitle: String = "",
     val currentArtist: String = "",
     val currentArtworkUri: String? = null,
-    val queueMediaIds:
-        List<String> =
-        emptyList(),
+    val queueSize:
+        Int =
+        0,
     val currentIndex: Int = -1,
     val currentPositionMs: Long = 0L,
     val durationMs: Long = 0L,
@@ -62,7 +56,8 @@ internal data class VexStreamPlaybackReadState(
 ) {
     val hasQueue: Boolean
         get() =
-            queueMediaIds.isNotEmpty()
+            queueSize >
+                0
 
     val progressFraction: Float
         get() =
@@ -105,22 +100,6 @@ internal data class VexStreamPlaybackReadState(
             VexStreamPlaybackReadState()
     }
 }
-
-/**
- * One surface-ready playback observation projected from retained Player Partner CURRENT plus the
- * process-shared Playback Family projection.
- *
- * This value owns no currentness. The Player Store owns outside CURRENT and Playback Family owns
- * semantic Playback CURRENT.
- */
-internal data class VexStreamCurrentPlaybackObservation(
-    val readState:
-        VexStreamPlaybackReadState,
-    val playbackProjection:
-        VexStreamPlaybackProjection,
-    val queueProjection:
-        VexStreamQueueProjection,
-)
 
 /**
  * Feature-local live diagnostic trace for the current-playback projection chain.
@@ -299,94 +278,21 @@ internal object VexStreamPlaybackTrace {
             )
 }
 
-/**
- * Project retained Player Partner CURRENT for consumers that do not need a live progress clock.
- *
- * Position/duration/buffered progress is intentionally not claimed by Player CURRENT because normal
- * Media3 playback time advances without a Player.Events occurrence. The existing UI progress reader
- * remains an explicit provider-read seam until a truthful maintained observation is formed.
- */
-internal fun VexStreamPlayerPartner.Current.toVexStreamCurrentPlaybackObservation(
-    playbackFamily:
-        VexStreamPlaybackFamily,
-):
-    VexStreamCurrentPlaybackObservation =
-    VexStreamCurrentPlaybackObservation(
-        readState =
-            toVexStreamPlaybackReadState(),
-        playbackProjection =
-            playbackFamily
-                .currentPlaybackProjection,
-        queueProjection =
-            (
-                this as?
-                    VexStreamPlayerPartner.Current.Available
-            )
-                ?.queue
-                .toVexStreamQueueProjection(),
-    )
-
-private fun VexStreamPlayerPartner.Current.toVexStreamPlaybackReadState(
-    progress:
-        VexStreamPlaybackProgress =
-        VexStreamPlaybackProgress.Empty,
-):
-    VexStreamPlaybackReadState =
-    when (
-        this
-    ) {
-        VexStreamPlayerPartner.Current
-            .Unavailable ->
-            VexStreamPlaybackReadState
-                .Empty
-
-        is VexStreamPlayerPartner.Current
-            .Available ->
-            VexStreamPlaybackReadState(
-                currentMediaId =
-                    currentMedia.mediaId,
-                currentTitle =
-                    currentMedia.title,
-                currentArtist =
-                    currentMedia.artist,
-                currentArtworkUri =
-                    currentMedia.artworkUri,
-                queueMediaIds =
-                    queueItems.mediaIds,
-                currentIndex =
-                    queueNavigation.currentIndex,
-                currentPositionMs =
-                    progress.positionMs,
-                durationMs =
-                    progress.durationMs,
-                bufferedPositionMs =
-                    progress.bufferedPositionMs,
-            )
-    }
-
 @Composable
-internal fun rememberVexStreamPlaybackReadState():
+internal fun rememberVexStreamPlaybackReadState(
+    baseReadState:
+        VexStreamPlaybackReadState,
+    progressConnection:
+        VexStreamPlaybackProgressConnection?,
+):
     State<
         VexStreamPlaybackReadState
     > {
-    val owner:
-        VexStreamPlayerConnectionViewModel =
-        viewModel()
-    val playerCurrent by
-        owner
-            .playerStore
-            .states
-            .collectAsStateWithLifecycle(
-                initialValue =
-                    owner
-                        .playerStore
-                        .current,
-            )
-    val progressConnection =
-        owner.progressConnection
     val progress =
         remember(
             progressConnection,
+            baseReadState.currentMediaId,
+            baseReadState.currentIndex,
         ) {
             mutableStateOf(
                 progressConnection
@@ -397,7 +303,8 @@ internal fun rememberVexStreamPlaybackReadState():
         }
 
     LaunchedEffect(
-        playerCurrent,
+        baseReadState.currentMediaId,
+        baseReadState.currentIndex,
         progressConnection,
     ) {
         progress.value =
@@ -409,6 +316,8 @@ internal fun rememberVexStreamPlaybackReadState():
 
     LaunchedEffect(
         progressConnection,
+        baseReadState.currentMediaId,
+        baseReadState.currentIndex,
     ) {
         if (
             progressConnection ==
@@ -435,10 +344,17 @@ internal fun rememberVexStreamPlaybackReadState():
     }
 
     return rememberUpdatedState(
-        playerCurrent
-            .toVexStreamPlaybackReadState(
-                progress.value,
-            ),
+        baseReadState.copy(
+            currentPositionMs =
+                progress.value
+                    .positionMs,
+            durationMs =
+                progress.value
+                    .durationMs,
+            bufferedPositionMs =
+                progress.value
+                    .bufferedPositionMs,
+        ),
     )
 }
 

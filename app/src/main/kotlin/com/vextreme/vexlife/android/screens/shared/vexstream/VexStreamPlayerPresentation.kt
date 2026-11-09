@@ -98,7 +98,7 @@ internal fun VexStreamMiniPlayer(
             ?.let { index ->
                 (index + 1).toString() +
                     "/" +
-                    playback.queueMediaIds.size
+                    playback.queueSize
             }
 
     val handler =

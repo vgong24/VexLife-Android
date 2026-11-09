@@ -17,6 +17,7 @@ import com.vextreme.vexlife.android.ui.SharedPreferencesThemeModeStore
 import com.vextreme.vexlife.android.ui.ThemeModeStore
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackAdmission
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackConnectionFactory
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackExperienceRelay
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerObservationReceiver
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
@@ -78,6 +79,13 @@ class VexApplication :
          */
         dependencies.resolve(
             dependencyModule.backgroundServiceRelay,
+        )
+        /*
+         * Seed the Compose Playback relationship before any Service/Controller can begin producing
+         * Player or Control transitions. Later admissions are explicit and reuse this exact current.
+         */
+        dependencies.resolve(
+            dependencyModule.playbackExperienceRelay,
         )
         dependencies.resolve(
             dependencyModule.playbackWidgetUpdateExecution,
@@ -159,6 +167,14 @@ internal class VexApplicationDependencyModule(
                 playbackFamily,
         )
 
+    val playbackExperienceRelay =
+        PlaybackExperienceRelayProvider(
+            playerStore =
+                playerStore,
+            playbackFamily =
+                playbackFamily,
+        )
+
     val playbackConnectionFactory =
         PlaybackConnectionFactoryProvider(
             playbackAdmission =
@@ -167,6 +183,8 @@ internal class VexApplicationDependencyModule(
                 processExecutionRoot,
             playbackWidgetRelay =
                 playbackWidgetRelay,
+            playbackExperienceRelay =
+                playbackExperienceRelay,
         )
 
     val playerObservationReceiver =
@@ -177,6 +195,8 @@ internal class VexApplicationDependencyModule(
                 playbackAdmission,
             playbackWidgetRelay =
                 playbackWidgetRelay,
+            playbackExperienceRelay =
+                playbackExperienceRelay,
         )
 
     val playbackWidgetUpdateExecution =
@@ -203,6 +223,7 @@ internal class VexApplicationDependencyModule(
             navigationSession,
             backgroundServiceRelay,
             playbackWidgetRelay,
+            playbackExperienceRelay,
             playbackConnectionFactory,
             playerObservationReceiver,
             playbackWidgetUpdateExecution,
@@ -464,11 +485,49 @@ internal class VexApplicationDependencyModule(
             )
     }
 
+    /** Process-current coherent relationship consumed by Compose Playback presentation. */
+    internal class PlaybackExperienceRelayProvider(
+        private val playerStore:
+            VexDependencyProvider<
+                VexStreamPlayerStore
+            >,
+        private val playbackFamily:
+            VexDependencyProvider<
+                VexStreamPlaybackFamily
+            >,
+    ) :
+        VexDependencyProvider<
+            VexStreamPlaybackExperienceRelay
+        >(
+            dependencies =
+                listOf(
+                    playerStore,
+                    playbackFamily,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexStreamPlaybackExperienceRelay =
+            VexStreamPlaybackExperienceRelay(
+                playerStore =
+                    dependencies.require(
+                        playerStore,
+                    ),
+                playbackFamily =
+                    dependencies.require(
+                        playbackFamily,
+                    ),
+            )
+    }
+
     /**
      * One construction path for Playback Controls across UI and Widget callers.
      *
-     * Family admission is projected to the Widget Relay before Effect realization; the factory keeps
-     * that consequence path consistent without making the feature connection depend on Widget.
+     * Family admission is projected to both consumer-owned Playback relationship currents before
+     * Effect realization; the factory keeps that consequence path consistent without making the
+     * feature connection depend on either UI or Widget implementation.
      */
     internal class PlaybackConnectionFactoryProvider(
         private val playbackAdmission:
@@ -483,6 +542,10 @@ internal class VexApplicationDependencyModule(
             VexDependencyProvider<
                 VexStreamPlaybackWidgetRelay
             >,
+        private val playbackExperienceRelay:
+            VexDependencyProvider<
+                VexStreamPlaybackExperienceRelay
+            >,
     ) :
         VexDependencyProvider<
             VexStreamPlaybackConnectionFactory
@@ -492,6 +555,7 @@ internal class VexApplicationDependencyModule(
                     playbackAdmission,
                     executionRoot,
                     playbackWidgetRelay,
+                    playbackExperienceRelay,
                 ),
         ) {
         override fun create(
@@ -499,9 +563,13 @@ internal class VexApplicationDependencyModule(
                 VexDependencyBuildScope,
         ):
             VexStreamPlaybackConnectionFactory {
-            val relay =
+            val widgetRelay =
                 dependencies.require(
                     playbackWidgetRelay,
+                )
+            val experienceRelay =
+                dependencies.require(
+                    playbackExperienceRelay,
                 )
 
             return VexStreamPlaybackConnectionFactory(
@@ -516,7 +584,10 @@ internal class VexApplicationDependencyModule(
                 onFamilyCurrent = {
                         familyState,
                         ->
-                    relay.admitFamilyCurrent(
+                    widgetRelay.admitFamilyCurrent(
+                        familyState,
+                    )
+                    experienceRelay.admitFamilyCurrent(
                         familyState,
                     )
                 },
@@ -527,8 +598,8 @@ internal class VexApplicationDependencyModule(
     /**
      * Process-lived Player Observation admission plus post-Family-reconciliation projection handoff.
      *
-     * Composition wires the accepted round trip to the Playback Widget Relay without making Player
-     * or Playback source code depend on Widget.
+     * Composition wires the accepted round trip to both consumer-owned Playback relationship
+     * currents without making Player or Playback source code depend on UI or Widget implementation.
      */
     internal class PlayerObservationReceiverProvider(
         private val playerStore:
@@ -543,6 +614,10 @@ internal class VexApplicationDependencyModule(
             VexDependencyProvider<
                 VexStreamPlaybackWidgetRelay
             >,
+        private val playbackExperienceRelay:
+            VexDependencyProvider<
+                VexStreamPlaybackExperienceRelay
+            >,
     ) :
         VexDependencyProvider<
             VexStreamPlayerObservationReceiver
@@ -552,6 +627,7 @@ internal class VexApplicationDependencyModule(
                     playerStore,
                     playbackAdmission,
                     playbackWidgetRelay,
+                    playbackExperienceRelay,
                 ),
         ) {
         override fun create(
@@ -559,9 +635,13 @@ internal class VexApplicationDependencyModule(
                 VexDependencyBuildScope,
         ):
             VexStreamPlayerObservationReceiver {
-            val relay =
+            val widgetRelay =
                 dependencies.require(
                     playbackWidgetRelay,
+                )
+            val experienceRelay =
+                dependencies.require(
+                    playbackExperienceRelay,
                 )
 
             return VexStreamPlayerObservationReceiver(
@@ -577,7 +657,13 @@ internal class VexApplicationDependencyModule(
                         playerCurrent,
                         familyState,
                         ->
-                    relay.admitProviderRoundTrip(
+                    widgetRelay.admitProviderRoundTrip(
+                        playerCurrent =
+                            playerCurrent,
+                        familyState =
+                            familyState,
+                    )
+                    experienceRelay.admitProviderRoundTrip(
                         playerCurrent =
                             playerCurrent,
                         familyState =

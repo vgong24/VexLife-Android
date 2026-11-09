@@ -13,7 +13,7 @@ import com.vextreme.vexlife.android.VexApplication
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackService
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackConnection
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackConnectionFactory
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackExperienceRelay
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackProgressConnection
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackSeekConnection
 import com.vextreme.vexlife.android.vexstream.queue.PartnerVexStreamQueueConnection
@@ -46,14 +46,14 @@ internal class VexStreamPlayerConnectionViewModel(
                 "VexStream Playback requires VexApplication as the process composition root",
             )
 
-    val family:
-        VexStreamPlaybackFamily =
+    val playbackExperienceRelay:
+        VexStreamPlaybackExperienceRelay =
         vexApplication
             .dependencies
             .resolve(
                 vexApplication
                     .dependencyModule
-                    .playbackFamily,
+                    .playbackExperienceRelay,
             )
 
     private val playbackConnectionFactory:
