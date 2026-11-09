@@ -46,8 +46,8 @@ VEX_EXECUTION_OWNER
 ~~~
 
 There is no public execution InstanceId, SourceRef, Handle, completed Snapshot registry, or
-root-level activeExecutions registry. The read-only CurrentProjection exposed through currentExecution described below is derived
-directly from canonical custody and owns no second active-work truth.
+root-level activeExecutions registry. The read-only CurrentProjection exposed through currentExecution
+described below is derived directly from canonical custody and owns no second active-work truth.
 
 ## Authoring surface
 
@@ -113,6 +113,28 @@ Is there a genuinely distinct sustained execution responsibility with its own li
 These routes intentionally produce different Kotlin shapes while preserving the same responsibility
 law. Similar syntax is not evidence that two meanings should share another abstraction, and different
 syntax is not evidence that the meanings are unrelated.
+
+### Do not escape into an unmanaged coroutine tree
+
+When a rightful live owner and [VexExecutionRoot] already exist, do not work around the architecture
+with a feature-created `CoroutineScope`, `SupervisorJob`, retained `Job` field, or raw `launch/collect`
+plumbing merely because the operation is asynchronous.
+
+~~~text
+existing owner + bounded lifetime
+-> VexExecution direct entry
+
+independently meaningful sustained async owner
+-> concrete VexExecution subclass
+
+maintained Relay dependency
+-> VexExecution.observe through the Relay dependency contract
+~~~
+
+Ordinary Compose animation/presentation mechanics may still use their rightful UI-scoped tools. The
+boundary here is product/provider work whose custody, overlap, cancellation, or recovery must remain
+inspectable and bounded beyond one incidental callback.
+
 ### Finite work
 
 ~~~text
@@ -153,6 +175,36 @@ CALLABLE NAME / REFLECTED TYPE NAME
     != semantic identity
     != durable identity
     != RelationshipId
+~~~
+
+### Finite failure and later admission
+
+Finite work is one attempt, not a permanently running source and not an automatic retry policy.
+
+~~~text
+operation throws
+-> onFailure receives operation failure
+-> Job completes
+-> Job is removed from source custody
+-> Job is removed from RelationshipId custody
+-> empty relationship lane is removed
+
+later request
+-> may admit a new Job through the same live execution owner
+~~~
+
+A failed attempt therefore does not poison that execution owner or permanently occupy the
+relationship. For `Queued`, an admitted successor waits for its predecessor to finish and may then
+run even when the predecessor's operation failed.
+
+VexExecution does **not** automatically replay finite work. Repeating a save, pump request, queue
+mutation, message send, or provider command may duplicate an outside effect. Retry belongs to the
+smallest owner that knows whether another attempt is lawful and idempotent.
+
+~~~text
+ATTEMPT FAILURE
+!= EXECUTION OWNER FAILURE
+!= AUTOMATIC RETRY AUTHORITY
 ~~~
 
 ### Maintained observation
@@ -283,6 +335,11 @@ root.joinStopAll()
 
 Examples of real root lifetime owners include an application/ViewModel session or one Android
 Service that created the root.
+
+A shorter-lived workflow may keep a private concrete VexExecution owner while sharing a longer-lived
+root. VexStream Track/Collection use this shape so Compose disposal can stop only their own
+source-preparation/provider-request Jobs without terminating sibling process work or creating a raw
+feature scope.
 
 ## Source-addressed local control
 
@@ -434,6 +491,7 @@ PR #209 exercises the refined execution law through:
 - VexMaps Distribution Session directly uses VexExecution for async work whose meaning and lifecycle the Session already owns;
 - VexMaps destination/place search source-addressed replacement;
 - VexStream application/session and service execution roots;
+- VexStream Track/Collection disposable workflow owners: Latest/Queued source preparation and Player requests remain under concrete VexExecution custody without inventing Families or feature coroutine scopes;
 - Partner patient zero: inbound receipt/admission is queued under a private owner-local RelationshipId on each live Connection, while Store -> Family Flow observation remains exact-source addressed; durable Connection.Id provenance is deliberately not reused as runtime RelationshipId;
 - owner-scoped shutdown while a root may host sibling owners.
 

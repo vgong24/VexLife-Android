@@ -189,12 +189,12 @@ Store -> Family observation
 
 Family consequence
     accepted Control relationship
-    + authored Begin Approach
+    + authored Effect + Approach
     -> Family-derived RelationshipId
     -> Method Job(s)
 ~~~
 
-Pump requests use Begin(Queued · Effect.RequestPumpDelivery): sequencing is authored by Family and
+Pump requests use Effect.RequestPumpDelivery + Approach.Queued: sequencing is authored by Family and
 consumed by launchWith()/VexExecution rather than re-decided by Method.
 
 ### Room / restart
@@ -340,18 +340,24 @@ Behavior source merely because the Direct Family foundation exists.
 PR #193 is the acceptance/origin reference for the Direct Family identity/custody refinement:
 https://github.com/vgong24/VexLife-Android/pull/193
 
-## Start here
+## Historical Direct Family exposition — lineage only
 
-Read FAMILY-CIRCUIT.md, then VexFamilyHighConfidenceTest.
+The sections below preserve earlier Direct Family pressure and rationale. They are **not** the current
+authoring contract where they conflict with the current entry above, FAMILY-CIRCUIT.md, VexFamily.kt,
+or focused tests. In particular, Act.Begin / begin* / result-admission examples below are historical;
+current Direct Family Act carries Effect + Approach directly and VexMethod.Result does not author later
+State admission.
 
-Current runtime:
+Read FAMILY-CIRCUIT.md, then VexFamily.kt and the focused current tests before changing Direct Family.
+
+Historical runtime snapshot:
 
 ~~~text
 Family.activate(control)
 -> concrete Family.act(currentState, control)
 -> when (currentState)
 -> when (control)
--> stay / admit / optional begin
+-> stay / admit / optional historical begin
 -> StateRelay / execution
 ~~~
 

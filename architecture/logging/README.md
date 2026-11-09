@@ -96,6 +96,62 @@ There is no parallel FamilyLogger, ExecutionLogger, trace bus, completed-executi
 callable-derived operation identity. Pure semantic decision code such as VexFamily.act(...) does not
 receive Logger.
 
+## Automatic routing versus explicit fact formation
+
+Some boundaries already know a complete fact and therefore route it automatically.
+
+`VexRuntime` owns the accepted UI/navigation boundary and automatically records facts such as:
+
+~~~text
+AppOpened
+Clicked / Submitted
+DynamicInteraction
+Back / Dismissed
+CurrentScreen after navigation mutation
+settled pager Screen
+~~~
+
+A Screen or feature that calls the normal `VexRuntime.activate(...)`, `activateDynamic(...)`,
+`submit(...)`, `goBack(...)`, or external-navigation surface should not emit another duplicate
+interaction fact.
+
+Other foundations deliberately do not infer Logger meaning from their method calls:
+
+~~~text
+VexFamily.activate(...)
+VexMethod.invoke()
+VexExecution.begin/observe(...)
+VexPartner.Connection.receive(...)
+VexCompoundRelay.processStates(...)
+~~~
+
+Those owners know semantic State, active custody, provider observations, or relationship current; they
+do not necessarily know the truthful human/runtime action name to record. Automatically deriving
+facts from callable names, class names, or reflected types would make chronology depend on naming and
+would recreate a second semantic vocabulary inside Logger.
+
+The accepted Family continuation supplies the mechanical seams without inventing facts:
+
+~~~text
+accepted Act
+-> launchWith(root)
+-> method(
+       beforeOperation = { rightful owner may record EffectRequested },
+       onResult = { rightful owner may record Success / Failure / Error meaning }
+   )
+~~~
+
+The concrete realization boundary forms those facts because it knows the exact Control/Effect,
+provider result meaning, and currentness policy. ThemeMode is the current complete example. Record the
+independently meaningful accepted/observed facts required by the product and proof; do not turn every
+internal function step into exhaust. Missing a required fact must be repaired at its rightful boundary,
+not compensated for with a feature-local chronology root.
+
+For process-lived Services/widgets, first resolve which canonical Logger lifetime should receive the
+fact. Do not inject a session Logger into a longer-lived process owner by convenience, and do not mint
+a process logger or feature sequence merely to avoid that lifetime question. A feature-local Logcat
+trace may remain temporary diagnostic evidence, but it is not automatically accepted chronology.
+
 ## Stable coordinate -> readable fields
 
 The stored interaction fact keeps its compact stable coordinate:
@@ -298,7 +354,8 @@ Focused Logger source tests protect:
 - runtime-element distinction;
 - structured semantic/runtime events entering the same chronology.
 
-Repository-owned Gradle/JVM proof is still required on the exact PR #209 candidate before this
-refinement may claim proven integration.
+Repository-owned exact-head proof is required for changes to this Logger integration. PR #209
+remains origin evidence for the accepted Logger refinement; later candidates must prove their own
+integration rather than inheriting that proof by reference.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][LOGGING] -->

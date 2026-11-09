@@ -84,10 +84,21 @@ internal fun interface VexStreamTrackPlaybackResolver {
 }
 
 /**
- * Feature-local Track playback surface.
+ * Feature-local Track playback workflow.
  *
- * This is not a Partner Connection. It owns Track source preparation and one disposable
- * VexExecution lifetime, then addresses the actual Player Partner request Connection.
+ * This does not earn a Family: Track play/queue is an exact payload-resolution request and does not
+ * own an independently meaningful semantic CURRENT that another consumer observes. It also is not a
+ * Partner Connection; the actual outside participant remains [VexStreamPlayerPartner].
+ *
+ * The private [Execution] is intentional. It is the disposable owner of this workflow's asynchronous
+ * source preparation and provider requests while the shared [VexExecutionRoot] may outlive this
+ * remembered feature surface and host sibling owners. It provides Latest/Queued custody and bounded
+ * shutdown without a feature-created CoroutineScope, SupervisorJob, retained Job field, or raw
+ * launch/collect plumbing.
+ *
+ * A failed finite attempt completes and leaves VexExecution custody, so a later request may be
+ * admitted through the same live workflow. Finite provider retry is not automatic here because only
+ * the feature/provider boundary can decide whether repeating a real request is safe.
  */
 internal class VexStreamTrackPlayback(
     root:
@@ -172,6 +183,13 @@ internal class VexStreamTrackPlayback(
         execution.shutdown()
     }
 
+    /**
+     * Exact execution owner for the disposable Track workflow.
+     *
+     * Play is Latest because a newer selected context supersedes unfinished source preparation for an
+     * older selection. Queue is Queued because every accepted placement remains meaningful and order
+     * must be preserved. These are workflow relationships, not Family-authored consequences.
+     */
     private class Execution(
         root:
             VexExecutionRoot,

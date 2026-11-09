@@ -2,6 +2,7 @@
 
 package com.vextreme.vexlife.android.insulin
 
+import com.vextreme.vexlife.android.execution.VexExecution
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -11,6 +12,12 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * Full reusable circuit pressure for two external Partners and one insulin semantic owner.
+ *
+ * These tests are not disposable synthetic-provider tests. They preserve the architecture contract a
+ * future real Pen/Pump realization must continue to satisfy while provider mechanics evolve.
+ */
 class InsulinPartnerCircuitTest {
     @Test
     fun familyCarriesTheSameInsulinAmountFromControlThroughEffectIntoBoundMethod() {
@@ -27,15 +34,19 @@ class InsulinPartnerCircuitTest {
                 )
 
             val act =
-                family.activate(
-                    InsulinFamily.Control.RequestPumpDelivery(
-                        amount =
-                            amount,
+                checkNotNull(
+                    family.activate(
+                        InsulinFamily.Control.RequestPumpDelivery(
+                            amount =
+                                amount,
+                        ),
                     ),
                 )
 
             val effect =
-                act?.effect as
+                checkNotNull(
+                    act.effect,
+                ) as
                     InsulinFamily.Effect.RequestPumpDelivery
             val method =
                 InsulinFamily.Act.Method.RequestPumpDelivery(
@@ -54,29 +65,33 @@ class InsulinPartnerCircuitTest {
                 method.parameter,
             )
             assertEquals(
-                com.vextreme.vexlife.android.execution.VexExecution.Approach.Queued,
-                act.begin
-                    ?.approach,
+                VexExecution.Approach.Queued,
+                act.approach,
             )
             assertNotNull(
                 act.relationshipId,
             )
 
             val secondAct =
-                family.activate(
-                    InsulinFamily.Control.RequestPumpDelivery(
-                        amount =
-                            InsulinFamily.Parameter.InsulinAmount(
-                                unitsHundredths =
-                                    125,
-                            ),
+                checkNotNull(
+                    family.activate(
+                        InsulinFamily.Control.RequestPumpDelivery(
+                            amount =
+                                InsulinFamily.Parameter.InsulinAmount(
+                                    unitsHundredths =
+                                        125,
+                                ),
+                        ),
                     ),
                 )
 
             assertEquals(
+                VexExecution.Approach.Queued,
+                secondAct.approach,
+            )
+            assertEquals(
                 act.relationshipId,
-                secondAct
-                    ?.relationshipId,
+                secondAct.relationshipId,
             )
             assertEquals(
                 InsulinFamily.State.Empty,
