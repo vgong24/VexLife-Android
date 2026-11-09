@@ -1,5 +1,7 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
+import kotlinx.coroutines.Job
+
 /**
  * Concrete Playback realization boundary.
  *
@@ -7,7 +9,7 @@ package com.vextreme.vexlife.android.vexstream.playback
  * accepted Effects against one concrete Media3 controller.
  */
 internal fun interface VexStreamPlaybackEffectConnection {
-    fun realize(
+    suspend fun realize(
         effect:
             VexStreamPlaybackEffect,
     )
@@ -18,7 +20,8 @@ internal interface VexStreamPlaybackConnection {
     fun activate(
         control:
             VexStreamPlaybackControl,
-    )
+    ):
+        Job?
 }
 
 /**

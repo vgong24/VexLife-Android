@@ -888,6 +888,7 @@ class VexStreamPlaybackWidgetActionCallback :
                         .activate(
                             command.control,
                         )
+                        ?.join()
 
                 is VexStreamPlaybackWidgetCommand.Queue ->
                     PartnerVexStreamQueueConnection(

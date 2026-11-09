@@ -163,6 +163,8 @@ internal class VexApplicationDependencyModule(
         PlaybackConnectionFactoryProvider(
             playbackAdmission =
                 playbackAdmission,
+            executionRoot =
+                processExecutionRoot,
             playbackWidgetRelay =
                 playbackWidgetRelay,
         )
@@ -473,6 +475,10 @@ internal class VexApplicationDependencyModule(
             VexDependencyProvider<
                 VexStreamPlaybackAdmission
             >,
+        private val executionRoot:
+            VexDependencyProvider<
+                VexExecutionRoot
+            >,
         private val playbackWidgetRelay:
             VexDependencyProvider<
                 VexStreamPlaybackWidgetRelay
@@ -484,6 +490,7 @@ internal class VexApplicationDependencyModule(
             dependencies =
                 listOf(
                     playbackAdmission,
+                    executionRoot,
                     playbackWidgetRelay,
                 ),
         ) {
@@ -501,6 +508,10 @@ internal class VexApplicationDependencyModule(
                 admission =
                     dependencies.require(
                         playbackAdmission,
+                    ),
+                executionRoot =
+                    dependencies.require(
+                        executionRoot,
                     ),
                 onFamilyCurrent = {
                         familyState,

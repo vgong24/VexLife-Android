@@ -275,22 +275,26 @@ internal class Media3VexStreamPlayerControlConnection(
         )
     }
 
-    override fun realize(
+    override suspend fun realize(
         effect:
             VexStreamPlaybackEffect,
     ) {
-        when (
-            effect
+        withContext(
+            providerDispatcher,
         ) {
-            VexStreamPlaybackEffect.RequestPlay ->
-                controller.play()
+            when (
+                effect
+            ) {
+                VexStreamPlaybackEffect.RequestPlay ->
+                    controller.play()
 
-            VexStreamPlaybackEffect.RequestPause ->
-                controller.pause()
+                VexStreamPlaybackEffect.RequestPause ->
+                    controller.pause()
 
-            VexStreamPlaybackEffect.RestartCurrent -> {
-                controller.seekToDefaultPosition()
-                controller.play()
+                VexStreamPlaybackEffect.RestartCurrent -> {
+                    controller.seekToDefaultPosition()
+                    controller.play()
+                }
             }
         }
     }
