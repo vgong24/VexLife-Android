@@ -805,6 +805,99 @@ class VexExecutionTest {
         }
 
     @Test
+    fun beginStartsAnAlreadyAdmittedEarliestOccurrenceWhenItReusesCustody() =
+        runBlocking {
+            val root =
+                VexExecutionRoot()
+            val owner =
+                Any()
+            val relationship =
+                DirectRelationship(
+                    "earliest-admitted-before-begin",
+                )
+            val started =
+                CompletableDeferred<Unit>()
+            val release =
+                CompletableDeferred<Unit>()
+            val firstMethod =
+                AwaitingBoundOperation(
+                    value =
+                        "A",
+                    started =
+                        started,
+                    release =
+                        release,
+                )
+            val secondCalls =
+                mutableListOf<String>()
+            val secondMethod =
+                BoundOperation(
+                    value =
+                        "B",
+                    calls =
+                        secondCalls,
+                )
+
+            try {
+                val admitted =
+                    VexExecution.admit(
+                        executionRoot =
+                            root,
+                        owner =
+                            owner,
+                        approach =
+                            VexExecution.Approach.Earliest,
+                        relationshipId =
+                            relationship,
+                        operation =
+                            firstMethod::invoke,
+                    )
+
+                assertFalse(
+                    started.isCompleted,
+                )
+
+                val reused =
+                    VexExecution.begin(
+                        executionRoot =
+                            root,
+                        owner =
+                            owner,
+                        approach =
+                            VexExecution.Approach.Earliest,
+                        relationshipId =
+                            relationship,
+                        operation =
+                            secondMethod::invoke,
+                    )
+
+                assertSame(
+                    admitted,
+                    reused,
+                )
+
+                withTimeout(
+                    2_000,
+                ) {
+                    started.await()
+                }
+
+                assertTrue(
+                    secondCalls.isEmpty(),
+                )
+
+                release.complete(
+                    Unit,
+                )
+                admitted.join()
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
+            }
+        }
+
+    @Test
     fun admitEarliestRequiresNewOccurrenceWhileBeginKeepsExistingReuseLaw() =
         runBlocking {
             val root =
