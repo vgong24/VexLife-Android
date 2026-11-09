@@ -356,11 +356,6 @@ abstract class VexFamily<
             State : VexFamily.State<Family>,
             Effect : VexFamily.Effect<Family> {
 
-            val admittedState:
-                State?
-                get() =
-                    authored.admittedState
-
             /**
              * Live preparation view of the authored Begin that still requires a new occurrence.
              *
@@ -1144,7 +1139,7 @@ abstract class VexFamily<
                         realizationAdmission,
                 )
 
-            accepted.admittedState
+            resolved.admittedState
                 ?.let(
                     ::setCurrentStateLocked,
                 )
