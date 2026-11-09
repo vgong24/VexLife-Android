@@ -289,6 +289,14 @@ abstract class VexFamily<
             Any? =
             null
 
+        private var realizationAdmission:
+            (
+                (
+                    () -> Job
+                ) -> Job
+            )? =
+            null
+
         /**
          * Family-owned specialization of the reusable [VexMethod] contract.
          *
@@ -378,34 +386,42 @@ abstract class VexFamily<
                 ) {
                     "Only an Act accepted by VexFamily.activate(...) may launch"
                 }
+            val admit =
+                checkNotNull(
+                    realizationAdmission,
+                ) {
+                    "Accepted Act Begin is missing its realization admission binding"
+                }
 
-            return VexExecution.begin(
-                executionRoot =
-                    executionRoot,
-                owner =
-                    owner,
-                approach =
-                    authoredBegin.approach,
-                relationshipId =
-                    relationshipId,
-                operation =
-                    method::invoke,
-                beforeOperation =
-                    beforeOperation,
-                onResult = { result ->
-                    onResult(
-                        result,
-                    )
-                },
-                onFailure = { error ->
-                    onResult(
-                        VexMethod.Result.Error(
-                            cause =
-                                error,
-                        ),
-                    )
-                },
-            )
+            return admit {
+                VexExecution.begin(
+                    executionRoot =
+                        executionRoot,
+                    owner =
+                        owner,
+                    approach =
+                        authoredBegin.approach,
+                    relationshipId =
+                        relationshipId,
+                    operation =
+                        method::invoke,
+                    beforeOperation =
+                        beforeOperation,
+                    onResult = { result ->
+                        onResult(
+                            result,
+                        )
+                    },
+                    onFailure = { error ->
+                        onResult(
+                            VexMethod.Result.Error(
+                                cause =
+                                    error,
+                            ),
+                        )
+                    },
+                )
+            }
         }
 
         internal fun acceptedBy(
@@ -413,6 +429,19 @@ abstract class VexFamily<
                 Any,
             relationshipId:
                 VexExecution.RelationshipId?,
+            acceptedBegin:
+                Begin<
+                    Family,
+                    Effect
+                >? =
+                begin,
+            realizationAdmission:
+                (
+                    (
+                        () -> Job
+                    ) -> Job
+                )? =
+                null,
         ):
             Act<
                 Family,
@@ -423,13 +452,15 @@ abstract class VexFamily<
                 admittedState =
                     admittedState,
                 begin =
-                    begin,
+                    acceptedBegin,
                 relationshipId =
                     relationshipId,
             )
                 .also { accepted ->
                     accepted.executionOwner =
                         owner
+                    accepted.realizationAdmission =
+                        realizationAdmission
                 }
 
         /**
@@ -531,6 +562,49 @@ abstract class VexFamily<
             return result
         }
     }
+
+    /*
+     * Acceptance-side continuity only. VexExecution remains the Job-custody owner.
+     *
+     * A binding is the private one-shot admission state for one accepted Begin. A lane retains only
+     * unresolved accepted realizations for one maintained RelationshipId so Approach meaning cannot
+     * be reordered between activate(...) and launch(...).
+     */
+    private class RealizationBinding(
+        val approach:
+            VexExecution.Approach,
+        val relationshipId:
+            VexExecution.RelationshipId?,
+    ) {
+        var admitted:
+            Boolean =
+            false
+
+        var superseded:
+            Boolean =
+            false
+    }
+
+    private class AcceptanceLane(
+        val approach:
+            VexExecution.Approach,
+    ) {
+        val bindings:
+            MutableList<
+                RealizationBinding
+            > =
+            mutableListOf()
+    }
+
+    private val relationshipLock =
+        Any()
+
+    private val acceptanceLanes =
+        linkedMapOf<
+            VexExecution.RelationshipId,
+            AcceptanceLane
+        >()
+
 
     private val stateLock =
         Any()
@@ -778,14 +852,17 @@ abstract class VexFamily<
      *
      *     act(CURRENT State, Control)
      *     -> bind maintained RelationshipId when Begin requires one
+     *     -> preserve accepted overlap order until realization enters custody
      *     -> bind the live Family as execution owner
      *     -> admit immediate State when present
      *     -> return accepted Act
      *
      * Acceptance turns pure semantic meaning into this live Family's current responsibility without
-     * realizing [Act.begin]. A caller may later bind the Begin Effect to a concrete Method and hand
-     * that prepared consequence to VexExecution through Act.launch(...). This keeps availability /
-     * act resolution side-effect free.
+     * realizing [Act.begin]. Latest supersedes older pending realizations, Queued preserves pending
+     * acceptance order, and Earliest may return an accepted Act with no additional Begin while an
+     * earlier accepted realization remains unresolved. A caller may later bind the remaining Begin
+     * Effect to a concrete Method and hand that prepared consequence to VexExecution through
+     * Act.launch(...). This keeps availability / act resolution side-effect free.
      */
     fun activate(
         control:
@@ -808,24 +885,155 @@ abstract class VexFamily<
                 )
                     ?: return null
 
-            val acceptedRelationshipId =
-                when (
+            var acceptedBegin =
+                resolved.begin
+            var acceptedRelationshipId:
+                VexExecution.RelationshipId? =
+                null
+            var realizationBinding:
+                RealizationBinding? =
+                null
+
+            when (
+                val approach =
                     resolved.begin
                         ?.approach
-                ) {
-                    VexExecution.Approach.Earliest,
-                    VexExecution.Approach.Latest,
-                    VexExecution.Approach.Queued,
-                    ->
+            ) {
+                null ->
+                    Unit
+
+                VexExecution.Approach.Independent ->
+                    realizationBinding =
+                        RealizationBinding(
+                            approach =
+                                approach,
+                            relationshipId =
+                                null,
+                        )
+
+                VexExecution.Approach.Earliest,
+                VexExecution.Approach.Latest,
+                VexExecution.Approach.Queued,
+                -> {
+                    val relationshipId =
                         relationshipId(
                             control,
                         )
 
-                    VexExecution.Approach.Independent,
-                    null,
-                    ->
-                        null
+                    synchronized(
+                        relationshipLock,
+                    ) {
+                        val existing =
+                            acceptanceLanes[
+                                relationshipId
+                            ]
+                        if (
+                            existing !=
+                            null
+                        ) {
+                            check(
+                                existing.approach ==
+                                    approach,
+                            ) {
+                                "Accepted relationship is already unresolved as " +
+                                    existing.approach +
+                                    " and cannot also be " +
+                                    approach
+                            }
+                        }
+
+                        val lane =
+                            existing
+                                ?: AcceptanceLane(
+                                    approach =
+                                        approach,
+                                )
+                                    .also { created ->
+                                        acceptanceLanes[
+                                            relationshipId
+                                        ] =
+                                            created
+                                    }
+
+                        when (
+                            approach
+                        ) {
+                            VexExecution.Approach.Earliest ->
+                                if (
+                                    lane.bindings.isNotEmpty()
+                                ) {
+                                    /*
+                                     * The earlier unresolved accepted realization is already
+                                     * sufficient, so this accepted Act has no additional Begin.
+                                     */
+                                    acceptedBegin =
+                                        null
+                                } else {
+                                    acceptedRelationshipId =
+                                        relationshipId
+                                    realizationBinding =
+                                        RealizationBinding(
+                                            approach =
+                                                approach,
+                                            relationshipId =
+                                                relationshipId,
+                                        )
+                                            .also(
+                                                lane.bindings::add,
+                                            )
+                                }
+
+                            VexExecution.Approach.Latest -> {
+                                lane.bindings
+                                    .filter { binding ->
+                                        !binding.admitted
+                                    }
+                                    .forEach { binding ->
+                                        binding.superseded =
+                                            true
+                                    }
+                                lane.bindings
+                                    .removeAll { binding ->
+                                        !binding.admitted
+                                    }
+
+                                acceptedRelationshipId =
+                                    relationshipId
+                                realizationBinding =
+                                    RealizationBinding(
+                                        approach =
+                                            approach,
+                                        relationshipId =
+                                            relationshipId,
+                                    )
+                                        .also(
+                                            lane.bindings::add,
+                                        )
+                            }
+
+                            VexExecution.Approach.Queued -> {
+                                acceptedRelationshipId =
+                                    relationshipId
+                                realizationBinding =
+                                    RealizationBinding(
+                                        approach =
+                                            approach,
+                                        relationshipId =
+                                            relationshipId,
+                                    )
+                                        .also(
+                                            lane.bindings::add,
+                                        )
+                            }
+
+                            VexExecution.Approach.Independent ->
+                                error(
+                                    "Independent realization does not use a maintained acceptance lane",
+                                )
+                        }
+                    }
                 }
+            }
 
             val accepted =
                 resolved.acceptedBy(
@@ -833,6 +1041,20 @@ abstract class VexFamily<
                         this,
                     relationshipId =
                         acceptedRelationshipId,
+                    acceptedBegin =
+                        acceptedBegin,
+                    realizationAdmission =
+                        realizationBinding
+                            ?.let { binding ->
+                                { formJob ->
+                                    admitRealization(
+                                        binding =
+                                            binding,
+                                        formJob =
+                                            formJob,
+                                    )
+                                }
+                            },
                 )
 
             accepted.admittedState
@@ -841,6 +1063,147 @@ abstract class VexFamily<
                 )
 
             accepted
+        }
+
+    /**
+     * Admit one accepted Begin to runtime custody exactly once.
+     *
+     * This is mechanical acceptance-side continuity only. VexExecution still owns the resulting Job
+     * and active overlap mechanics.
+     */
+    private fun admitRealization(
+        binding:
+            RealizationBinding,
+        formJob:
+            () -> Job,
+    ):
+        Job =
+        synchronized(
+            relationshipLock,
+        ) {
+            check(
+                !binding.admitted,
+            ) {
+                "Accepted Act realization has already entered execution custody"
+            }
+            check(
+                !binding.superseded,
+            ) {
+                "Accepted Act realization was superseded before execution custody"
+            }
+
+            binding.relationshipId
+                ?.let { relationshipId ->
+                    val lane =
+                        checkNotNull(
+                            acceptanceLanes[
+                                relationshipId
+                            ],
+                        ) {
+                            "Accepted Act realization is missing its acceptance lane"
+                        }
+                    check(
+                        lane.approach ==
+                            binding.approach,
+                    ) {
+                        "Accepted Act realization Approach no longer matches its acceptance lane"
+                    }
+
+                    if (
+                        binding.approach ==
+                        VexExecution.Approach.Queued
+                    ) {
+                        val firstPending =
+                            lane.bindings
+                                .firstOrNull { candidate ->
+                                    !candidate.admitted &&
+                                        !candidate.superseded
+                                }
+                        check(
+                            firstPending ===
+                                binding,
+                        ) {
+                            "Queued accepted consequence cannot enter custody before an earlier accepted consequence"
+                        }
+                    }
+
+                    if (
+                        binding.approach ==
+                        VexExecution.Approach.Latest
+                    ) {
+                        val latestPending =
+                            lane.bindings
+                                .lastOrNull { candidate ->
+                                    !candidate.admitted &&
+                                        !candidate.superseded
+                                }
+                        check(
+                            latestPending ===
+                                binding,
+                        ) {
+                            "Latest accepted consequence is no longer the newest pending realization"
+                        }
+                    }
+
+                    if (
+                        binding.approach ==
+                        VexExecution.Approach.Earliest
+                    ) {
+                        check(
+                            lane.bindings
+                                .firstOrNull() ===
+                                binding,
+                        ) {
+                            "Earliest accepted consequence is no longer the unresolved earliest realization"
+                        }
+                    }
+                }
+
+            /*
+             * Mark admission before the lazy Job is started so a re-entrant acceptance cannot treat
+             * this binding as still pending. A pre-custody failure rolls the flag back.
+             */
+            binding.admitted =
+                true
+
+            val job =
+                try {
+                    formJob()
+                } catch (
+                    failure:
+                        Throwable,
+                ) {
+                    binding.admitted =
+                        false
+                    throw failure
+                }
+
+            job.invokeOnCompletion {
+                synchronized(
+                    relationshipLock,
+                ) {
+                    binding.relationshipId
+                        ?.let { relationshipId ->
+                            acceptanceLanes[
+                                relationshipId
+                            ]
+                                ?.let { lane ->
+                                    lane.bindings.remove(
+                                        binding,
+                                    )
+                                    if (
+                                        lane.bindings.isEmpty()
+                                    ) {
+                                        acceptanceLanes.remove(
+                                            relationshipId,
+                                        )
+                                    }
+                                }
+                        }
+                }
+            }
+
+            job
         }
 
     /**
