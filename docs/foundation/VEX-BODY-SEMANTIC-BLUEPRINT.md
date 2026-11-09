@@ -1030,10 +1030,9 @@ VexFamily
    ├─ Begin<Family, Effect>
    │  ├─ Effect
    │  └─ Approach
-   ├─ Method<Family, SuccessOutput, FailureOutput>
-   │  └─ specializes VexMethod<SuccessOutput, FailureOutput>
-   └─ MethodFollowUp<Family>
-      compile-time continuation only
+   └─ Method<Family, SuccessOutput, FailureOutput>
+      ├─ specializes VexMethod<SuccessOutput, FailureOutput>
+      └─ carries the exact accepted Begin Effect
 
 VexExecution
     Job / overlap / cancellation / observation mechanics
@@ -1260,51 +1259,50 @@ custody law.
 
 This does not create a new execution root or execution vocabulary.
 
-### launchWith consumes decisions already authored
+### Act.launch consumes decisions already authored
 
-Before this checkpoint ThemeMode realization manually repeated:
+An earlier checkpoint removed manual re-supply of:
 
 ~~~text
 owner = family
 approach = act.begin.approach
 relationshipId = act.relationshipId
-operation = ...
-argument = ...
 ~~~
+
+but implemented that continuation as:
+
+~~~text
+Act.launchWith(root)
+-> MethodFollowUp<Family>
+-> method(boundMethod)
+~~~
+
+That intermediate type owned no semantic meaning and dropped the Effect coordinate from the visible
+continuation. Current source removes it rather than promoting it.
 
 Current accepted Act binds the live Family execution owner during `activate(...)` without putting
-that owner into Act equality/copy semantics.
-
-Then:
+that owner into Act equality/copy semantics. A concrete Method carries the exact accepted Begin
+Effect, then:
 
 ~~~kotlin
-checkNotNull(
-    act.launchWith(
-        executionRoot,
-    ),
-) {
-    "Effect requires an executable Act Begin"
-}
-    .method(
-        boundMethod,
-    )
+act.launch(
+    executionRoot = executionRoot,
+    method = boundMethod,
+)
 ~~~
 
-consumes:
+consumes and verifies:
 
 ~~~text
 accepted Act
 ├─ live Family execution owner
-├─ Begin.Approach
+├─ Begin
+│  ├─ exact Effect === Method.effect
+│  └─ Approach
 └─ RelationshipId
 ~~~
 
-The caller does not choose those values again.
-
-`MethodFollowUp` exists only because Kotlin must return some type from `launchWith(...)` before
-`.method(...)` can be the next legal operation. It owns no semantic truth, no execution lifetime,
-no relationship identity, and no provider behavior. Do not promote it into a Runtime/Scope/Manager
-concept.
+The caller does not choose those values again and no follow-up wrapper sits between Begin and Method.
 
 ### Effect, Method Output, and State remain different
 
@@ -1537,9 +1535,9 @@ Act.Method.Save(
 )
 ~~~
 
-#### Caller re-selects execution relationship
+#### Caller does not re-select execution relationship
 
-Replaced:
+Historical manual form:
 
 ~~~text
 VexExecution.begin(
@@ -1550,10 +1548,14 @@ VexExecution.begin(
 )
 ~~~
 
-with:
+An intermediate checkpoint replaced that with `launchWith(...).method(...)`; current source removes
+the non-semantic follow-up object and keeps the completed relationship visible:
 
 ~~~text
-act.launchWith(executionRoot).method(boundMethod)
+Act.Begin
+-> exact Effect-bound Method
+-> act.launch(executionRoot, boundMethod)
+-> VexExecution
 ~~~
 
 #### Generic result-to-State grammar
@@ -1590,15 +1592,16 @@ accepted Act
         v
 Act.Method.Save(
     ThemeModeStore,
-    same Mode
+    exact accepted Effect.Save
 )
         |
         v
-Act.launchWith(VexExecutionRoot)
+Act.launch(
+    VexExecutionRoot,
+    Method.Save
+)
         |
-        v
-MethodFollowUp.method(Method.Save)
-        |
+        +-> verifies Method.effect === Begin.effect
         +-> consumes owner
         +-> consumes Latest
         +-> consumes RelationshipId
