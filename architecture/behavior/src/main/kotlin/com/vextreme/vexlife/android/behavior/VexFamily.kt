@@ -609,8 +609,6 @@ abstract class VexFamily<
      * be reordered between activate(...) and launch(...).
      */
     private class RealizationBinding(
-        val approach:
-            VexExecution.Approach,
         val relationshipId:
             VexExecution.RelationshipId?,
     ) {
@@ -947,8 +945,6 @@ abstract class VexFamily<
                 VexExecution.Approach.Independent ->
                     realizationBinding =
                         RealizationBinding(
-                            approach =
-                                approach,
                             relationshipId =
                                 null,
                         )
@@ -1008,8 +1004,6 @@ abstract class VexFamily<
                                 ) {
                                     realizationBinding =
                                         RealizationBinding(
-                                            approach =
-                                                approach,
                                             relationshipId =
                                                 relationshipId,
                                         )
@@ -1034,8 +1028,6 @@ abstract class VexFamily<
 
                                 realizationBinding =
                                     RealizationBinding(
-                                        approach =
-                                            approach,
                                         relationshipId =
                                             relationshipId,
                                     )
@@ -1047,8 +1039,6 @@ abstract class VexFamily<
                             VexExecution.Approach.Queued ->
                                 realizationBinding =
                                     RealizationBinding(
-                                        approach =
-                                            approach,
                                         relationshipId =
                                             relationshipId,
                                     )
@@ -1212,13 +1202,13 @@ abstract class VexFamily<
                         }
                     check(
                         lane.approach ==
-                            binding.approach,
+                            begin.approach,
                     ) {
                         "Accepted Act realization Approach no longer matches its acceptance lane"
                     }
 
                     if (
-                        binding.approach ==
+                        begin.approach ==
                         VexExecution.Approach.Queued
                     ) {
                         val firstPending =
@@ -1236,7 +1226,7 @@ abstract class VexFamily<
                     }
 
                     if (
-                        binding.approach ==
+                        begin.approach ==
                         VexExecution.Approach.Latest
                     ) {
                         val latestPending =
@@ -1254,7 +1244,7 @@ abstract class VexFamily<
                     }
 
                     if (
-                        binding.approach ==
+                        begin.approach ==
                         VexExecution.Approach.Earliest
                     ) {
                         check(
