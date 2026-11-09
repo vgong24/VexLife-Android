@@ -33,10 +33,20 @@ internal data class VexStreamCollectionPlaybackRequest(
 )
 
 /**
- * Feature-local Collection playback surface.
+ * Feature-local Collection playback workflow.
  *
- * This is not a Partner Connection. It owns Collection source/order preparation and a disposable
- * VexExecution lifetime, then addresses the actual Player Partner request Connection.
+ * This does not earn a Family: the request resolves one rendered collection payload and does not own
+ * an independently meaningful semantic CURRENT. It is also not a Partner Connection; the actual
+ * outside participant remains [VexStreamPlayerPartner].
+ *
+ * The private [Execution] is the disposable owner of source preparation and the eventual Player
+ * request while the shared [VexExecutionRoot] may outlive this remembered feature surface and host
+ * sibling work. This keeps Latest custody and disposal cancellation inside VexExecution instead of a
+ * feature-created CoroutineScope, SupervisorJob, retained Job field, or raw launch block.
+ *
+ * A failed finite attempt completes and leaves custody, so a later Collection request may be admitted
+ * through the same live workflow. The foundation does not automatically retry the provider request;
+ * only the feature/provider boundary can decide whether repeating a real operation is safe.
  */
 internal class VexStreamCollectionPlayback(
     root:
@@ -89,6 +99,13 @@ internal class VexStreamCollectionPlayback(
         execution.shutdown()
     }
 
+    /**
+     * Exact execution owner for the disposable Collection workflow.
+     *
+     * Play is Latest because a newer collection/order request supersedes unfinished preparation for
+     * an older request. This RelationshipId is local workflow coordination; it is not a Family
+     * identity and is never derived from the request payload or reflected callable name.
+     */
     private class Execution(
         root:
             VexExecutionRoot,
