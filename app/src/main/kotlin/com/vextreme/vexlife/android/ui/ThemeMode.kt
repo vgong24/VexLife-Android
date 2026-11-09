@@ -69,9 +69,11 @@ internal class ThemeModeFamily(
      * observation cannot overwrite a newer accepted semantic selection while that selection's
      * realization remains unsettled.
      *
-     * act(...) remains pure. The realization boundary enters the fence through activateSelection(...)
-     * and leaves it when execution custody terminates (including cancellation) or when custody could
-     * not be established and launch fails synchronously.
+     * activateSelection(...) installs the fence provisionally under this same lock before
+     * activate(...), so no Store observation can race between immediate semantic admission and the
+     * currentness fence becoming visible. Null or thrown activation rolls that provisional value back.
+     * The realization boundary leaves the accepted fence when execution custody terminates (including
+     * cancellation) or when custody could not be established and launch fails synchronously.
      */
     private val selectionObservationLock =
         Any()
