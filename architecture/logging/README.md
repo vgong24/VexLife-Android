@@ -354,7 +354,8 @@ Focused Logger source tests protect:
 - runtime-element distinction;
 - structured semantic/runtime events entering the same chronology.
 
-Repository-owned Gradle/JVM proof is still required on the exact PR #209 candidate before this
-refinement may claim proven integration.
+Repository-owned exact-head proof is required for changes to this Logger integration. PR #209
+remains origin evidence for the accepted Logger refinement; later candidates must prove their own
+integration rather than inheriting that proof by reference.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][LOGGING] -->
