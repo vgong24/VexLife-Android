@@ -400,6 +400,9 @@ internal class ThemeModeFamily(
  * reconciliation. The maintained Store Flow is a separate observation route. They may converge on
  * the same semantic ThemeMode truth only after each route has independently earned that fact;
  * Result and Observation are not interchangeable evidence.
+ *
+ * The Boolean return reports whether the Control was lawfully accepted into this realization path.
+ * It does not report Method success, Store commit success, or durable ThemeMode outcome.
  */
 internal fun activateThemeMode(
     family:
