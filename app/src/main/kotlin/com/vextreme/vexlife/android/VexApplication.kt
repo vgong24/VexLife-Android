@@ -15,6 +15,7 @@ import com.vextreme.vexlife.android.screens.shared.maps.VexMapsNavigationProcess
 import com.vextreme.vexlife.android.screens.shared.maps.VexNavigationSession
 import com.vextreme.vexlife.android.ui.SharedPreferencesThemeModeStore
 import com.vextreme.vexlife.android.ui.ThemeModeStore
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackAdmission
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackConnectionFactory
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerObservationReceiver
@@ -132,6 +133,11 @@ internal class VexApplicationDependencyModule(
     val playerStore =
         PlayerStoreProvider()
 
+    val playbackAdmission =
+        PlaybackAdmissionProvider(
+            playbackFamily,
+        )
+
     val navigationSession =
         NavigationSessionProvider()
 
@@ -155,8 +161,8 @@ internal class VexApplicationDependencyModule(
 
     val playbackConnectionFactory =
         PlaybackConnectionFactoryProvider(
-            playbackFamily =
-                playbackFamily,
+            playbackAdmission =
+                playbackAdmission,
             playbackWidgetRelay =
                 playbackWidgetRelay,
         )
@@ -165,8 +171,8 @@ internal class VexApplicationDependencyModule(
         PlayerObservationReceiverProvider(
             playerStore =
                 playerStore,
-            playbackFamily =
-                playbackFamily,
+            playbackAdmission =
+                playbackAdmission,
             playbackWidgetRelay =
                 playbackWidgetRelay,
         )
@@ -191,6 +197,7 @@ internal class VexApplicationDependencyModule(
             processExecutionRoot,
             playbackFamily,
             playerStore,
+            playbackAdmission,
             navigationSession,
             backgroundServiceRelay,
             playbackWidgetRelay,
@@ -296,6 +303,33 @@ internal class VexApplicationDependencyModule(
         ):
             VexStreamPlayerStore =
             VexStreamPlayerStore()
+    }
+
+    /** Serializes Playback Family admissions with exact immediate relationship consequences. */
+    internal class PlaybackAdmissionProvider(
+        private val playbackFamily:
+            VexDependencyProvider<
+                VexStreamPlaybackFamily
+            >,
+    ) :
+        VexDependencyProvider<
+            VexStreamPlaybackAdmission
+        >(
+            dependencies =
+                listOf(
+                    playbackFamily,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexStreamPlaybackAdmission =
+            VexStreamPlaybackAdmission(
+                dependencies.require(
+                    playbackFamily,
+                ),
+            )
     }
 
     /** One semantic Playback Family shared by UI, Service, and Widget projections. */
@@ -435,9 +469,9 @@ internal class VexApplicationDependencyModule(
      * that consequence path consistent without making the feature connection depend on Widget.
      */
     internal class PlaybackConnectionFactoryProvider(
-        private val playbackFamily:
+        private val playbackAdmission:
             VexDependencyProvider<
-                VexStreamPlaybackFamily
+                VexStreamPlaybackAdmission
             >,
         private val playbackWidgetRelay:
             VexDependencyProvider<
@@ -449,7 +483,7 @@ internal class VexApplicationDependencyModule(
         >(
             dependencies =
                 listOf(
-                    playbackFamily,
+                    playbackAdmission,
                     playbackWidgetRelay,
                 ),
         ) {
@@ -464,9 +498,9 @@ internal class VexApplicationDependencyModule(
                 )
 
             return VexStreamPlaybackConnectionFactory(
-                family =
+                admission =
                     dependencies.require(
-                        playbackFamily,
+                        playbackAdmission,
                     ),
                 onFamilyCurrent = {
                         familyState,
@@ -490,9 +524,9 @@ internal class VexApplicationDependencyModule(
             VexDependencyProvider<
                 VexStreamPlayerStore
             >,
-        private val playbackFamily:
+        private val playbackAdmission:
             VexDependencyProvider<
-                VexStreamPlaybackFamily
+                VexStreamPlaybackAdmission
             >,
         private val playbackWidgetRelay:
             VexDependencyProvider<
@@ -505,7 +539,7 @@ internal class VexApplicationDependencyModule(
             dependencies =
                 listOf(
                     playerStore,
-                    playbackFamily,
+                    playbackAdmission,
                     playbackWidgetRelay,
                 ),
         ) {
@@ -524,9 +558,9 @@ internal class VexApplicationDependencyModule(
                     dependencies.require(
                         playerStore,
                     ),
-                playbackFamily =
+                playbackAdmission =
                     dependencies.require(
-                        playbackFamily,
+                        playbackAdmission,
                     ),
                 onAcceptedCurrent = {
                         playerCurrent,

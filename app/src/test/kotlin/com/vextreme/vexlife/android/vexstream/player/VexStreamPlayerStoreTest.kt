@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.vexstream.player
 
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackAdmission
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackPhase
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
@@ -32,6 +33,10 @@ class VexStreamPlayerStoreTest {
                         playPauseAvailable = true,
                     ),
                 )
+            val admission =
+                VexStreamPlaybackAdmission(
+                    family,
+                )
             var handedOff:
                 Pair<
                     VexStreamPlayerPartner.Current,
@@ -42,8 +47,8 @@ class VexStreamPlayerStoreTest {
                 VexStreamPlayerObservationReceiver(
                     store =
                         store,
-                    playbackFamily =
-                        family,
+                    playbackAdmission =
+                        admission,
                     onAcceptedCurrent = {
                             current,
                             familyState,

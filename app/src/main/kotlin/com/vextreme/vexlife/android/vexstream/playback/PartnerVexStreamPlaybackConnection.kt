@@ -6,8 +6,8 @@ package com.vextreme.vexlife.android.vexstream.playback
  * Provider observation is independent and returns through the process Player Partner Store.
  */
 internal class PartnerVexStreamPlaybackConnection(
-    private val family:
-        VexStreamPlaybackFamily,
+    private val admission:
+        VexStreamPlaybackAdmission,
     private val effectConnection:
         VexStreamPlaybackEffectConnection,
     private val onFamilyCurrent:
@@ -20,16 +20,14 @@ internal class PartnerVexStreamPlaybackConnection(
             VexStreamPlaybackControl,
     ) {
         val act =
-            family
+            admission
                 .activate(
-                    control,
+                    control =
+                        control,
+                    onAdmitted =
+                        onFamilyCurrent,
                 )
                 ?: return
-
-        act.admittedState
-            ?.let(
-                onFamilyCurrent,
-            )
 
         val effect =
             act.effect
@@ -46,8 +44,8 @@ internal class PartnerVexStreamPlaybackConnection(
  * admission -> Widget relationship -> Effect realization sequence.
  */
 internal class VexStreamPlaybackConnectionFactory(
-    private val family:
-        VexStreamPlaybackFamily,
+    private val admission:
+        VexStreamPlaybackAdmission,
     private val onFamilyCurrent:
         (VexStreamPlaybackState) -> Unit =
         {},
@@ -58,8 +56,8 @@ internal class VexStreamPlaybackConnectionFactory(
     ):
         VexStreamPlaybackConnection =
         PartnerVexStreamPlaybackConnection(
-            family =
-                family,
+            admission =
+                admission,
             effectConnection =
                 effectConnection,
             onFamilyCurrent =

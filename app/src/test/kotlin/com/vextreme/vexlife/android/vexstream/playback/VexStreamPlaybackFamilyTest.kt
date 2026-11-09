@@ -19,6 +19,10 @@ class VexStreamPlaybackFamilyTest {
                     playPauseAvailable = true,
                 ),
             )
+        val admission =
+            VexStreamPlaybackAdmission(
+                family,
+            )
         val sequence =
             mutableListOf<String>()
         var admittedState:
@@ -26,8 +30,8 @@ class VexStreamPlaybackFamilyTest {
             null
         val connection =
             PartnerVexStreamPlaybackConnection(
-                family =
-                    family,
+                admission =
+                    admission,
                 effectConnection =
                     VexStreamPlaybackEffectConnection {
                         sequence +=
@@ -60,6 +64,124 @@ class VexStreamPlaybackFamilyTest {
             family.currentState,
             admittedState,
         )
+    }
+
+    @Test
+    fun playbackAdmissionSerializesPostAdmissionCallbacksAcrossOrigins() {
+        val family =
+            VexStreamPlaybackFamily(
+                VexStreamPlaybackState.Media(
+                    playRequested = false,
+                    phase =
+                        VexStreamPlaybackPhase.Ready,
+                    playPauseAvailable = true,
+                ),
+            )
+        val admission =
+            VexStreamPlaybackAdmission(
+                family,
+            )
+        val firstCallbackEntered =
+            java.util.concurrent.CountDownLatch(
+                1,
+            )
+        val releaseFirstCallback =
+            java.util.concurrent.CountDownLatch(
+                1,
+            )
+        val secondStarted =
+            java.util.concurrent.CountDownLatch(
+                1,
+            )
+        val secondAdmitted =
+            java.util.concurrent.CountDownLatch(
+                1,
+            )
+        val executor =
+            java.util.concurrent.Executors
+                .newFixedThreadPool(
+                    2,
+                )
+
+        try {
+            val first =
+                executor.submit {
+                    admission.activate(
+                        control =
+                            VexStreamPlaybackControl.PlayPause,
+                        onAdmitted = {
+                            firstCallbackEntered
+                                .countDown()
+                            releaseFirstCallback
+                                .await(
+                                    5,
+                                    java.util.concurrent.TimeUnit.SECONDS,
+                                )
+                        },
+                    )
+                }
+
+            assertTrue(
+                firstCallbackEntered.await(
+                    5,
+                    java.util.concurrent.TimeUnit.SECONDS,
+                ),
+            )
+
+            val second =
+                executor.submit {
+                    secondStarted
+                        .countDown()
+                    admission.observeExact(
+                        state =
+                            VexStreamPlaybackState.NoMedia,
+                        onAdmitted = {
+                            secondAdmitted
+                                .countDown()
+                        },
+                    )
+                }
+
+            assertTrue(
+                secondStarted.await(
+                    5,
+                    java.util.concurrent.TimeUnit.SECONDS,
+                ),
+            )
+            assertFalse(
+                secondAdmitted.await(
+                    100,
+                    java.util.concurrent.TimeUnit.MILLISECONDS,
+                ),
+            )
+
+            releaseFirstCallback
+                .countDown()
+
+            first.get(
+                5,
+                java.util.concurrent.TimeUnit.SECONDS,
+            )
+            second.get(
+                5,
+                java.util.concurrent.TimeUnit.SECONDS,
+            )
+
+            assertTrue(
+                secondAdmitted.await(
+                    5,
+                    java.util.concurrent.TimeUnit.SECONDS,
+                ),
+            )
+            assertEquals(
+                VexStreamPlaybackState.NoMedia,
+                family.currentState,
+            )
+        } finally {
+            releaseFirstCallback
+                .countDown()
+            executor.shutdownNow()
+        }
     }
 
     @Test
