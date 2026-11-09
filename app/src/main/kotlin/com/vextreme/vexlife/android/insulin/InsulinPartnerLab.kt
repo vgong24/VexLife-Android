@@ -193,10 +193,13 @@ internal class InsulinPartnerLab(
     }
 
     /**
-     * Human/Synthetic Surface -> Family Control -> Effect -> bound Act.Method -> Pump Partner.
+     * Human/Synthetic Surface -> Family Control -> accepted Act -> Begin -> exact Effect ->
+     * bound Act.Method -> Act.launch(...) -> Pump Partner.
      *
-     * Provider acknowledgement updates only the lab diagnostic status. Store and Family State do not
-     * change until a later Pump Signal is received and admitted.
+     * Begin preserves the authored Queued relationship before the concrete Pump Connection is added
+     * as the Method's realization capability. Provider acknowledgement updates only the lab
+     * diagnostic status. Store and Family State do not change until a later Pump Signal is received
+     * and admitted.
      */
     fun requestSyntheticPumpDelivery(
         unitsHundredths:
