@@ -1,10 +1,6 @@
 package com.vextreme.vexlife.android.vexstream.player
 
 import com.vextreme.vexlife.android.behavior.VexPartner
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackAdmission
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackPhase
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
-import com.vextreme.vexlife.android.vexstream.playback.reconcileVexStreamPlaybackObservation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -523,13 +519,6 @@ private fun VexStreamPlayerPartner.Current.Available.withSignal(
 internal class VexStreamPlayerObservationReceiver(
     private val store:
         VexStreamPlayerStore,
-    private val playbackAdmission:
-        VexStreamPlaybackAdmission,
-    private val onAcceptedCurrent:
-        (
-            VexStreamPlayerPartner.Current,
-            VexStreamPlaybackState,
-        ) -> Unit = { _, _ -> },
 ) :
     VexPartner.Connection.Receiver<
         VexStreamPlayerPartner,
@@ -544,28 +533,12 @@ internal class VexStreamPlayerObservationReceiver(
                 VexStreamPlayerPartner.Connection.Observation
             >,
     ) {
-        val admission =
-            store.connectionOpened(
-                connectionId =
-                    connectionId,
-                observations =
-                    observations,
-            )
-
-        if (
-            admission.accepted
-        ) {
-            reconcilePlayback(
-                current =
-                    admission.current,
-                onAdmitted = { familyState ->
-                    onAcceptedCurrent(
-                        admission.current,
-                        familyState,
-                    )
-                },
-            )
-        }
+        store.connectionOpened(
+            connectionId =
+                connectionId,
+            observations =
+                observations,
+        )
     }
 
     suspend fun receive(
@@ -574,38 +547,9 @@ internal class VexStreamPlayerObservationReceiver(
                 VexStreamPlayerPartner.Connection.Observation
             >,
     ) {
-        val admission =
-            store.receive(
-                observations,
-            )
-
-        if (
-            admission.accepted
-        ) {
-            observations
-                .lastSignal<
-                    VexStreamPlayerPartner.Signal.Playback
-                >()
-                ?.let { signal ->
-                    reconcilePlayback(
-                        signal =
-                            signal,
-                        onAdmitted = { familyState ->
-                            onAcceptedCurrent(
-                                admission.current,
-                                familyState,
-                            )
-                        },
-                    )
-                }
-                ?: playbackAdmission
-                    .withCurrent { familyState ->
-                        onAcceptedCurrent(
-                            admission.current,
-                            familyState,
-                        )
-                    }
-        }
+        store.receive(
+            observations,
+        )
     }
 
     override suspend fun receive(
@@ -623,119 +567,9 @@ internal class VexStreamPlayerObservationReceiver(
         connectionId:
             VexStreamPlayerPartner.Connection.Id,
     ) {
-        val admission =
-            store.connectionClosed(
-                connectionId,
-            )
-
-        if (
-            admission.accepted
-        ) {
-            playbackAdmission
-                .observeExact(
-                    state =
-                        VexStreamPlaybackState
-                            .NoMedia,
-                    onAdmitted = { familyState ->
-                        onAcceptedCurrent(
-                            admission.current,
-                            familyState,
-                        )
-                    },
-                )
-        }
-    }
-
-    private fun reconcilePlayback(
-        current:
-            VexStreamPlayerPartner.Current,
-        onAdmitted:
-            (VexStreamPlaybackState) -> Unit,
-    ) {
-        (
-            current as?
-                VexStreamPlayerPartner.Current.Available
+        store.connectionClosed(
+            connectionId,
         )
-            ?.playback
-            ?.let { signal ->
-                reconcilePlayback(
-                    signal =
-                        signal,
-                    onAdmitted =
-                        onAdmitted,
-                )
-            }
-            ?: playbackAdmission
-                .withCurrent(
-                    onAdmitted,
-                )
-    }
-
-    private fun reconcilePlayback(
-        signal:
-            VexStreamPlayerPartner.Signal.Playback,
-        onAdmitted:
-            (VexStreamPlaybackState) -> Unit,
-    ):
-        VexStreamPlaybackState =
-        playbackAdmission
-            .observeProvider(
-                observed =
-                    signal
-                        .toObservedPlaybackState(),
-                onAdmitted =
-                    onAdmitted,
-            )
-    }
-}
-
-private fun VexStreamPlayerPartner.Signal.Playback.toObservedPlaybackState():
-    VexStreamPlaybackState {
-    if (
-        !hasMedia
-    ) {
-        return VexStreamPlaybackState
-            .NoMedia
-    }
-
-    return when (
-        phase
-    ) {
-        VexStreamPlayerPartner.PlaybackPhase.Idle ->
-            VexStreamPlaybackState.Media(
-                playRequested =
-                    playRequested,
-                phase =
-                    VexStreamPlaybackPhase.Idle,
-                playPauseAvailable =
-                    playPauseAvailable,
-            )
-
-        VexStreamPlayerPartner.PlaybackPhase.Buffering ->
-            VexStreamPlaybackState.Media(
-                playRequested =
-                    playRequested,
-                phase =
-                    VexStreamPlaybackPhase.Buffering,
-                playPauseAvailable =
-                    playPauseAvailable,
-            )
-
-        VexStreamPlayerPartner.PlaybackPhase.Ready ->
-            VexStreamPlaybackState.Media(
-                playRequested =
-                    playRequested,
-                phase =
-                    VexStreamPlaybackPhase.Ready,
-                playPauseAvailable =
-                    playPauseAvailable,
-            )
-
-        VexStreamPlayerPartner.PlaybackPhase.Ended ->
-            VexStreamPlaybackState.Ended(
-                restartAvailable =
-                    restartAvailable,
-            )
     }
 }
 

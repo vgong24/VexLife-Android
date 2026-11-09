@@ -45,7 +45,7 @@ import com.vextreme.vexlife.android.VexApplication
 import com.vextreme.vexlife.android.data.vexstream.VexStreamArtworkStore
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackConnectionFactory
+import com.vextreme.vexlife.android.vexstream.playback.PartnerVexStreamPlaybackConnection
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackTrace
@@ -879,16 +879,42 @@ class VexStreamPlaybackWidgetActionCallback :
             when (
                 command
             ) {
-                is VexStreamPlaybackWidgetCommand.Playback ->
-                    appContext
-                        .vexStreamPlaybackConnectionFactory()
-                        .create(
+                is VexStreamPlaybackWidgetCommand.Playback -> {
+                    val application =
+                        appContext as?
+                            VexApplication
+                            ?: error(
+                                "VexStream Widget requires VexApplication as the process composition root",
+                            )
+                    val family =
+                        application
+                            .dependencies
+                            .resolve(
+                                application
+                                    .dependencyModule
+                                    .playbackFamily,
+                            )
+                    val executionRoot =
+                        application
+                            .dependencies
+                            .resolve(
+                                application
+                                    .dependencyModule
+                                    .processExecutionRoot,
+                            )
+
+                    PartnerVexStreamPlaybackConnection(
+                        family =
+                            family,
+                        executionRoot =
+                            executionRoot,
+                        effectConnection =
                             playerConnection,
-                        )
-                        .activate(
-                            command.control,
-                        )
+                    ).activate(
+                        command.control,
+                    )
                         ?.join()
+                }
 
                 is VexStreamPlaybackWidgetCommand.Queue ->
                     PartnerVexStreamQueueConnection(
@@ -1001,24 +1027,6 @@ private fun Context.vexStreamPlaybackWidgetRelay():
             vexApplication
                 .dependencyModule
                 .playbackWidgetRelay,
-        )
-}
-
-private fun Context.vexStreamPlaybackConnectionFactory():
-    VexStreamPlaybackConnectionFactory {
-    val vexApplication =
-        applicationContext as?
-            VexApplication
-            ?: error(
-                "VexStream Widget requires VexApplication as the process composition root",
-            )
-
-    return vexApplication
-        .dependencies
-        .resolve(
-            vexApplication
-                .dependencyModule
-                .playbackConnectionFactory,
         )
 }
 

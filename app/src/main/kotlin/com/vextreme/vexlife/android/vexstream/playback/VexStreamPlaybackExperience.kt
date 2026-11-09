@@ -10,9 +10,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 /**
  * UI-facing membrane for the process-shared VexStream Playback Family.
  *
- * Compose observes one process-current Playback Experience Relay formed from exact Player Store +
- * admitted Playback Family current. Live progress is layered separately from the configuration-
- * lifetime Player Partner Progress connection; neither becomes another semantic truth owner.
+ * Compose observes process-shared Family semantics plus retained Player Partner outside truth.
+ * The configuration-lifetime Player Partner controller Connection only realizes Effects/progress;
+ * it is not another semantic truth owner.
  */
 internal interface VexStreamPlaybackExperience {
     val displayState:
@@ -51,28 +51,28 @@ internal fun rememberVexStreamPlaybackExperience():
     val connection =
         owner.connection
 
-    val relationshipCurrent by
-        owner
-            .playbackExperienceRelay
-            .outputStates
-            .collectAsStateWithLifecycle(
-                initialValue =
-                    owner
-                        .playbackExperienceRelay
-                        .currentOutput,
-            )
     val playback by
-        rememberVexStreamPlaybackReadState(
-            baseReadState =
-                relationshipCurrent
-                    .readState,
-            progressConnection =
-                owner.progressConnection,
-        )
+        rememberVexStreamPlaybackReadState()
+
+    val semanticState by
+        owner
+            .family
+            .states
+            .collectAsStateWithLifecycle()
+
+    val projection =
+        remember(
+            semanticState,
+        ) {
+            owner
+                .family
+                .playbackProjectionFor(
+                    semanticState,
+                )
+        }
 
     val displayState =
-        relationshipCurrent
-            .playbackProjection
+        projection
             .toVexStreamPlaybackDisplayState(
                 playback =
                     playback,

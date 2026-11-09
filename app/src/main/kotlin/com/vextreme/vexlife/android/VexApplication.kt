@@ -15,10 +15,8 @@ import com.vextreme.vexlife.android.screens.shared.maps.VexMapsNavigationProcess
 import com.vextreme.vexlife.android.screens.shared.maps.VexNavigationSession
 import com.vextreme.vexlife.android.ui.SharedPreferencesThemeModeStore
 import com.vextreme.vexlife.android.ui.ThemeModeStore
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackAdmission
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackConnectionFactory
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackExperienceRelay
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
+import com.vextreme.vexlife.android.vexstream.playback.observeVexStreamPlaybackPlayerStore
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerObservationReceiver
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
 import com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetRelay
@@ -80,13 +78,6 @@ class VexApplication :
         dependencies.resolve(
             dependencyModule.backgroundServiceRelay,
         )
-        /*
-         * Seed the Compose Playback relationship before any Service/Controller can begin producing
-         * Player or Control transitions. Later admissions are explicit and reuse this exact current.
-         */
-        dependencies.resolve(
-            dependencyModule.playbackExperienceRelay,
-        )
         dependencies.resolve(
             dependencyModule.playbackWidgetUpdateExecution,
         )
@@ -135,15 +126,15 @@ internal class VexApplicationDependencyModule(
     val processExecutionRoot =
         ProcessExecutionRootProvider()
 
-    val playbackFamily =
-        PlaybackFamilyProvider()
-
     val playerStore =
         PlayerStoreProvider()
 
-    val playbackAdmission =
-        PlaybackAdmissionProvider(
-            playbackFamily,
+    val playbackFamily =
+        PlaybackFamilyProvider(
+            executionRoot =
+                processExecutionRoot,
+            playerStore =
+                playerStore,
         )
 
     val navigationSession =
@@ -161,42 +152,18 @@ internal class VexApplicationDependencyModule(
 
     val playbackWidgetRelay =
         PlaybackWidgetRelayProvider(
-            playerStore =
-                playerStore,
-            playbackFamily =
-                playbackFamily,
-        )
-
-    val playbackExperienceRelay =
-        PlaybackExperienceRelayProvider(
-            playerStore =
-                playerStore,
-            playbackFamily =
-                playbackFamily,
-        )
-
-    val playbackConnectionFactory =
-        PlaybackConnectionFactoryProvider(
-            playbackAdmission =
-                playbackAdmission,
             executionRoot =
                 processExecutionRoot,
-            playbackWidgetRelay =
-                playbackWidgetRelay,
-            playbackExperienceRelay =
-                playbackExperienceRelay,
+            playerStore =
+                playerStore,
+            playbackFamily =
+                playbackFamily,
         )
 
     val playerObservationReceiver =
         PlayerObservationReceiverProvider(
             playerStore =
                 playerStore,
-            playbackAdmission =
-                playbackAdmission,
-            playbackWidgetRelay =
-                playbackWidgetRelay,
-            playbackExperienceRelay =
-                playbackExperienceRelay,
         )
 
     val playbackWidgetUpdateExecution =
@@ -217,14 +184,11 @@ internal class VexApplicationDependencyModule(
             repositories,
             themeModeStore,
             processExecutionRoot,
-            playbackFamily,
             playerStore,
-            playbackAdmission,
+            playbackFamily,
             navigationSession,
             backgroundServiceRelay,
             playbackWidgetRelay,
-            playbackExperienceRelay,
-            playbackConnectionFactory,
             playerObservationReceiver,
             playbackWidgetUpdateExecution,
         )
@@ -328,44 +292,49 @@ internal class VexApplicationDependencyModule(
             VexStreamPlayerStore()
     }
 
-    /** Serializes Playback Family admissions with exact immediate relationship consequences. */
-    internal class PlaybackAdmissionProvider(
-        private val playbackFamily:
+    /** One semantic Playback Family, with Player Store observation bound at process lifetime. */
+    internal class PlaybackFamilyProvider(
+        private val executionRoot:
             VexDependencyProvider<
-                VexStreamPlaybackFamily
+                VexExecutionRoot
+            >,
+        private val playerStore:
+            VexDependencyProvider<
+                VexStreamPlayerStore
             >,
     ) :
         VexDependencyProvider<
-            VexStreamPlaybackAdmission
+            VexStreamPlaybackFamily
         >(
             dependencies =
                 listOf(
-                    playbackFamily,
+                    executionRoot,
+                    playerStore,
                 ),
         ) {
         override fun create(
             dependencies:
                 VexDependencyBuildScope,
         ):
-            VexStreamPlaybackAdmission =
-            VexStreamPlaybackAdmission(
-                dependencies.require(
-                    playbackFamily,
-                ),
-            )
-    }
+            VexStreamPlaybackFamily {
+            val family =
+                VexStreamPlaybackFamily()
 
-    /** One semantic Playback Family shared by UI, Service, and Widget projections. */
-    internal class PlaybackFamilyProvider :
-        VexDependencyProvider<
-            VexStreamPlaybackFamily
-        >() {
-        override fun create(
-            dependencies:
-                VexDependencyBuildScope,
-        ):
-            VexStreamPlaybackFamily =
-            VexStreamPlaybackFamily()
+            observeVexStreamPlaybackPlayerStore(
+                family =
+                    family,
+                store =
+                    dependencies.require(
+                        playerStore,
+                    ),
+                executionRoot =
+                    dependencies.require(
+                        executionRoot,
+                    ),
+            )
+
+            return family
+        }
     }
 
     /**
@@ -450,6 +419,10 @@ internal class VexApplicationDependencyModule(
      * remain the rightful owners of their source truths.
      */
     internal class PlaybackWidgetRelayProvider(
+        private val executionRoot:
+            VexDependencyProvider<
+                VexExecutionRoot
+            >,
         private val playerStore:
             VexDependencyProvider<
                 VexStreamPlayerStore
@@ -464,6 +437,7 @@ internal class VexApplicationDependencyModule(
         >(
             dependencies =
                 listOf(
+                    executionRoot,
                     playerStore,
                     playbackFamily,
                 ),
@@ -474,149 +448,26 @@ internal class VexApplicationDependencyModule(
         ):
             VexStreamPlaybackWidgetRelay =
             VexStreamPlaybackWidgetRelay(
-                playerStore =
-                    dependencies.require(
-                        playerStore,
-                    ),
-                playbackFamily =
-                    dependencies.require(
-                        playbackFamily,
-                    ),
-            )
-    }
-
-    /** Process-current coherent relationship consumed by Compose Playback presentation. */
-    internal class PlaybackExperienceRelayProvider(
-        private val playerStore:
-            VexDependencyProvider<
-                VexStreamPlayerStore
-            >,
-        private val playbackFamily:
-            VexDependencyProvider<
-                VexStreamPlaybackFamily
-            >,
-    ) :
-        VexDependencyProvider<
-            VexStreamPlaybackExperienceRelay
-        >(
-            dependencies =
-                listOf(
-                    playerStore,
-                    playbackFamily,
-                ),
-        ) {
-        override fun create(
-            dependencies:
-                VexDependencyBuildScope,
-        ):
-            VexStreamPlaybackExperienceRelay =
-            VexStreamPlaybackExperienceRelay(
-                playerStore =
-                    dependencies.require(
-                        playerStore,
-                    ),
-                playbackFamily =
-                    dependencies.require(
-                        playbackFamily,
-                    ),
-            )
-    }
-
-    /**
-     * One construction path for Playback Controls across UI and Widget callers.
-     *
-     * Family admission is projected to both consumer-owned Playback relationship currents before
-     * Effect realization; the factory keeps that consequence path consistent without making the
-     * feature connection depend on either UI or Widget implementation.
-     */
-    internal class PlaybackConnectionFactoryProvider(
-        private val playbackAdmission:
-            VexDependencyProvider<
-                VexStreamPlaybackAdmission
-            >,
-        private val executionRoot:
-            VexDependencyProvider<
-                VexExecutionRoot
-            >,
-        private val playbackWidgetRelay:
-            VexDependencyProvider<
-                VexStreamPlaybackWidgetRelay
-            >,
-        private val playbackExperienceRelay:
-            VexDependencyProvider<
-                VexStreamPlaybackExperienceRelay
-            >,
-    ) :
-        VexDependencyProvider<
-            VexStreamPlaybackConnectionFactory
-        >(
-            dependencies =
-                listOf(
-                    playbackAdmission,
-                    executionRoot,
-                    playbackWidgetRelay,
-                    playbackExperienceRelay,
-                ),
-        ) {
-        override fun create(
-            dependencies:
-                VexDependencyBuildScope,
-        ):
-            VexStreamPlaybackConnectionFactory {
-            val widgetRelay =
-                dependencies.require(
-                    playbackWidgetRelay,
-                )
-            val experienceRelay =
-                dependencies.require(
-                    playbackExperienceRelay,
-                )
-
-            return VexStreamPlaybackConnectionFactory(
-                admission =
-                    dependencies.require(
-                        playbackAdmission,
-                    ),
                 executionRoot =
                     dependencies.require(
                         executionRoot,
                     ),
-                onFamilyCurrent = {
-                        familyState,
-                        ->
-                    widgetRelay.admitFamilyCurrent(
-                        familyState,
-                    )
-                    experienceRelay.admitFamilyCurrent(
-                        familyState,
-                    )
-                },
+                playerStore =
+                    dependencies.require(
+                        playerStore,
+                    ),
+                playbackFamily =
+                    dependencies.require(
+                        playbackFamily,
+                    ),
             )
-        }
     }
 
-    /**
-     * Process-lived Player Observation admission plus post-Family-reconciliation projection handoff.
-     *
-     * Composition wires the accepted round trip to both consumer-owned Playback relationship
-     * currents without making Player or Playback source code depend on UI or Widget implementation.
-     */
+    /** Player Partner Observation handoff into the Player Store. */
     internal class PlayerObservationReceiverProvider(
         private val playerStore:
             VexDependencyProvider<
                 VexStreamPlayerStore
-            >,
-        private val playbackAdmission:
-            VexDependencyProvider<
-                VexStreamPlaybackAdmission
-            >,
-        private val playbackWidgetRelay:
-            VexDependencyProvider<
-                VexStreamPlaybackWidgetRelay
-            >,
-        private val playbackExperienceRelay:
-            VexDependencyProvider<
-                VexStreamPlaybackExperienceRelay
             >,
     ) :
         VexDependencyProvider<
@@ -625,53 +476,19 @@ internal class VexApplicationDependencyModule(
             dependencies =
                 listOf(
                     playerStore,
-                    playbackAdmission,
-                    playbackWidgetRelay,
-                    playbackExperienceRelay,
                 ),
         ) {
         override fun create(
             dependencies:
                 VexDependencyBuildScope,
         ):
-            VexStreamPlayerObservationReceiver {
-            val widgetRelay =
-                dependencies.require(
-                    playbackWidgetRelay,
-                )
-            val experienceRelay =
-                dependencies.require(
-                    playbackExperienceRelay,
-                )
-
-            return VexStreamPlayerObservationReceiver(
+            VexStreamPlayerObservationReceiver =
+            VexStreamPlayerObservationReceiver(
                 store =
                     dependencies.require(
                         playerStore,
                     ),
-                playbackAdmission =
-                    dependencies.require(
-                        playbackAdmission,
-                    ),
-                onAcceptedCurrent = {
-                        playerCurrent,
-                        familyState,
-                        ->
-                    widgetRelay.admitProviderRoundTrip(
-                        playerCurrent =
-                            playerCurrent,
-                        familyState =
-                            familyState,
-                    )
-                    experienceRelay.admitProviderRoundTrip(
-                        playerCurrent =
-                            playerCurrent,
-                        familyState =
-                            familyState,
-                    )
-                },
             )
-        }
     }
 
     /**

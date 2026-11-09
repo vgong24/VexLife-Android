@@ -2,8 +2,8 @@ package com.vextreme.vexlife.android.vexstream.playback
 
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -14,79 +14,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VexStreamPlaybackFamilyTest {
-    @Test
-    fun partnerConnectionPublishesAdmittedFamilyCurrentBeforeEffectRealization() =
-        runBlocking {
-        val family =
-            VexStreamPlaybackFamily(
-                VexStreamPlaybackState.Media(
-                    playRequested = false,
-                    phase =
-                        VexStreamPlaybackPhase.Ready,
-                    playPauseAvailable = true,
-                ),
-            )
-        val admission =
-            VexStreamPlaybackAdmission(
-                family,
-            )
-        val root =
-            VexExecutionRoot(
-                dispatcher =
-                    Dispatchers.Unconfined,
-            )
-        val sequence =
-            mutableListOf<String>()
-        var admittedState:
-            VexStreamPlaybackState? =
-            null
-        val connection =
-            PartnerVexStreamPlaybackConnection(
-                admission =
-                    admission,
-                executionRoot =
-                    root,
-                effectConnection =
-                    VexStreamPlaybackEffectConnection {
-                        sequence +=
-                            "effect"
-                        assertEquals(
-                            family.currentState,
-                            admittedState,
-                        )
-                    },
-                onFamilyCurrent = { state ->
-                    sequence +=
-                        "state"
-                    admittedState =
-                        state
-                },
-            )
-
-        val job =
-            requireNotNull(
-                connection.activate(
-                    VexStreamPlaybackControl.PlayPause,
-                ),
-            )
-        job.join()
-
-        assertEquals(
-            listOf(
-                "state",
-                "effect",
-            ),
-            sequence,
-        )
-        assertEquals(
-            family.currentState,
-            admittedState,
-        )
-        root.joinStopAll(
-            "test complete",
-        )
-    }
-
     @Test
     fun acceptedLatestActUsesVexExecutionToCancelTheOlderPlaybackRealization() =
         runBlocking {
@@ -101,10 +28,6 @@ class VexStreamPlaybackFamilyTest {
                         playPauseAvailable = true,
                     ),
                 )
-            val admission =
-                VexStreamPlaybackAdmission(
-                    family,
-                )
             val firstStarted =
                 CompletableDeferred<Unit>()
             val firstCancelled =
@@ -117,8 +40,8 @@ class VexStreamPlaybackFamilyTest {
                 0
             val connection =
                 PartnerVexStreamPlaybackConnection(
-                    admission =
-                        admission,
+                    family =
+                        family,
                     executionRoot =
                         root,
                     effectConnection =
@@ -185,7 +108,7 @@ class VexStreamPlaybackFamilyTest {
         }
 
     @Test
-    fun playbackAdmissionSerializesPostAdmissionCallbacksAcrossOrigins() {
+    fun providerObservationCannotEraseANewerPendingPlayPause() {
         val family =
             VexStreamPlaybackFamily(
                 VexStreamPlaybackState.Media(
@@ -195,111 +118,40 @@ class VexStreamPlaybackFamilyTest {
                     playPauseAvailable = true,
                 ),
             )
-        val admission =
-            VexStreamPlaybackAdmission(
-                family,
-            )
-        val firstCallbackEntered =
-            java.util.concurrent.CountDownLatch(
-                1,
-            )
-        val releaseFirstCallback =
-            java.util.concurrent.CountDownLatch(
-                1,
-            )
-        val secondStarted =
-            java.util.concurrent.CountDownLatch(
-                1,
-            )
-        val secondAdmitted =
-            java.util.concurrent.CountDownLatch(
-                1,
-            )
-        val executor =
-            java.util.concurrent.Executors
-                .newFixedThreadPool(
-                    2,
-                )
 
-        try {
-            val first =
-                executor.submit {
-                    admission.activate(
-                        control =
-                            VexStreamPlaybackControl.PlayPause,
-                        onAdmitted = {
-                            firstCallbackEntered
-                                .countDown()
-                            releaseFirstCallback
-                                .await(
-                                    5,
-                                    java.util.concurrent.TimeUnit.SECONDS,
-                                )
-                        },
-                    )
-                }
+        family.activatePlayback(
+            VexStreamPlaybackControl.PlayPause,
+        )
 
-            assertTrue(
-                firstCallbackEntered.await(
-                    5,
-                    java.util.concurrent.TimeUnit.SECONDS,
+        val stale =
+            family.observePlayer(
+                playbackSignal(
+                    playRequested = false,
                 ),
-            )
+            ) as
+                VexStreamPlaybackState.Media
 
-            val second =
-                executor.submit {
-                    secondStarted
-                        .countDown()
-                    admission.observeExact(
-                        state =
-                            VexStreamPlaybackState.NoMedia,
-                        onAdmitted = {
-                            secondAdmitted
-                                .countDown()
-                        },
-                    )
-                }
+        assertTrue(
+            stale.playRequested,
+        )
+        assertTrue(
+            stale.requestPending,
+        )
 
-            assertTrue(
-                secondStarted.await(
-                    5,
-                    java.util.concurrent.TimeUnit.SECONDS,
+        val acknowledged =
+            family.observePlayer(
+                playbackSignal(
+                    playRequested = true,
                 ),
-            )
-            assertFalse(
-                secondAdmitted.await(
-                    100,
-                    java.util.concurrent.TimeUnit.MILLISECONDS,
-                ),
-            )
+            ) as
+                VexStreamPlaybackState.Media
 
-            releaseFirstCallback
-                .countDown()
-
-            first.get(
-                5,
-                java.util.concurrent.TimeUnit.SECONDS,
-            )
-            second.get(
-                5,
-                java.util.concurrent.TimeUnit.SECONDS,
-            )
-
-            assertTrue(
-                secondAdmitted.await(
-                    5,
-                    java.util.concurrent.TimeUnit.SECONDS,
-                ),
-            )
-            assertEquals(
-                VexStreamPlaybackState.NoMedia,
-                family.currentState,
-            )
-        } finally {
-            releaseFirstCallback
-                .countDown()
-            executor.shutdownNow()
-        }
+        assertTrue(
+            acknowledged.playRequested,
+        )
+        assertFalse(
+            acknowledged.requestPending,
+        )
     }
 
     @Test
@@ -309,21 +161,18 @@ class VexStreamPlaybackFamilyTest {
                 VexStreamPlaybackState.Media(
                     playRequested = false,
                     phase =
-                        VexStreamPlaybackPhase
-                            .Buffering,
+                        VexStreamPlaybackPhase.Buffering,
                     playPauseAvailable = true,
                 ),
             )
 
         val play =
             family.activate(
-                VexStreamPlaybackControl
-                    .PlayPause,
+                VexStreamPlaybackControl.PlayPause,
             )
 
         assertSame(
-            VexStreamPlaybackEffect
-                .RequestPlay,
+            VexStreamPlaybackEffect.RequestPlay,
             play?.effect,
         )
         assertEquals(
@@ -335,8 +184,7 @@ class VexStreamPlaybackFamilyTest {
                 playRequested = true,
                 requestPending = true,
                 phase =
-                    VexStreamPlaybackPhase
-                        .Buffering,
+                    VexStreamPlaybackPhase.Buffering,
                 playPauseAvailable = true,
             ),
             family.currentState,
@@ -344,13 +192,11 @@ class VexStreamPlaybackFamilyTest {
 
         val pause =
             family.activate(
-                VexStreamPlaybackControl
-                    .PlayPause,
+                VexStreamPlaybackControl.PlayPause,
             )
 
         assertSame(
-            VexStreamPlaybackEffect
-                .RequestPause,
+            VexStreamPlaybackEffect.RequestPause,
             pause?.effect,
         )
         assertEquals(
@@ -377,15 +223,13 @@ class VexStreamPlaybackFamilyTest {
 
         assertFalse(
             family.isAvailable(
-                VexStreamPlaybackControl
-                    .PlayPause,
+                VexStreamPlaybackControl.PlayPause,
             ),
         )
         assertEquals(
             null,
             family.activate(
-                VexStreamPlaybackControl
-                    .PlayPause,
+                VexStreamPlaybackControl.PlayPause,
             ),
         )
     }
@@ -401,27 +245,21 @@ class VexStreamPlaybackFamilyTest {
 
         assertTrue(
             available.isAvailable(
-                VexStreamPlaybackControl
-                    .PlayPause,
+                VexStreamPlaybackControl.PlayPause,
             ),
         )
         val restart =
-            available
-                .activate(
-                    VexStreamPlaybackControl
-                        .PlayPause,
-                )
+            available.activate(
+                VexStreamPlaybackControl.PlayPause,
+            )
 
         assertSame(
-            VexStreamPlaybackEffect
-                .RestartCurrent,
-            restart
-                ?.effect,
+            VexStreamPlaybackEffect.RestartCurrent,
+            restart?.effect,
         )
         assertEquals(
             VexExecution.Approach.Latest,
-            restart
-                ?.approach,
+            restart?.approach,
         )
         assertEquals(
             VexStreamPlaybackState.Ended(
@@ -440,11 +278,25 @@ class VexStreamPlaybackFamilyTest {
 
         assertFalse(
             blocked.isAvailable(
-                VexStreamPlaybackControl
-                    .PlayPause,
+                VexStreamPlaybackControl.PlayPause,
             ),
         )
     }
+
+    private fun playbackSignal(
+        playRequested:
+            Boolean,
+    ):
+        VexStreamPlayerPartner.Signal.Playback =
+        VexStreamPlayerPartner.Signal.Playback(
+            hasMedia = true,
+            playRequested =
+                playRequested,
+            phase =
+                VexStreamPlayerPartner.PlaybackPhase.Ready,
+            playPauseAvailable = true,
+            restartAvailable = true,
+        )
 }
 
 // [VXG RealForever][VEXSTREAM][PLAYBACK][DIRECT-FAMILY]

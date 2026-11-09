@@ -1,9 +1,5 @@
 package com.vextreme.vexlife.android.vexstream.player
 
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackAdmission
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackPhase
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.take
@@ -19,44 +15,14 @@ import org.junit.Test
 
 class VexStreamPlayerStoreTest {
     @Test
-    fun receiverHandsOffCurrentOnlyAfterPlaybackFamilyReconciliation() =
+    fun receiverAdmitsPartnerObservationsToPlayerStore() =
         runBlocking {
             val store =
                 VexStreamPlayerStore()
-            val family =
-                VexStreamPlaybackFamily(
-                    VexStreamPlaybackState.Media(
-                        playRequested = true,
-                        requestPending = true,
-                        phase =
-                            VexStreamPlaybackPhase.Ready,
-                        playPauseAvailable = true,
-                    ),
-                )
-            val admission =
-                VexStreamPlaybackAdmission(
-                    family,
-                )
-            var handedOff:
-                Pair<
-                    VexStreamPlayerPartner.Current,
-                    VexStreamPlaybackState
-                >? =
-                null
             val receiver =
                 VexStreamPlayerObservationReceiver(
                     store =
                         store,
-                    playbackAdmission =
-                        admission,
-                    onAcceptedCurrent = {
-                            current,
-                            familyState,
-                            ->
-                        handedOff =
-                            current to
-                                familyState
-                    },
                 )
             val connectionId =
                 id(
@@ -78,32 +44,17 @@ class VexStreamPlayerStoreTest {
                                 playback =
                                     playback(
                                         playRequested =
-                                            false,
+                                            true,
                                     ),
                             ),
                     ),
             )
 
-            val accepted =
-                requireNotNull(
-                    handedOff,
-                )
-            assertEquals(
-                store.current,
-                accepted.first,
-            )
-            assertEquals(
-                family.currentState,
-                accepted.second,
-            )
-            val state =
-                accepted.second as
-                    VexStreamPlaybackState.Media
+            val current =
+                store.current as
+                    VexStreamPlayerPartner.Current.Available
             assertTrue(
-                state.playRequested,
-            )
-            assertTrue(
-                state.requestPending,
+                current.playback.playRequested,
             )
         }
 

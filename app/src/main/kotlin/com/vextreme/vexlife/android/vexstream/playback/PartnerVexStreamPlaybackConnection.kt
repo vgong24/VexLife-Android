@@ -13,15 +13,12 @@ import kotlinx.coroutines.Job
  * RelationshipId and the live Family execution owner are not reconstructed or discarded here.
  */
 internal class PartnerVexStreamPlaybackConnection(
-    private val admission:
-        VexStreamPlaybackAdmission,
+    private val family:
+        VexStreamPlaybackFamily,
     private val executionRoot:
         VexExecutionRoot,
     private val effectConnection:
         VexStreamPlaybackEffectConnection,
-    private val onFamilyCurrent:
-        (VexStreamPlaybackState) -> Unit =
-        {},
 ) :
     VexStreamPlaybackConnection {
     override fun activate(
@@ -30,12 +27,9 @@ internal class PartnerVexStreamPlaybackConnection(
     ):
         Job? {
         val act =
-            admission
-                .activate(
-                    control =
-                        control,
-                    onAdmitted =
-                        onFamilyCurrent,
+            family
+                .activatePlayback(
+                    control,
                 )
                 ?: return null
         val effect =
@@ -84,35 +78,5 @@ private class VexStreamPlaybackEffectMethod(
     }
 }
 
-/**
- * Feature-local construction boundary that keeps every Playback Control path on the same:
- *
- * Family admission -> bounded relationship consequence -> accepted Act execution -> Partner request.
- */
-internal class VexStreamPlaybackConnectionFactory(
-    private val admission:
-        VexStreamPlaybackAdmission,
-    private val executionRoot:
-        VexExecutionRoot,
-    private val onFamilyCurrent:
-        (VexStreamPlaybackState) -> Unit =
-        {},
-) {
-    fun create(
-        effectConnection:
-            VexStreamPlaybackEffectConnection,
-    ):
-        VexStreamPlaybackConnection =
-        PartnerVexStreamPlaybackConnection(
-            admission =
-                admission,
-            executionRoot =
-                executionRoot,
-            effectConnection =
-                effectConnection,
-            onFamilyCurrent =
-                onFamilyCurrent,
-        )
-}
 
 // [VXG RealForever][VEXSTREAM][PLAYBACK][PLAYER-PARTNER]

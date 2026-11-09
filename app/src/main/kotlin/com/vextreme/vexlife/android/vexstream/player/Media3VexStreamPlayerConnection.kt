@@ -13,16 +13,13 @@ internal class Media3VexStreamPlayerConnection(
         Player,
     private val receiver:
         VexStreamPlayerObservationReceiver,
-    executionRoot:
+    private val executionRoot:
         VexExecutionRoot,
     private val clock:
         () -> Long = {
             System.currentTimeMillis()
         },
 ) :
-    VexExecution(
-        executionRoot,
-    ),
     VexStreamPlayerPartner.Connection,
     AutoCloseable {
     private object InboundAdmission :
@@ -184,7 +181,11 @@ internal class Media3VexStreamPlayerConnection(
         delivery:
             Delivery,
     ) {
-        beginQueued(
+        VexExecution.beginQueued(
+            executionRoot =
+                executionRoot,
+            owner =
+                this,
             relationshipId =
                 InboundAdmission,
             operation =
