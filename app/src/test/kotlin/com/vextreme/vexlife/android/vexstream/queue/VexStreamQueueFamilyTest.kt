@@ -1,10 +1,8 @@
 package com.vextreme.vexlife.android.vexstream.queue
 
 import com.vextreme.vexlife.android.execution.VexExecution
-import kotlin.random.Random
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -147,39 +145,7 @@ class VexStreamQueueFamilyTest {
         )
     }
 
-    @Test
-    fun shuffleTargetOrderPreservesPlayedPrefixAndChangesFutureOrder() {
-        val order =
-            vexStreamQueueShuffleTargetOrder(
-                itemCount = 5,
-                currentIndex = 1,
-                random = Random(0),
-            )
 
-        assertEquals(
-            listOf(
-                0,
-                1,
-            ),
-            order.take(2),
-        )
-        assertEquals(
-            setOf(
-                2,
-                3,
-                4,
-            ),
-            order.drop(2).toSet(),
-        )
-        assertNotEquals(
-            listOf(
-                2,
-                3,
-                4,
-            ),
-            order.drop(2),
-        )
-    }
 }
 
 // [VXG RealForever][VEXSTREAM][QUEUE][DIRECT-FAMILY][PROOF]

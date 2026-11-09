@@ -323,7 +323,6 @@ VexStreamPresentationRefs
                                 null
                         val reorderEnabled =
                             queueCurrent
-                                ?.navigation
                                 ?.reorderAvailable == true &&
                                 queueReorderConnection !=
                                 null

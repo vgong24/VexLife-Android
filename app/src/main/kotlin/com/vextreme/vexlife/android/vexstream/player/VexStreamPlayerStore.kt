@@ -49,7 +49,14 @@ internal class VexStreamPlayerStore {
             VexStreamPlayerPartner.Signal.QueueItems,
         val navigation:
             VexStreamPlayerPartner.Signal.QueueNavigation,
-    )
+    ) {
+        val reorderAvailable:
+            Boolean
+            get() =
+                items.mediaIds.size >
+                    1 &&
+                    navigation.changeMediaItemsAvailable
+    }
 
     private sealed interface Update {
         data class ConnectionOpened(

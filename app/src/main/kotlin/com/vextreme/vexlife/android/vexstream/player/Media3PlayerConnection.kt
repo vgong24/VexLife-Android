@@ -6,7 +6,6 @@ import androidx.media3.common.Player
 import com.vextreme.vexlife.android.behavior.VexPartner
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
-import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueShuffleAvailable
 
 internal class Media3PlayerConnection(
     private val player:
@@ -420,18 +419,7 @@ private fun Player.toVexStreamPlayerQueueNavigationSignal():
                 Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
             ) &&
                 hasNextMediaItem(),
-        shuffleAvailable =
-            vexStreamQueueShuffleAvailable(
-                mediaItemCount =
-                    mediaItemCount,
-                currentIndex =
-                    currentMediaItemIndex,
-                canChangeMediaItems =
-                    isCommandAvailable(
-                        Player.COMMAND_CHANGE_MEDIA_ITEMS,
-                    ),
-            ),
-        clearAvailable =
+        changeMediaItemsAvailable =
             isCommandAvailable(
                 Player.COMMAND_CHANGE_MEDIA_ITEMS,
             ),
@@ -443,12 +431,6 @@ private fun Player.toVexStreamPlayerQueueNavigationSignal():
                 ) &&
                 isCommandAvailable(
                     Player.COMMAND_PLAY_PAUSE,
-                ),
-        reorderAvailable =
-            mediaItemCount >
-                1 &&
-                isCommandAvailable(
-                    Player.COMMAND_CHANGE_MEDIA_ITEMS,
                 ),
     )
 

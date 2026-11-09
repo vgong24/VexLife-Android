@@ -12,12 +12,12 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackService
-import com.vextreme.vexlife.android.vexstream.queue.shuffleVexStreamFutureQueue
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.android.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
+import kotlin.random.Random
 
 /**
  * Media3 controller realization of the request/progress sides of the same VexStream Player Partner.
@@ -279,8 +279,115 @@ internal class Media3ControllerConnection(
         withContext(
             providerDispatcher,
         ) {
-            controller.shuffleVexStreamFutureQueue()
+            shuffleFutureQueue()
         }
+    }
+
+    private fun shuffleFutureQueue(
+        random:
+            Random =
+            Random.Default,
+    ):
+        Boolean {
+        val count =
+            controller.mediaItemCount
+        val currentIndex =
+            controller.currentMediaItemIndex
+
+        if (
+            !shuffleFutureAvailable(
+                mediaItemCount =
+                    count,
+                currentIndex =
+                    currentIndex,
+                canChangeMediaItems =
+                    controller.isCommandAvailable(
+                        Player.COMMAND_CHANGE_MEDIA_ITEMS,
+                    ),
+            )
+        ) {
+            return false
+        }
+
+        val lockedThrough =
+            currentIndex.coerceIn(
+                -1,
+                count -
+                    1,
+            )
+        val futureStart =
+            (lockedThrough + 1)
+                .coerceIn(
+                    0,
+                    count,
+                )
+        val natural =
+            (futureStart until count)
+                .toList()
+        val randomized =
+            natural.shuffled(
+                random,
+            )
+        val changed =
+            if (
+                randomized ==
+                natural
+            ) {
+                randomized.drop(
+                    1,
+                ) +
+                    randomized.first()
+            } else {
+                randomized
+            }
+        val shuffledFuture =
+            changed.map(
+                controller::getMediaItemAt,
+            )
+
+        controller.shuffleModeEnabled =
+            false
+        controller.replaceMediaItems(
+            futureStart,
+            count,
+            shuffledFuture,
+        )
+        return true
+    }
+
+    private fun shuffleFutureAvailable(
+        mediaItemCount:
+            Int,
+        currentIndex:
+            Int,
+        canChangeMediaItems:
+            Boolean,
+    ):
+        Boolean {
+        if (
+            !canChangeMediaItems ||
+            mediaItemCount <=
+                1
+        ) {
+            return false
+        }
+
+        val lockedThrough =
+            currentIndex.coerceIn(
+                -1,
+                mediaItemCount -
+                    1,
+            )
+        val futureStart =
+            (lockedThrough + 1)
+                .coerceIn(
+                    0,
+                    mediaItemCount,
+                )
+
+        return mediaItemCount -
+            futureStart >
+            1
     }
 
     override suspend fun clearQueue() {

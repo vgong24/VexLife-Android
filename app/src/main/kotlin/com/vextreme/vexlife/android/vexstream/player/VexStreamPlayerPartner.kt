@@ -174,14 +174,9 @@ internal object VexStreamPlayerPartner :
                 Boolean,
             val nextAvailable:
                 Boolean,
-            val shuffleAvailable:
-                Boolean,
-            val clearAvailable:
+            val changeMediaItemsAvailable:
                 Boolean,
             val playOccurrenceAvailable:
-                Boolean =
-                false,
-            val reorderAvailable:
                 Boolean =
                 false,
         ) :

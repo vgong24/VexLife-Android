@@ -12,7 +12,6 @@ import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerConnectionViewModel
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
-import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueShuffleTargetOrder
 import com.vextreme.vexlife.android.vexstream.track.VexStreamTrackPlaybackResolver
 import com.vextreme.vexlife.android.vexstream.track.prepareVexStreamTrackArtworkBestEffort
 import kotlin.random.Random
@@ -305,12 +304,35 @@ internal fun vexStreamCollectionPlaybackTargetOrder(
         VexStreamCollectionPlaybackOrder.Natural ->
             (0 until itemCount).toList()
 
-        VexStreamCollectionPlaybackOrder.Shuffled ->
-            vexStreamQueueShuffleTargetOrder(
-                itemCount = itemCount,
-                currentIndex = -1,
-                random = random,
-            )
+        VexStreamCollectionPlaybackOrder.Shuffled -> {
+            val natural =
+                (0 until itemCount)
+                    .toList()
+
+            if (
+                natural.size <=
+                1
+            ) {
+                natural
+            } else {
+                val randomized =
+                    natural.shuffled(
+                        random,
+                    )
+
+                if (
+                    randomized ==
+                    natural
+                ) {
+                    randomized.drop(
+                        1,
+                    ) +
+                        randomized.first()
+                } else {
+                    randomized
+                }
+            }
+        }
     }
 }
 

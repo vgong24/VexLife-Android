@@ -502,9 +502,7 @@ class VexStreamPlayerStoreTest {
                     false,
                 nextAvailable =
                     false,
-                shuffleAvailable =
-                    false,
-                clearAvailable =
+                changeMediaItemsAvailable =
                     queueItems.mediaIds.isNotEmpty(),
             ),
             VexStreamPlayerPartner.Signal.Repeat(

@@ -283,13 +283,66 @@ internal fun VexStreamPlayerStore.QueueSnapshot?.toVexStreamQueueState():
                     queue.navigation
                         .nextAvailable,
                 shuffleAvailable =
-                    queue.navigation
-                        .shuffleAvailable,
+                    vexStreamQueueShuffleAvailable(
+                        mediaItemCount =
+                            queue.items
+                                .mediaIds
+                                .size,
+                        currentIndex =
+                            queue.navigation
+                                .currentIndex,
+                        canChangeMediaItems =
+                            queue.navigation
+                                .changeMediaItemsAvailable,
+                    ),
                 clearAvailable =
-                    queue.navigation
-                        .clearAvailable,
+                    queue.items
+                        .mediaIds
+                        .isNotEmpty() &&
+                        queue.navigation
+                            .changeMediaItemsAvailable,
             )
         }
         ?: VexStreamQueueState.Empty
+
+internal fun vexStreamQueueShuffleAvailable(
+    mediaItemCount:
+        Int,
+    currentIndex:
+        Int,
+    canChangeMediaItems:
+        Boolean,
+):
+    Boolean {
+    require(
+        mediaItemCount >=
+            0,
+    )
+
+    if (
+        !canChangeMediaItems ||
+        mediaItemCount <=
+            1
+    ) {
+        return false
+    }
+
+    val lockedThrough =
+        currentIndex.coerceIn(
+            -1,
+            mediaItemCount -
+                1,
+        )
+    val futureStart =
+        (lockedThrough + 1)
+            .coerceIn(
+                0,
+                mediaItemCount,
+            )
+
+    return mediaItemCount -
+        futureStart >
+        1
+}
 
 // [VXG RealForever][VEXSTREAM][QUEUE][DIRECT-FAMILY]
