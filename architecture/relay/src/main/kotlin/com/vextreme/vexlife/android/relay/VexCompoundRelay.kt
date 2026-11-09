@@ -1,8 +1,8 @@
 package com.vextreme.vexlife.android.relay
 
-import com.vextreme.vexlife.android.convergence.VexConvergence
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
@@ -15,35 +15,12 @@ abstract class VexCompoundRelay<
     initialOutputState: OutputState,
     private val executionRoot: VexExecutionRoot? = null,
     private val observedDependencies: List<VexRelayDependency<InputState>> = emptyList(),
-) :
-    VexConvergence<
-        InputState,
-        VexCompoundState<
-            InputState,
-            OutputState
-        >
-    >(
-        initialCurrent =
-            VexCompoundState(
-                inputState =
-                    initialInputState
-                        .deepCopy(),
-                outputState =
-                    initialOutputState
-                        .deepCopy(),
-            ),
-    ),
-    VexObservableRelay<
-        VexCompoundState<
-            InputState,
-            OutputState
-        >
-    > {
-    private val observationLock =
-        Any()
+) : VexObservableRelay<VexCompoundState<InputState, OutputState>> {
+    private val lock = Any()
+    private var processing = false
 
-    private var observationsStarted =
-        false
+    private val observationLock = Any()
+    private var observationsStarted = false
 
     init {
         require(relayRef.isNotBlank()) { "relayRef must not be blank" }
@@ -68,23 +45,21 @@ abstract class VexCompoundRelay<
         }
     }
 
-    override val states:
-        Flow<
-            VexCompoundState<
-                InputState,
-                OutputState
-            >
-        > =
-        convergedStates
-            .map { state ->
-                state.deepCopy()
-            }
+    private val mutableCurrentState =
+        MutableStateFlow(
+            VexCompoundState(
+                inputState = initialInputState.deepCopy(),
+                outputState = initialOutputState.deepCopy(),
+            ),
+        )
 
-    val inputStates:
-        Flow<
-            InputState
-        > =
-        convergedStates
+    override val states: Flow<VexCompoundState<InputState, OutputState>> =
+        mutableCurrentState.map { state ->
+            state.deepCopy()
+        }
+
+    val inputStates: Flow<InputState> =
+        mutableCurrentState
             .map { state ->
                 state.inputState
             }
@@ -93,18 +68,16 @@ abstract class VexCompoundRelay<
                 input.deepCopy()
             }
 
-    val currentInput:
-        InputState
+    val currentInput: InputState
         get() =
-            convergedCurrent
-                .inputState
-                .deepCopy()
+            synchronized(lock) {
+                mutableCurrentState.value
+                    .inputState
+                    .deepCopy()
+            }
 
-    val outputStates:
-        Flow<
-            OutputState
-        > =
-        convergedStates
+    val outputStates: Flow<OutputState> =
+        mutableCurrentState
             .map { state ->
                 state.outputState
             }
@@ -113,21 +86,19 @@ abstract class VexCompoundRelay<
                 output.deepCopy()
             }
 
-    val currentOutput:
-        OutputState
+    val currentOutput: OutputState
         get() =
-            convergedCurrent
-                .outputState
-                .deepCopy()
+            synchronized(lock) {
+                mutableCurrentState.value
+                    .outputState
+                    .deepCopy()
+            }
 
-    override val current:
-        VexCompoundState<
-            InputState,
-            OutputState
-        >
+    override val current: VexCompoundState<InputState, OutputState>
         get() =
-            convergedCurrent
-                .deepCopy()
+            synchronized(lock) {
+                mutableCurrentState.value.deepCopy()
+            }
 
     /**
      * Admit this Relay's constructor-declared observation dependencies into the canonical
@@ -178,61 +149,58 @@ abstract class VexCompoundRelay<
     }
 
     /**
-     * Relay-specific relationship calculation over facts that have already been observed.
+     * Atomic in-memory reducer over facts that have already been observed.
      *
-     * Compound Relay keeps its existing full bounded relationship reevaluation law here. The lower
-     * VexConvergence class supplies only serialized retained-CURRENT mechanics; it does not authorize
-     * hand-maintained partial invalidation inside a Relay.
+     * Keep blocking IO, SDK waits and other suspending work in dependency owners. This method cannot
+     * suspend halfway through a transition, so each admitted patch reconciles against one exact
+     * retained current state before the next patch may enter.
      */
     protected abstract fun processStates(
         inputState: InputState,
         currentState: VexCompoundState<InputState, OutputState>,
     ): VexCompoundState<InputState, OutputState>
 
-    final override fun converge(
-        update:
-            InputState,
-        current:
-            VexCompoundState<
-                InputState,
-                OutputState
-            >,
-    ):
-        VexCompoundState<
-            InputState,
-            OutputState
-        > {
-        val processed =
-            processStates(
-                inputState =
-                    update
-                        .deepCopy(),
-                currentState =
-                    current
-                        .deepCopy(),
-            )
-                .deepCopy()
-
-        return VexCompoundState(
-            inputState =
-                processed
-                    .inputState
-                    .deepCopy(),
-            outputState =
-                processed
-                    .outputState
-                    .deepCopy(),
-        )
-    }
-
     protected fun send(
         inputState: InputState,
     ): VexCompoundState<InputState, OutputState> =
-        admit(
-            inputState
-                .deepCopy(),
-        )
-            .deepCopy()
+        synchronized(lock) {
+            check(!processing) {
+                "VexCompoundRelay cannot recursively send state from processStates"
+            }
+
+            val current =
+                mutableCurrentState.value.deepCopy()
+
+            processing = true
+            try {
+                val processed =
+                    processStates(
+                        inputState = inputState.deepCopy(),
+                        currentState = current.deepCopy(),
+                    ).deepCopy()
+
+                val meaningChanged =
+                    processed.inputState != current.inputState ||
+                        processed.outputState != current.outputState
+
+                if (!meaningChanged) {
+                    return@synchronized current.deepCopy()
+                }
+
+                val next =
+                    VexCompoundState(
+                        inputState = processed.inputState.deepCopy(),
+                        outputState = processed.outputState.deepCopy(),
+                    )
+
+                mutableCurrentState.value =
+                    next.deepCopy()
+
+                next.deepCopy()
+            } finally {
+                processing = false
+            }
+        }
 }
 
 // [VXG RealForever]
