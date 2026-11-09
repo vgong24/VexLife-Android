@@ -38,11 +38,11 @@ import com.vextreme.vexlife.android.elements.navigation.NavigationTrailContent
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.collection.VexStreamCollectionPlaybackOrder
 import com.vextreme.vexlife.android.vexstream.collection.VexStreamCollectionPlaybackRequest
-import com.vextreme.vexlife.android.vexstream.collection.rememberVexStreamCollectionPlaybackConnection
+import com.vextreme.vexlife.android.vexstream.collection.rememberVexStreamCollectionPlayback
 import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCollectionPlan
 import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCopyConnection
 import com.vextreme.vexlife.android.vexstream.offline.vexStreamOfflineCollectionPlan
-import com.vextreme.vexlife.android.vexstream.track.rememberVexStreamTrackPlaybackConnection
+import com.vextreme.vexlife.android.vexstream.track.rememberVexStreamTrackPlayback
 
 /**
  * Library collection presentation for Albums, Artists and Playlists.
@@ -405,7 +405,7 @@ private fun VexStreamCollectionDetail(
     onVisitArtist: (String) -> Unit,
 ) {
     val trackPlaybackConnection =
-        rememberVexStreamTrackPlaybackConnection(
+        rememberVexStreamTrackPlayback(
             resolver = resolver,
         )
     val offlinePlan =
@@ -636,7 +636,7 @@ private fun VexStreamCollectionActions(
     modifier: Modifier = VexModifier,
 ) {
     val connection =
-        rememberVexStreamCollectionPlaybackConnection(
+        rememberVexStreamCollectionPlayback(
             resolver = resolver,
         )
     val playRequest =

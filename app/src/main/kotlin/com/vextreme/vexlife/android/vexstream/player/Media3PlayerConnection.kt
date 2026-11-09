@@ -8,7 +8,7 @@ import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueShuffleAvailable
 
-internal class Media3VexStreamPlayerConnection(
+internal class Media3PlayerConnection(
     private val player:
         Player,
     private val receiver:
@@ -236,7 +236,7 @@ private fun Player.toVexStreamPlayerSignals():
         toVexStreamPlayerCurrentMediaSignal(),
     )
 
-private fun Media3VexStreamPlayerConnection.EventInput.toVexStreamPlayerSignals():
+private fun Media3PlayerConnection.EventInput.toVexStreamPlayerSignals():
     List<
         VexStreamPlayerPartner.Signal
     > =
@@ -362,6 +362,12 @@ private fun Player.toVexStreamPlayerPlaybackSignal():
                 isCommandAvailable(
                     Player.COMMAND_SEEK_TO_DEFAULT_POSITION,
                 ),
+        seekAvailable =
+            currentMediaItem !=
+                null &&
+                isCommandAvailable(
+                    Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
+                ),
     )
 
 private fun Player.toVexStreamPlayerQueueItemsSignal():
@@ -429,6 +435,21 @@ private fun Player.toVexStreamPlayerQueueNavigationSignal():
             isCommandAvailable(
                 Player.COMMAND_CHANGE_MEDIA_ITEMS,
             ),
+        playOccurrenceAvailable =
+            mediaItemCount >
+                0 &&
+                isCommandAvailable(
+                    Player.COMMAND_SEEK_TO_MEDIA_ITEM,
+                ) &&
+                isCommandAvailable(
+                    Player.COMMAND_PLAY_PAUSE,
+                ),
+        reorderAvailable =
+            mediaItemCount >
+                1 &&
+                isCommandAvailable(
+                    Player.COMMAND_CHANGE_MEDIA_ITEMS,
+                ),
     )
 
 private fun Player.toVexStreamPlayerRepeatSignal():

@@ -1,31 +1,30 @@
 package com.vextreme.vexlife.android.vexstream.repeat
 
-import com.vextreme.vexlife.android.behavior.VexBehaviorProjection
-import com.vextreme.vexlife.android.behavior.VexPort
+internal data class VexStreamRepeatControlProjection(
+    val isAvailable:
+        Boolean,
+)
 
-/** Feature-local names keep foundation generic weight out of ordinary Repeat callers. */
-internal typealias VexStreamRepeatConnection =
-    VexPort<
-        VexStreamRepeatFamily,
+internal data class VexStreamRepeatProjection(
+    val state:
         VexStreamRepeatState,
-        VexStreamRepeatControl,
-        VexStreamRepeatAct
-    >
-
-internal typealias VexStreamRepeatProjection =
-    VexBehaviorProjection<
-        VexStreamRepeatFamily,
-        VexStreamRepeatState,
-        VexStreamRepeatControl,
-        VexStreamRepeatAct
-    >
-
-// [VXG RealForever]
-
-/** Concrete outside-player realization of one already-resolved Repeat Effect. */
-internal fun interface VexStreamRepeatEffectConnection {
-    fun realize(
-        effect:
-            VexStreamRepeatEffect,
-    )
+    val toggleAvailable:
+        Boolean,
+) {
+    operator fun get(
+        control:
+            VexStreamRepeatControl,
+    ):
+        VexStreamRepeatControlProjection =
+        when (
+            control
+        ) {
+            VexStreamRepeatControl.Toggle ->
+                VexStreamRepeatControlProjection(
+                    isAvailable =
+                        toggleAvailable,
+                )
+        }
 }
+
+// [VXG RealForever][VEXSTREAM][REPEAT][DIRECT-FAMILY]

@@ -7,7 +7,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.vextreme.vexlife.android.VexApplication
 import com.vextreme.vexlife.android.behavior.VexService
-import com.vextreme.vexlife.android.vexstream.player.Media3VexStreamPlayerConnection
+import com.vextreme.vexlife.android.vexstream.player.Media3PlayerConnection
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerObservationReceiver
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
@@ -46,7 +46,7 @@ class VexStreamPlaybackService :
                 .currentState
 
     private var currentPlayerConnection:
-        Media3VexStreamPlayerConnection? =
+        Media3PlayerConnection? =
         null
     override fun onCreate() {
         super.onCreate()
@@ -119,7 +119,7 @@ class VexStreamPlaybackService :
                         .playerObservationReceiver,
                 )
         val playerConnection =
-            Media3VexStreamPlayerConnection(
+            Media3PlayerConnection(
                 player =
                     player,
                 receiver =

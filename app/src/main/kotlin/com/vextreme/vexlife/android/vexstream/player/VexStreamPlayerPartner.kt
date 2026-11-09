@@ -1,15 +1,6 @@
 package com.vextreme.vexlife.android.vexstream.player
 
 import com.vextreme.vexlife.android.behavior.VexPartner
-import com.vextreme.vexlife.android.vexstream.collection.VexStreamCollectionPlaybackRealization
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackEffectConnection
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackProgressConnection
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackSeekConnection
-import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueEffectConnection
-import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueuePlayConnection
-import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueReorderConnection
-import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatEffectConnection
-import com.vextreme.vexlife.android.vexstream.track.VexStreamTrackPlaybackRealization
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -90,6 +81,45 @@ internal object VexStreamPlayerPartner :
         }
     }
 
+    /**
+     * One exact occurrence in the externally-owned ordered Player queue.
+     *
+     * occurrence distinguishes duplicate media IDs inside one observed queue; index binds that
+     * occurrence to its current external position. Either coordinate may become stale after mutation.
+     */
+    data class QueueOccurrence(
+        val mediaId:
+            String,
+        val occurrence:
+            Int,
+        val index:
+            Int,
+    ) {
+        init {
+            require(
+                mediaId.isNotBlank(),
+            )
+            require(
+                occurrence >=
+                    1,
+            )
+            require(
+                index >=
+                    0,
+            )
+        }
+    }
+
+    enum class QueuePlacement {
+        Next,
+        End,
+    }
+
+    enum class QueueMove {
+        Earlier,
+        Later,
+    }
+
     sealed interface Signal :
         VexPartner.Signal<
             VexStreamPlayerPartner
@@ -110,6 +140,9 @@ internal object VexStreamPlayerPartner :
                 Boolean,
             val restartAvailable:
                 Boolean,
+            val seekAvailable:
+                Boolean =
+                false,
         ) :
             Signal
 
@@ -145,6 +178,12 @@ internal object VexStreamPlayerPartner :
                 Boolean,
             val clearAvailable:
                 Boolean,
+            val playOccurrenceAvailable:
+                Boolean =
+                false,
+            val reorderAvailable:
+                Boolean =
+                false,
         ) :
             Signal
 
@@ -230,31 +269,112 @@ internal object VexStreamPlayerPartner :
         }
 
         /**
-         * Request-capable side of one live Player Connection.
+         * Request-capable side of one live Connection to the external Player Source.
          *
-         * Existing feature-owned Effect/Seek vocabularies remain authoritative; this role only says
-         * one Player Connection can realize those already-resolved requests.
+         * This vocabulary belongs to the Partner relationship itself. Feature Families translate
+         * their accepted Effects into these requests through bound Act.Methods; the Partner does not
+         * inherit feature-owned Effect/Connection interfaces.
          */
         interface Request :
-            Connection,
-            VexStreamPlaybackEffectConnection,
-            VexStreamQueueEffectConnection,
-            VexStreamRepeatEffectConnection,
-            VexStreamQueuePlayConnection,
-            VexStreamQueueReorderConnection,
-            VexStreamTrackPlaybackRealization,
-            VexStreamCollectionPlaybackRealization,
-            VexStreamPlaybackSeekConnection
+            Connection {
+            val mediaPlaybackAvailable:
+                Boolean
 
-        /**
-         * Bounded live progress read from one Player Connection.
-         *
-         * Progress is deliberately separate from Request because reading provider time is not an
-         * outbound Effect.
-         */
+            suspend fun playMedia(
+                items:
+                    List<
+                        Media
+                    >,
+                selectedIndex:
+                    Int =
+                    0,
+            ):
+                Boolean
+
+            fun mediaQueueAvailable(
+                placement:
+                    QueuePlacement,
+            ):
+                Boolean
+
+            suspend fun queueMedia(
+                media:
+                    Media,
+                placement:
+                    QueuePlacement,
+            ):
+                Boolean
+
+            suspend fun play()
+
+            suspend fun pause()
+
+            suspend fun restartCurrent()
+
+            suspend fun previous()
+
+            suspend fun next()
+
+            suspend fun shuffleFuture()
+
+            suspend fun clearQueue()
+
+            suspend fun setRepeatEnabled(
+                enabled:
+                    Boolean,
+            )
+
+            fun playQueueOccurrence(
+                occurrence:
+                    QueueOccurrence,
+            ):
+                Boolean
+
+            fun moveQueueOccurrence(
+                occurrence:
+                    QueueOccurrence,
+                move:
+                    QueueMove,
+            ):
+                Boolean
+
+            fun seek(
+                mediaId:
+                    String,
+                mediaItemIndex:
+                    Int,
+                positionMs:
+                    Long,
+            ):
+                Boolean
+        }
+
+        /** Bounded live progress read from one Connection to the same external Player Source. */
         interface Progress :
-            Connection,
-            VexStreamPlaybackProgressConnection
+            Connection {
+            data class Snapshot(
+                val positionMs:
+                    Long =
+                    0L,
+                val durationMs:
+                    Long =
+                    0L,
+                val bufferedPositionMs:
+                    Long =
+                    0L,
+            ) {
+                companion object {
+                    val Empty =
+                        Snapshot()
+                }
+            }
+
+            val isPlaying:
+                Boolean
+
+            fun readProgress():
+                Snapshot
+        }
 
         data class Observation(
             override val connectionId:

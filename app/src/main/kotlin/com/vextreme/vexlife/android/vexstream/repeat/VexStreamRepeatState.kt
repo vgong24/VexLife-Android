@@ -1,6 +1,6 @@
 package com.vextreme.vexlife.android.vexstream.repeat
 
-import com.vextreme.vexlife.android.behavior.VexBehaviorFamily
+import com.vextreme.vexlife.android.behavior.VexFamily
 
 /**
  * Provider-derived Repeat truth used by the current one-toggle product experience.
@@ -9,7 +9,7 @@ import com.vextreme.vexlife.android.behavior.VexBehaviorFamily
  * asks only whether Repeat is active. Enabling from Disabled still requests queue-wide Repeat All.
  */
 sealed interface VexStreamRepeatState :
-    VexBehaviorFamily.State<
+    VexFamily.State<
         VexStreamRepeatFamily
     > {
     data class Disabled(

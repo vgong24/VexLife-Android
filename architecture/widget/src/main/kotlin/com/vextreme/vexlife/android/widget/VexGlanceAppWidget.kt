@@ -416,9 +416,8 @@ abstract class VexGlanceAppWidget<
  */
 @JvmInline
 value class VexWidgetActionRef(
-    override val value: String,
-) :
-    VexWidget.Action.Ref {
+    val value: String,
+) {
     init {
         require(
             REF.matches(

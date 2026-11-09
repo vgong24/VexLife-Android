@@ -5,10 +5,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerConnectionViewModel
-import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 
-/** Compose-facing membrane over retained Player Partner Repeat truth and Repeat Controls. */
+/** Compose-facing membrane over the process-shared Repeat Family. */
 internal interface VexStreamRepeatExperience {
     val projection:
         VexStreamRepeatProjection
@@ -22,16 +23,31 @@ internal interface VexStreamRepeatExperience {
 private class CurrentVexStreamRepeatExperience(
     override val projection:
         VexStreamRepeatProjection,
+    private val family:
+        VexStreamRepeatFamily,
     private val connection:
-        VexStreamRepeatConnection?,
+        VexStreamPlayerPartner.Connection.Request?,
+    private val executionRoot:
+        VexExecutionRoot,
 ) :
     VexStreamRepeatExperience {
     override fun activate(
         control:
             VexStreamRepeatControl,
     ) {
-        connection?.activate(
-            control,
+        val requestConnection =
+            connection
+                ?: return
+
+        activateVexStreamRepeat(
+            family =
+                family,
+            control =
+                control,
+            connection =
+                requestConnection,
+            executionRoot =
+                executionRoot,
         )
     }
 }
@@ -42,39 +58,43 @@ internal fun rememberVexStreamRepeatExperience():
     val owner:
         VexStreamPlayerConnectionViewModel =
         viewModel()
-    val repeat by
-        owner
-            .playerStore
-            .repeatSignals
+    val family =
+        owner.repeatFamily
+    val state by
+        family
+            .states
             .collectAsStateWithLifecycle(
                 initialValue =
-                    (
-                        owner.playerStore.current as?
-                            VexStreamPlayerStore.Snapshot.Available
-                    )
-                        ?.repeat,
+                    family.currentState,
             )
     val projection =
         remember(
-            repeat,
+            state,
         ) {
-            repeat
-                .toVexStreamRepeatProjection()
+            family.projectionFor(
+                state,
+            )
         }
     val connection =
-        owner.repeatConnection
+        owner.playerRequestConnection
 
     return remember(
         projection,
+        family,
         connection,
+        owner.executionRoot,
     ) {
         CurrentVexStreamRepeatExperience(
             projection =
                 projection,
+            family =
+                family,
             connection =
                 connection,
+            executionRoot =
+                owner.executionRoot,
         )
     }
 }
 
-// [VXG RealForever][VEXSTREAM][REPEAT][PLAYER-PARTNER]
+// [VXG RealForever][VEXSTREAM][REPEAT][DIRECT-FAMILY]

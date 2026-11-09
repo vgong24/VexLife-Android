@@ -32,47 +32,52 @@ class VexStreamPlaybackFamilyTest {
                 CompletableDeferred<Unit>()
             val firstCancelled =
                 CompletableDeferred<Unit>()
-            val secondEffect =
-                CompletableDeferred<
-                    VexStreamPlaybackEffect
-                >()
+            val secondOperation =
+                CompletableDeferred<String>()
             var realization =
                 0
             val connection =
-                PartnerVexStreamPlaybackConnection(
-                    family =
-                        family,
-                    executionRoot =
-                        root,
-                    effectConnection =
-                        VexStreamPlaybackEffectConnection { effect ->
-                            realization +=
-                                1
-                            if (
-                                realization ==
-                                1
-                            ) {
-                                firstStarted.complete(
+                requestConnection(
+                    onPlay = {
+                        realization +=
+                            1
+                        if (
+                            realization ==
+                            1
+                        ) {
+                            firstStarted.complete(
+                                Unit,
+                            )
+                            try {
+                                awaitCancellation()
+                            } finally {
+                                firstCancelled.complete(
                                     Unit,
                                 )
-                                try {
-                                    awaitCancellation()
-                                } finally {
-                                    firstCancelled.complete(
-                                        Unit,
-                                    )
-                                }
-                            } else {
-                                secondEffect.complete(
-                                    effect,
-                                )
                             }
-                        },
+                        } else {
+                            secondOperation.complete(
+                                "play",
+                            )
+                        }
+                    },
+                    onPause = {
+                        secondOperation.complete(
+                            "pause",
+                        )
+                    },
                 )
 
             requireNotNull(
-                connection.activate(
-                    VexStreamPlaybackControl.PlayPause,
+                activateVexStreamPlayback(
+                    family =
+                        family,
+                    control =
+                        VexStreamPlaybackControl.PlayPause,
+                    connection =
+                        connection,
+                    executionRoot =
+                        root,
                 ),
             )
             withTimeout(
@@ -83,8 +88,15 @@ class VexStreamPlaybackFamilyTest {
 
             val secondJob =
                 requireNotNull(
-                    connection.activate(
-                        VexStreamPlaybackControl.PlayPause,
+                    activateVexStreamPlayback(
+                        family =
+                            family,
+                        control =
+                            VexStreamPlaybackControl.PlayPause,
+                        connection =
+                            connection,
+                        executionRoot =
+                            root,
                     ),
                 )
 
@@ -93,12 +105,12 @@ class VexStreamPlaybackFamilyTest {
             ) {
                 firstCancelled.await()
             }
-            assertSame(
-                VexStreamPlaybackEffect.RequestPause,
+            assertEquals(
+                "pause",
                 withTimeout(
                     5_000L,
                 ) {
-                    secondEffect.await()
+                    secondOperation.await()
                 },
             )
             secondJob.join()
@@ -297,6 +309,103 @@ class VexStreamPlaybackFamilyTest {
             playPauseAvailable = true,
             restartAvailable = true,
         )
+
+    private fun requestConnection(
+        onPlay:
+            suspend () -> Unit =
+            {},
+        onPause:
+            suspend () -> Unit =
+            {},
+    ):
+        VexStreamPlayerPartner.Connection.Request =
+        object :
+            VexStreamPlayerPartner.Connection.Request {
+            override val id =
+                VexStreamPlayerPartner.Connection.Id(
+                    value =
+                        "test-controller",
+                    occurrence =
+                        1L,
+                )
+
+            override val mediaPlaybackAvailable =
+                true
+
+            override suspend fun playMedia(
+                items:
+                    List<
+                        VexStreamPlayerPartner.Media
+                    >,
+                selectedIndex:
+                    Int,
+            ) =
+                true
+
+            override fun mediaQueueAvailable(
+                placement:
+                    VexStreamPlayerPartner.QueuePlacement,
+            ) =
+                true
+
+            override suspend fun queueMedia(
+                media:
+                    VexStreamPlayerPartner.Media,
+                placement:
+                    VexStreamPlayerPartner.QueuePlacement,
+            ) =
+                true
+
+            override suspend fun play() {
+                onPlay()
+            }
+
+            override suspend fun pause() {
+                onPause()
+            }
+
+            override suspend fun restartCurrent() = Unit
+
+            override suspend fun previous() = Unit
+
+            override suspend fun next() = Unit
+
+            override suspend fun shuffleFuture() = Unit
+
+            override suspend fun clearQueue() = Unit
+
+            override suspend fun setRepeatEnabled(
+                enabled:
+                    Boolean,
+            ) = Unit
+
+
+            override fun playQueueOccurrence(
+                occurrence:
+                    VexStreamPlayerPartner.QueueOccurrence,
+            ) =
+                true
+
+
+            override fun moveQueueOccurrence(
+                occurrence:
+                    VexStreamPlayerPartner.QueueOccurrence,
+                move:
+                    VexStreamPlayerPartner.QueueMove,
+            ) =
+                true
+
+
+            override fun seek(
+                mediaId:
+                    String,
+                mediaItemIndex:
+                    Int,
+                positionMs:
+                    Long,
+            ) =
+                true
+        }
 }
 
 // [VXG RealForever][VEXSTREAM][PLAYBACK][DIRECT-FAMILY]

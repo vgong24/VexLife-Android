@@ -12,7 +12,6 @@ import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackProjecti
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackProjectionFor
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
-import com.vextreme.vexlife.android.widget.VexWidget
 
 /**
  * Bounded Player-origin facts required by the Playback Widget.
@@ -101,9 +100,6 @@ internal data class VexStreamPlaybackWidgetRelayOutputState(
 ) :
     VexOutputState<
         VexStreamPlaybackWidgetRelayOutputState
-    >,
-    VexWidget.Relay.Output<
-        VexStreamPlaybackWidget
     > {
     override fun deepCopy():
         VexStreamPlaybackWidgetRelayOutputState =
@@ -187,10 +183,7 @@ internal class VexStreamPlaybackWidgetRelay(
                     )
                 }
             },
-    ),
-    VexWidget.Relay<
-        VexStreamPlaybackWidget
-    > {
+    ) {
     init {
         startObservedDependencies()
     }

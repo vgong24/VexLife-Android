@@ -43,7 +43,7 @@ class VexStreamTrackPlaybackTest {
             val realized =
                 CopyOnWriteArrayList<String>()
             val execution =
-                VexStreamTrackPlaybackExecution(
+                VexStreamTrackPlayback(
                     root =
                         root,
                     resolver =
@@ -54,8 +54,8 @@ class VexStreamTrackPlaybackTest {
                                 state,
                             )
                         },
-                    realization =
-                        realization(
+                    connection =
+                        requestConnection(
                             onPlay = { resolved ->
                                 realized +=
                                     resolved.items.map {
@@ -141,7 +141,7 @@ class VexStreamTrackPlaybackTest {
             val events =
                 CopyOnWriteArrayList<String>()
             val execution =
-                VexStreamTrackPlaybackExecution(
+                VexStreamTrackPlayback(
                     root =
                         root,
                     resolver =
@@ -173,8 +173,8 @@ class VexStreamTrackPlaybackTest {
                                             .value
                             }
                         },
-                    realization =
-                        realization(
+                    connection =
+                        requestConnection(
                             onPlay = { resolved ->
                                 events +=
                                     "realize:" +
@@ -256,7 +256,7 @@ class VexStreamTrackPlaybackTest {
             val realized =
                 CopyOnWriteArrayList<String>()
             val execution =
-                VexStreamTrackPlaybackExecution(
+                VexStreamTrackPlayback(
                     root =
                         root,
                     resolver =
@@ -280,8 +280,8 @@ class VexStreamTrackPlaybackTest {
                                 state,
                             )
                         },
-                    realization =
-                        realization(
+                    connection =
+                        requestConnection(
                             onPlay = { resolved ->
                                 realized +=
                                     resolved.items[
@@ -363,16 +363,16 @@ class VexStreamTrackPlaybackTest {
             val realized =
                 CopyOnWriteArrayList<String>()
             val execution =
-                VexStreamTrackPlaybackExecution(
+                VexStreamTrackPlayback(
                     root =
                         root,
                     resolver =
                         VexStreamTrackPlaybackResolver(
                             ::media,
                         ),
-                    realization =
-                        realization(
-                            onQueue = { _, media ->
+                    connection =
+                        requestConnection(
+                            onQueue = { media ->
                                 realized +=
                                     media.mediaId
                             },
@@ -499,116 +499,7 @@ class VexStreamTrackPlaybackTest {
         )
     }
 
-    @Test
-    fun playAdmissionRequiresEveryProviderCommandActuallyUsed() {
-        assertTrue(
-            vexStreamTrackPlayCommandsAvailable(
-                changeMediaItemsAvailable = true,
-                prepareAvailable = true,
-                playAvailable = true,
-                shuffleEnabled = false,
-                setShuffleModeAvailable = false,
-            ),
-        )
-        assertFalse(
-            vexStreamTrackPlayCommandsAvailable(
-                changeMediaItemsAvailable = false,
-                prepareAvailable = true,
-                playAvailable = true,
-                shuffleEnabled = false,
-                setShuffleModeAvailable = true,
-            ),
-        )
-        assertFalse(
-            vexStreamTrackPlayCommandsAvailable(
-                changeMediaItemsAvailable = true,
-                prepareAvailable = true,
-                playAvailable = true,
-                shuffleEnabled = true,
-                setShuffleModeAvailable = false,
-            ),
-        )
-    }
-
-    @Test
-    fun playNextStartsPlaybackOnlyWhenEmptyQueueCommandsAreAvailable() {
-        assertEquals(
-            VexStreamTrackQueueTarget.StartPlayback,
-            vexStreamTrackQueueTarget(
-                placement =
-                    VexStreamTrackQueuePlacement.Next,
-                mediaItemCount =
-                    0,
-                currentMediaItemIndex =
-                    0,
-                timelineAvailable =
-                    true,
-                setMediaItemAvailable =
-                    true,
-                changeMediaItemsAvailable =
-                    false,
-                prepareAvailable =
-                    true,
-                playAvailable =
-                    true,
-            ),
-        )
-    }
-
-    @Test
-    fun playNextNeedsTimelineAndInsertsAfterCurrentItem() {
-        assertEquals(
-            VexStreamTrackQueueTarget.Insert(
-                index =
-                    2,
-            ),
-            vexStreamTrackQueueTarget(
-                placement =
-                    VexStreamTrackQueuePlacement.Next,
-                mediaItemCount =
-                    4,
-                currentMediaItemIndex =
-                    1,
-                timelineAvailable =
-                    true,
-                setMediaItemAvailable =
-                    false,
-                changeMediaItemsAvailable =
-                    true,
-                prepareAvailable =
-                    false,
-                playAvailable =
-                    false,
-            ),
-        )
-    }
-
-    @Test
-    fun addToQueueNeedsOnlyAppendAuthorityAfterSourceResolution() {
-        assertEquals(
-            VexStreamTrackQueueTarget.Append,
-            vexStreamTrackQueueTarget(
-                placement =
-                    VexStreamTrackQueuePlacement.End,
-                mediaItemCount =
-                    null,
-                currentMediaItemIndex =
-                    null,
-                timelineAvailable =
-                    false,
-                setMediaItemAvailable =
-                    false,
-                changeMediaItemsAvailable =
-                    true,
-                prepareAvailable =
-                    false,
-                playAvailable =
-                    false,
-            ),
-        )
-    }
-
-    private fun realization(
+    private fun requestConnection(
         onPlay:
             suspend (
                 ResolvedTrackPlay,
@@ -616,49 +507,98 @@ class VexStreamTrackPlaybackTest {
             {},
         onQueue:
             suspend (
-                VexStreamTrackQueueRequest,
                 VexStreamPlayerPartner.Media,
             ) -> Unit =
-            { _, _ -> },
+            {},
     ):
-        VexStreamTrackPlaybackRealization =
+        VexStreamPlayerPartner.Connection.Request =
         object :
-            VexStreamTrackPlaybackRealization {
-            override val isTrackPlayAvailable:
-                Boolean =
+            VexStreamPlayerPartner.Connection.Request {
+            override val id =
+                VexStreamPlayerPartner.Connection.Id(
+                    value =
+                        "track-test-controller",
+                    occurrence =
+                        1L,
+                )
+
+            override val mediaPlaybackAvailable =
                 true
 
-            override fun isTrackQueueAvailable(
-                request:
-                    VexStreamTrackQueueRequest,
-            ):
-                Boolean =
-                true
-
-            override suspend fun realizeTrackPlay(
-                resolved:
-                    ResolvedTrackPlay,
+            override suspend fun playMedia(
+                items:
+                    List<
+                        VexStreamPlayerPartner.Media
+                    >,
+                selectedIndex:
+                    Int,
             ):
                 Boolean {
                 onPlay(
-                    resolved,
+                    ResolvedTrackPlay(
+                        items =
+                            items,
+                        selectedIndex =
+                            selectedIndex,
+                    ),
                 )
                 return true
             }
 
-            override suspend fun realizeTrackQueue(
-                request:
-                    VexStreamTrackQueueRequest,
+            override fun mediaQueueAvailable(
+                placement:
+                    VexStreamPlayerPartner.QueuePlacement,
+            ) =
+                true
+
+            override suspend fun queueMedia(
                 media:
                     VexStreamPlayerPartner.Media,
+                placement:
+                    VexStreamPlayerPartner.QueuePlacement,
             ):
                 Boolean {
                 onQueue(
-                    request,
                     media,
                 )
                 return true
             }
+
+            override suspend fun play() = Unit
+            override suspend fun pause() = Unit
+            override suspend fun restartCurrent() = Unit
+            override suspend fun previous() = Unit
+            override suspend fun next() = Unit
+            override suspend fun shuffleFuture() = Unit
+            override suspend fun clearQueue() = Unit
+            override suspend fun setRepeatEnabled(
+                enabled:
+                    Boolean,
+            ) = Unit
+
+            override fun playQueueOccurrence(
+                occurrence:
+                    VexStreamPlayerPartner.QueueOccurrence,
+            ) =
+                true
+
+            override fun moveQueueOccurrence(
+                occurrence:
+                    VexStreamPlayerPartner.QueueOccurrence,
+                move:
+                    VexStreamPlayerPartner.QueueMove,
+            ) =
+                true
+
+            override fun seek(
+                mediaId:
+                    String,
+                mediaItemIndex:
+                    Int,
+                positionMs:
+                    Long,
+            ) =
+                true
         }
 
     private fun media(

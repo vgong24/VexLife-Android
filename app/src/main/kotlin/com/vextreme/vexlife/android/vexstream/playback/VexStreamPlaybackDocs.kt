@@ -3,108 +3,73 @@ package com.vextreme.vexlife.android.vexstream.playback
 /**
  * # VexStream Playback
  *
- * ## Semantic owner
+ * VexStream music relates Vex semantic owners to one external Player Partner Source.
  *
- * [VexStreamPlaybackFamily] owns Playback State / Control / Act / Effect meaning.
+ *     VexStreamPlayerPartner
+ *       Source       one external music/playback origin
+ *       Signal       outside statements
+ *       Connection   live access paths to that Source
  *
- *     CURRENT State + Control
- *         -> accepted Act
- *         -> optional admitted pending State
- *         -> Effect + Approach / RelationshipId
+ * Current Media3 realization:
  *
- * Provider reality remains outside Family until it has crossed the Player Partner and Player Store.
+ *     Media3PlayerConnection
+ *         observation path from ExoPlayer
  *
- * ## Outside Player -> Store -> Family
+ *     Media3ControllerConnection
+ *         request/progress path through MediaController
  *
- *     Media3 Player
- *         -> VexStreamPlayerPartner.Connection
- *         -> Conversion
- *         -> Signal
- *         -> Observation
- *         -> VexStreamPlayerObservationReceiver
- *         -> VexStreamPlayerStore CURRENT
- *         -> VexExecution.observe(store::playbackSignals, owner = Playback Family)
- *         -> VexStreamPlaybackFamily.observePlayer(...)
- *         -> Family.observe(reconciled State)
+ * Player / MediaSession / MediaController are realization/access mechanisms around the same Source;
+ * their Android class boundaries do not manufacture separate product owners.
  *
- * The Receiver ends at the Store boundary. It does not mutate Family or fan out presentation
- * callbacks.
+ * ## Inbound
  *
- * Playback has a real provider-vs-Control currentness question: a stale Media3 statement must not
- * erase a newer pending Play/Pause intent. Following the accepted concrete-Family currentness
- * pattern, [VexStreamPlaybackFamily] keeps that reconciliation fence locally around
- * [VexStreamPlaybackFamily.activatePlayback] and [VexStreamPlaybackFamily.observePlayer]. There is
- * no separate admission/coordinator owner.
+ *     external Source
+ *       -> Media3PlayerConnection
+ *       -> Conversion
+ *       -> Signal / Observation
+ *       -> Receiver
+ *       -> VexStreamPlayerStore.Snapshot
+ *       -> VexExecution observation
+ *       -> Playback / Queue / Repeat Family
  *
- * ## Control -> accepted Act -> Player Partner request
+ * Receiver ends at Store. Store owns retained outside truth. Family owns semantic meaning.
  *
- *     Control
- *         -> PartnerVexStreamPlaybackConnection
- *         -> Playback Family.activatePlayback(Control)
- *         -> accepted Act
- *         -> Act.launchWith(VexExecutionRoot)
- *         -> bound VexFamily.Act.Method
- *         -> VexStreamPlaybackEffectConnection
- *         -> Media3 provider looper
+ * ## Playback semantic loop
  *
- * The accepted Act's authored Approach, RelationshipId and live Family execution owner survive into
- * VexExecution. Playback's Latest relationship therefore governs actual overlapping request Jobs.
+ *     Playback Control
+ *       -> VexStreamPlaybackFamily.activate(...)
+ *       -> accepted Act
+ *       -> optional pending State
+ *       -> Effect
+ *       -> bound VexStreamPlaybackFamily.Act.Method
+ *       -> VexExecution
+ *       -> VexStreamPlayerPartner.Connection.Request
+ *       -> external Source
  *
- * ## Inbound execution
+ * Provider acknowledgement/outcome returns only through Player observation.
  *
- * [Media3VexStreamPlayerConnection] uses the existing direct VexExecution entry:
+ * Playback keeps one feature-specific provider/current-Control reconciliation fence because a stale
+ * provider statement must not erase a newer pending Play/Pause intent. This is not a second State
+ * owner.
  *
- *     VexExecution.beginQueued(
- *         executionRoot,
- *         owner = exact live Player Connection,
- *         relationshipId = inbound ordering relationship,
- *         ...
- *     )
+ * ## Provider read facts
  *
- * It does not introduce a second execution-owner hierarchy. Opened / Observed / Closed remain queued
- * in arrival order for that live Connection.
+ * [VexStreamPlaybackReadState] is a bounded presentation read model composed from Player Store
+ * Snapshot plus live [VexStreamPlayerPartner.Connection.Progress]. Full QueueItems remain Queue/Store
+ * owned.
  *
  * ## Widget
  *
- * [com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetRelay] uses the established
- * Compound Relay dependency mechanism to observe Player Store CURRENT and Playback Family CURRENT.
- * It owns only its bounded remote-surface relationship current; it does not mutate either owner or
- * invent transaction/origin admission vocabulary.
- *
- *     Player Store CURRENT ----\
- *                              -> Playback Widget Relay -> SurfaceState -> Glance
- *     Playback Family CURRENT -/
- *
- * Full QueueItems remain Player Store / Queue-owned; the Widget input carries only the metadata and
- * navigation availability required by the remote surface.
- *
- * ## Compose
- *
- * [VexStreamPlaybackExperience] observes Playback Family semantic State while
- * [VexStreamPlaybackReadState] observes retained Player Store read truth and the concrete live
- * Progress connection. Compose does not create a second Playback relationship-current owner merely
- * because it reads both sources.
- *
- * If a demonstrated consumer failure later proves that UI requires a distinct cross-owner
- * relationship current, that requirement must earn a Relay separately.
+ * The Playback Widget's [com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetRelay]
+ * is an ordinary Compound Relay over bounded Player Store + Playback Family currents. Widget durable
+ * SurfaceState / Projection / ActionRef remain presentation mechanics; no peer VexWidget semantic
+ * root is required.
  *
  * ## Sustained realization
  *
- * VexStreamPlaybackService owns sustained ExoPlayer / MediaSession realization while borrowing
- * Playback Family CURRENT. Service lifetime is not Playback truth and does not manufacture a second
- * State owner.
- *
- * ## Non-collapse
- *
- *     Partner != Store
- *     Store != Family
- *     Family != Execution
- *     Family != Relay
- *     Relay != source truth
- *     SurfaceState != product State
- *     Service != semantic owner
+ * VexStreamPlaybackService owns Android MediaSession/ExoPlayer lifetime. It borrows semantic
+ * Playback CURRENT and hosts the observation Connection; Service lifetime is not Playback truth.
  */
-// Documentation/navigation only.
 @Suppress("unused")
 internal class VexStreamPlaybackDocs private constructor()
 

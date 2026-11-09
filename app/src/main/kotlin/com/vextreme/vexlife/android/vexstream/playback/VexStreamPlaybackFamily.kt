@@ -3,10 +3,12 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
 import com.vextreme.vexlife.android.behavior.VexFamily
+import com.vextreme.vexlife.android.behavior.VexMethod
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
+import kotlinx.coroutines.Job
 
 /**
  * Process-shareable semantic owner for VexStream Playback.
@@ -143,6 +145,43 @@ internal class VexStreamPlaybackFamily(
             }
         }
 
+    object Act {
+        class Method(
+            private val connection:
+                VexStreamPlayerPartner.Connection.Request,
+            private val effect:
+                VexStreamPlaybackEffect,
+        ) :
+            VexFamily.Act.Method<
+                VexStreamPlaybackFamily,
+                Unit,
+                Nothing
+            > {
+            override suspend fun invoke():
+                VexMethod.Result<
+                    Unit,
+                    Nothing
+                > {
+                when (
+                    effect
+                ) {
+                    VexStreamPlaybackEffect.RequestPlay ->
+                        connection.play()
+
+                    VexStreamPlaybackEffect.RequestPause ->
+                        connection.pause()
+
+                    VexStreamPlaybackEffect.RestartCurrent ->
+                        connection.restartCurrent()
+                }
+
+                return VexMethod.Result.Success(
+                    Unit,
+                )
+            }
+        }
+    }
+
     /**
      * Feature projection derived from one exact Family State snapshot.
      *
@@ -173,6 +212,42 @@ internal class VexStreamPlaybackFamily(
         vexStreamPlaybackPlayPauseAvailable(
             state,
         )
+}
+
+
+internal fun activateVexStreamPlayback(
+    family:
+        VexStreamPlaybackFamily,
+    control:
+        VexStreamPlaybackControl,
+    connection:
+        VexStreamPlayerPartner.Connection.Request,
+    executionRoot:
+        VexExecutionRoot,
+):
+    Job? {
+    val act =
+        family.activatePlayback(
+            control,
+        )
+            ?: return null
+    val effect =
+        act.effect
+            ?: return null
+    val execution =
+        act.launchWith(
+            executionRoot,
+        )
+            ?: return null
+
+    return execution.method(
+        VexStreamPlaybackFamily.Act.Method(
+            connection =
+                connection,
+            effect =
+                effect,
+        ),
+    )
 }
 
 
@@ -217,6 +292,8 @@ private fun VexStreamPlayerPartner.Signal.Playback.toVexStreamPlaybackState():
                     VexStreamPlaybackPhase.Idle,
                 playPauseAvailable =
                     playPauseAvailable,
+                seekAvailable =
+                    seekAvailable,
             )
 
         VexStreamPlayerPartner.PlaybackPhase.Buffering ->
@@ -227,6 +304,8 @@ private fun VexStreamPlayerPartner.Signal.Playback.toVexStreamPlaybackState():
                     VexStreamPlaybackPhase.Buffering,
                 playPauseAvailable =
                     playPauseAvailable,
+                seekAvailable =
+                    seekAvailable,
             )
 
         VexStreamPlayerPartner.PlaybackPhase.Ready ->
@@ -237,12 +316,16 @@ private fun VexStreamPlayerPartner.Signal.Playback.toVexStreamPlaybackState():
                     VexStreamPlaybackPhase.Ready,
                 playPauseAvailable =
                     playPauseAvailable,
+                seekAvailable =
+                    seekAvailable,
             )
 
         VexStreamPlayerPartner.PlaybackPhase.Ended ->
             VexStreamPlaybackState.Ended(
                 restartAvailable =
                     restartAvailable,
+                seekAvailable =
+                    seekAvailable,
             )
     }
 }
@@ -259,6 +342,19 @@ internal fun vexStreamPlaybackProjectionFor(
             vexStreamPlaybackPlayPauseAvailable(
                 state,
             ),
+        seekAvailable =
+            when (
+                state
+            ) {
+                VexStreamPlaybackState.NoMedia ->
+                    false
+
+                is VexStreamPlaybackState.Media ->
+                    state.seekAvailable
+
+                is VexStreamPlaybackState.Ended ->
+                    state.seekAvailable
+            },
     )
 
 private fun vexStreamPlaybackPlayPauseAvailable(

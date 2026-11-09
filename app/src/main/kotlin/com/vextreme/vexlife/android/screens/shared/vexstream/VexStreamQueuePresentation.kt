@@ -48,11 +48,9 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackReadState
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueOccurrence
-import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueuePlayRequest
 import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueExperience
 import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueuePlayConnection
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueReorderDirection
-import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueReorderRequest
 import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueReorderConnection
 import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueAdjacentMoveTarget
 import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueOccurrences
@@ -77,6 +75,18 @@ internal fun VexStreamQueueContent(
         rememberVexStreamQueueExperience()
     val queueProjection =
         queueExperience.projection
+    val queueCurrent =
+        queueExperience.current
+    val queueMediaIds =
+        queueCurrent
+            ?.items
+            ?.mediaIds
+            .orEmpty()
+    val queueCurrentIndex =
+        queueCurrent
+            ?.navigation
+            ?.currentIndex
+            ?: -1
     val queuePlayConnection =
         rememberVexStreamQueuePlayConnection()
     val queueReorderConnection =
@@ -94,10 +104,10 @@ internal fun VexStreamQueueContent(
         }
     val queueOccurrences =
         remember(
-            playback.queueMediaIds,
+            queueMediaIds,
         ) {
             vexStreamQueueOccurrences(
-                playback.queueMediaIds,
+                queueMediaIds,
             )
         }
     val listState =
@@ -249,7 +259,7 @@ internal fun VexStreamQueueContent(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            if (playback.queueMediaIds.isEmpty()) {
+            if (queueMediaIds.isEmpty()) {
                 VexText(
                     id = "empty",
                     text =
@@ -301,16 +311,22 @@ VexStreamPresentationRefs
                                 occurrence.mediaId
                             ]
                         val isCurrent =
-                            index == playback.currentIndex
+                            index == queueCurrentIndex
                         val isDragging =
                             draggedKey ==
                                 stableKey
                         val queuePlayEnabled =
-                            queuePlayConnection
-                                ?.isPlayAvailable == true
+                            queueCurrent
+                                ?.navigation
+                                ?.playOccurrenceAvailable == true &&
+                                queuePlayConnection !=
+                                null
                         val reorderEnabled =
-                            queueReorderConnection
-                                ?.isReorderAvailable == true
+                            queueCurrent
+                                ?.navigation
+                                ?.reorderAvailable == true &&
+                                queueReorderConnection !=
+                                null
 
                         Row(
                             modifier = Modifier
@@ -376,11 +392,8 @@ VexStreamPresentationRefs
                                                     ),
                                         )
                                         queuePlayConnection
-                                            ?.play(
-                                                VexStreamQueuePlayRequest(
-                                                    occurrence =
-                                                        latestOccurrence,
-                                                ),
+                                            ?.playQueueOccurrence(
+                                                latestOccurrence,
                                             )
                                     },
                                 horizontalArrangement =
@@ -537,13 +550,11 @@ VexStreamPresentationRefs
                                                 }
                                             val moved =
                                                 queueReorderConnection
-                                                    ?.move(
-                                                        VexStreamQueueReorderRequest(
-                                                            occurrence =
-                                                                currentOccurrence,
-                                                            direction =
-                                                                direction,
-                                                        ),
+                                                    ?.moveQueueOccurrence(
+                                                        occurrence =
+                                                            currentOccurrence,
+                                                        move =
+                                                            direction,
                                                     ) == true
                                             if (!moved) {
                                                 return@detectVerticalDragGestures

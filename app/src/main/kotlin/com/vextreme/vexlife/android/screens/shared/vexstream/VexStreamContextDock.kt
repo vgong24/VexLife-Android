@@ -22,8 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.elements.ElementIcon
 import com.vextreme.vexlife.android.elements.VexIcon
@@ -31,16 +29,13 @@ import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPage
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.playback.present
-import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerConnectionViewModel
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackDisplayState
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackExperience
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackExperience
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackSeekConnection
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackSeekRequest
 import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackSeekPositionMs
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
-import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueuePlayRequest
 import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueExperience
 import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueuePlayConnection
 import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueOccurrences
@@ -99,6 +94,10 @@ private fun VexStreamContextDockContent(
         playbackExperience
             .displayState
             .playback
+    val playbackProjection =
+        playbackExperience
+            .displayState
+            .projection
     val queueExperience =
         rememberVexStreamQueueExperience()
     val queueProjection =
@@ -107,19 +106,8 @@ private fun VexStreamContextDockContent(
         rememberVexStreamQueuePlayConnection()
     val seekConnection =
         rememberVexStreamPlaybackSeekConnection()
-    val owner:
-        VexStreamPlayerConnectionViewModel =
-        viewModel()
-    val queueCurrent by
-        owner
-            .playerStore
-            .queueCurrents
-            .collectAsStateWithLifecycle(
-                initialValue =
-                    owner
-                        .playerStore
-                        .currentQueue,
-            )
+    val queueCurrent =
+        queueExperience.current
 
     var scrubFraction by
         remember(
@@ -132,8 +120,10 @@ private fun VexStreamContextDockContent(
         scrubFraction
             ?: playback.progressFraction
     val canSeek =
-        seekConnection
-            ?.isAvailable == true &&
+        playbackProjection
+            ?.seekAvailable == true &&
+            seekConnection !=
+                null &&
             playback.currentMediaId
                 ?.isNotBlank() == true &&
             playback.currentIndex >= 0 &&
@@ -294,19 +284,17 @@ private fun VexStreamContextDockContent(
                             action = "Changed",
                         )
                         seekConnection?.seek(
-                            VexStreamPlaybackSeekRequest(
-                                mediaId =
-                                    targetMediaId,
-                                mediaItemIndex =
-                                    targetMediaItemIndex,
-                                positionMs =
-                                    vexStreamPlaybackSeekPositionMs(
-                                        fraction =
-                                            targetFraction,
-                                        durationMs =
-                                            playback.durationMs,
-                                    ),
-                            ),
+                            mediaId =
+                                targetMediaId,
+                            mediaItemIndex =
+                                targetMediaItemIndex,
+                            positionMs =
+                                vexStreamPlaybackSeekPositionMs(
+                                    fraction =
+                                        targetFraction,
+                                    durationMs =
+                                        playback.durationMs,
+                                ),
                         )
                     }
                     scrubFraction = null
@@ -425,16 +413,16 @@ private fun VexStreamContextDockContent(
                                 action = "Selected",
                             )
                             queuePlayConnection
-                                ?.play(
-                                    VexStreamQueuePlayRequest(
-                                        occurrence =
-                                            occurrence,
-                                    ),
+                                ?.playQueueOccurrence(
+                                    occurrence,
                                 )
                         },
                         enabled =
-                            queuePlayConnection
-                                ?.isPlayAvailable == true,
+                            queueCurrent
+                                ?.navigation
+                                ?.playOccurrenceAvailable == true &&
+                                queuePlayConnection !=
+                                null,
                     ) {
                         Text(
                             text = title,

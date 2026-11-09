@@ -61,37 +61,6 @@ class VexStreamCollectionPlaybackTest {
     }
 
     @Test
-    fun playbackAdmissionRequiresEveryProviderCommandActuallyUsed() {
-        assertTrue(
-            vexStreamCollectionPlaybackCommandsAvailable(
-                changeMediaItemsAvailable = true,
-                prepareAvailable = true,
-                playAvailable = true,
-                shuffleEnabled = false,
-                setShuffleModeAvailable = false,
-            ),
-        )
-        assertFalse(
-            vexStreamCollectionPlaybackCommandsAvailable(
-                changeMediaItemsAvailable = false,
-                prepareAvailable = true,
-                playAvailable = true,
-                shuffleEnabled = false,
-                setShuffleModeAvailable = true,
-            ),
-        )
-        assertFalse(
-            vexStreamCollectionPlaybackCommandsAvailable(
-                changeMediaItemsAvailable = true,
-                prepareAvailable = true,
-                playAvailable = true,
-                shuffleEnabled = true,
-                setShuffleModeAvailable = false,
-            ),
-        )
-    }
-
-    @Test
     fun collectionExecutionPreparesCurrentArtworkThenHandsVexMediaToPlayerRealization() =
         runBlocking {
             val executor =
@@ -106,7 +75,7 @@ class VexStreamCollectionPlaybackTest {
             val events =
                 CopyOnWriteArrayList<String>()
             val execution =
-                VexStreamCollectionPlaybackExecution(
+                VexStreamCollectionPlayback(
                     root =
                         root,
                     resolver =
@@ -138,8 +107,8 @@ class VexStreamCollectionPlaybackTest {
                                             .value
                             }
                         },
-                    realization =
-                        realization { resolved ->
+                    connection =
+                        requestConnection { resolved ->
                             events +=
                                 "realize:" +
                                     resolved.items
@@ -233,7 +202,7 @@ class VexStreamCollectionPlaybackTest {
             val realized =
                 CopyOnWriteArrayList<String>()
             val execution =
-                VexStreamCollectionPlaybackExecution(
+                VexStreamCollectionPlayback(
                     root =
                         root,
                     resolver =
@@ -269,8 +238,8 @@ class VexStreamCollectionPlaybackTest {
                                 }
                             }
                         },
-                    realization =
-                        realization { resolved ->
+                    connection =
+                        requestConnection { resolved ->
                             realized +=
                                 resolved.items
                                     .first()
@@ -388,30 +357,96 @@ class VexStreamCollectionPlaybackTest {
         )
     }
 
-    private fun realization(
+    private fun requestConnection(
         onRealize:
             suspend (
                 ResolvedCollectionPlayback,
             ) -> Unit =
             {},
     ):
-        VexStreamCollectionPlaybackRealization =
+        VexStreamPlayerPartner.Connection.Request =
         object :
-            VexStreamCollectionPlaybackRealization {
-            override val isCollectionPlaybackAvailable:
-                Boolean =
+            VexStreamPlayerPartner.Connection.Request {
+            override val id =
+                VexStreamPlayerPartner.Connection.Id(
+                    value =
+                        "collection-test-controller",
+                    occurrence =
+                        1L,
+                )
+
+            override val mediaPlaybackAvailable =
                 true
 
-            override suspend fun realizeCollectionPlayback(
-                resolved:
-                    ResolvedCollectionPlayback,
+            override suspend fun playMedia(
+                items:
+                    List<
+                        VexStreamPlayerPartner.Media
+                    >,
+                selectedIndex:
+                    Int,
             ):
                 Boolean {
                 onRealize(
-                    resolved,
+                    ResolvedCollectionPlayback(
+                        orderedStates =
+                            emptyList(),
+                        items =
+                            items,
+                    ),
                 )
                 return true
             }
+
+            override fun mediaQueueAvailable(
+                placement:
+                    VexStreamPlayerPartner.QueuePlacement,
+            ) =
+                true
+
+            override suspend fun queueMedia(
+                media:
+                    VexStreamPlayerPartner.Media,
+                placement:
+                    VexStreamPlayerPartner.QueuePlacement,
+            ) =
+                true
+
+            override suspend fun play() = Unit
+            override suspend fun pause() = Unit
+            override suspend fun restartCurrent() = Unit
+            override suspend fun previous() = Unit
+            override suspend fun next() = Unit
+            override suspend fun shuffleFuture() = Unit
+            override suspend fun clearQueue() = Unit
+            override suspend fun setRepeatEnabled(
+                enabled:
+                    Boolean,
+            ) = Unit
+
+            override fun playQueueOccurrence(
+                occurrence:
+                    VexStreamPlayerPartner.QueueOccurrence,
+            ) =
+                true
+
+            override fun moveQueueOccurrence(
+                occurrence:
+                    VexStreamPlayerPartner.QueueOccurrence,
+                move:
+                    VexStreamPlayerPartner.QueueMove,
+            ) =
+                true
+
+            override fun seek(
+                mediaId:
+                    String,
+                mediaItemIndex:
+                    Int,
+                positionMs:
+                    Long,
+            ) =
+                true
         }
 
     private fun media(

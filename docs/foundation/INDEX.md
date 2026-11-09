@@ -580,72 +580,61 @@ activate(Control)
 
 and `VexPortFlow` adds a current `StateFlow` projection when observation over time is required.
 
-The current VexStream Play/Pause pressure example keeps the accepted boundaries visible:
+The current VexStream successor applies the newer Direct Family + Partner foundations rather than
+using the older VexPort shape as migration authority:
 
 ~~~text
-Media3 Player
-    -> VexStreamPlayerPartner.Connection
-    -> Conversion
-    -> Signal / Observation
-    -> VexStreamPlayerObservationReceiver
-    -> VexStreamPlayerStore CURRENT
+one external music/playback Source
+        |
+        +-> Media3PlayerConnection
+        |      -> Signal / Observation
+        |      -> Receiver
+        |      -> VexStreamPlayerStore.Snapshot
+        |
+        +-> Media3ControllerConnection
+               -> PlayerPartner.Connection.Request / Progress
 
-VexStreamPlayerStore.playbackSignals
-    -> VexExecution.observe(owner = VexStreamPlaybackFamily)
-    -> VexStreamPlaybackFamily.observePlayer(...)
-    -> reconciled VexStreamPlaybackFamily CURRENT
+Player Store Snapshot
+        |
+        +-> Playback Family
+        +-> Queue Family
+        +-> Repeat Family
 
-Control
-    -> PartnerVexStreamPlaybackConnection
-    -> VexStreamPlaybackFamily.activatePlayback(Control)
-    -> accepted Family Act
-    -> Act.launchWith(process VexExecutionRoot)
-    -> bound Act.Method
-    -> Media3VexStreamPlayerControlConnection
-    -> Media3 provider looper
+Family Control
+    -> accepted Act
+    -> Family.Act.Method
+    -> VexExecution
+    -> PlayerPartner.Connection.Request
+    -> external Source
 
-Player Store CURRENT + Playback Family CURRENT
-    -> VexStreamPlaybackWidgetRelay
-    -> Widget SurfaceState / Glance
-
-Compose
-    -> observes Playback Family semantic State
-    -> observes Player Store read truth
-    -> layers live Player Progress separately
+provider outcome
+    -> Player Signal / Observation
+    -> Store
+    -> Family observation
 ~~~
 
-The Player Receiver ends at Store admission. Playback-specific stale-provider/current-Control
-reconciliation remains inside the Playback Family, following the concrete-Family currentness pattern
-rather than creating a second admission owner. Widget Relay uses ordinary Compound Relay dependency
-observation. Compose does not gain a second relationship-current owner without a demonstrated need.
+The Player Partner owns Source / Signal / Connection vocabulary. Store owns retained outside
+Snapshot truth. Playback / Queue / Repeat own their separate semantic State / Control / Effect
+questions. Media3 Player / MediaSession / MediaController are realization/access mechanisms around
+the same external Source, not separate semantic owners.
 
+Playback's stale-provider/pending-Control reconciliation remains feature-specific inside its Family.
+Queue and Repeat now use Direct VexFamily rather than VexPort/SCAE wrappers. Track and Collection
+playback remain payload/source-resolution workflows because they have not earned independent semantic
+State/Control questions; their former channel/sequence schedulers are replaced by canonical
+VexExecution overlap.
 
-Control meaning is semantic-first as `Available(Act)` / `Unavailable`; Boolean availability is
-derived convenience. Every authored `on(...)` must explicitly terminate in `.stay()` or
-`.admit<State>()`, so incomplete relationships cannot silently disappear during construction.
+Exact queue-row Play/Reorder and Seek remain current-only Player Partner requests where presentation
+requires an immediate provider-currentness result. They do not gain fake feature Connection roots
+merely because their payload is richer than a finite Family Control.
 
-Behavior is the provider/UI/lifecycle-independent semantic rulebook. A concrete Connection is the
-reality boundary/adapter; it must identify its provider/runtime, rightful lifetime owner,
-currentness gates, and concurrency guarantees without requiring a generic Host abstraction.
+The Playback Widget may form one bounded Compound Relay from Player Store + Playback Family current,
+then publish durable Widget SurfaceState. Widget remains downstream presentation custody rather than
+another semantic Family/Partner root.
 
-Cross-family reactions remain convergence-based: convergence may request another family through
-that family's Control/Port, but must not bypass directly to a foreign Effect.
-
-VexMaps pressure establishes four compatibility boundaries without adding new semantic nouns:
-
-- same State-kind + same Act may use mutually-exclusive conditional relationships;
-- relationship admission is immediate semantic topology, not guaranteed final provider outcome;
-- VexPort re-resolution protects stale meaning at activation but does not replace async
-  generation/revision/result-admission gates;
-- concrete Connections retain their provider-specific concurrency/serialization guarantees.
-
-The package construction law is fractal: a sibling Behavior family is earned when the **behavioral
-question itself splits**, not merely when files become large. The canonical split criteria and the
-VexStream Playback mapping live in the family/package blueprint above.
-
-Runtime request payloads, generic UIElement binding, heterogeneous convergence envelopes, generic
-concurrency, generic async failure grammar, and full VexStream queue/seek/shuffle/repeat migration
-remain deliberately held until real consumers earn them.
+Older VexBehaviorFamily / VexPort consumers such as current Maps code remain valid historical/current
+consumers until their own migration is earned. Their existence does not pull new VexStream work back
+into the older pattern.
 
 ## F1 — UI Blueprint / Home Practicum
 

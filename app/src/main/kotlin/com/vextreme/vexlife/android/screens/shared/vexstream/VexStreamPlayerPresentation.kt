@@ -50,11 +50,10 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackExperience
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackReadState
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackSeekConnection
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackSeekRequest
 import com.vextreme.vexlife.android.vexstream.playback.present
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackSeekConnection
 import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackSeekPositionMs
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
 import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueExperience
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatControl
@@ -204,6 +203,8 @@ internal fun VexStreamMiniPlayer(
 
         VexStreamPlaybackTimeline(
             playback = playback,
+            seekAvailable =
+                playbackProjection.seekAvailable,
             seekConnection = seekConnection,
             runtime = runtime,
             semanticRef =
@@ -226,7 +227,7 @@ internal fun VexStreamMiniPlayer(
                         ?.get(
                             VexStreamQueueControl.Previous,
                         )
-                        ?.isAvailable == true,
+                        ?.seekAvailable == true,
             )
             VexIconButton(
                 element = VexStreamMusicScreen.TogglePlayback,
@@ -637,6 +638,9 @@ internal fun VexStreamFullPlayerSheet(
                         )
                 VexStreamPlaybackTimeline(
                     playback = playback,
+                    seekAvailable =
+                        playbackProjection
+                            ?.seekAvailable == true,
                     seekConnection = seekConnection,
                     runtime = runtime,
                     semanticRef = fullPlayerSeekRef,
@@ -778,7 +782,8 @@ internal fun VexStreamFullPlayerSheet(
 @Composable
 private fun VexStreamPlaybackTimeline(
     playback: VexStreamPlaybackReadState,
-    seekConnection: VexStreamPlaybackSeekConnection?,
+    seekAvailable: Boolean,
+    seekConnection: VexStreamPlayerPartner.Connection.Request?,
     runtime: VexRuntime,
     semanticRef: String,
     activationSubjectRef: String? = null,
@@ -854,14 +859,12 @@ private fun VexStreamPlaybackTimeline(
                         VexStreamMusicScreen.SeekPlayback,
                     )
                 seekConnection?.seek(
-                    VexStreamPlaybackSeekRequest(
-                        mediaId =
-                            targetMediaId,
-                        mediaItemIndex =
-                            targetMediaItemIndex,
-                        positionMs =
-                            targetPositionMs,
-                    ),
+                    mediaId =
+                        targetMediaId,
+                    mediaItemIndex =
+                        targetMediaItemIndex,
+                    positionMs =
+                        targetPositionMs,
                 )
             } else {
                 scrubFraction = null

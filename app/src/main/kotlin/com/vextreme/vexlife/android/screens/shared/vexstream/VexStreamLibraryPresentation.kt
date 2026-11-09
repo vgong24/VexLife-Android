@@ -33,9 +33,9 @@ import com.vextreme.vexlife.android.elements.VexText
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.collection.VexStreamCollectionPlaybackOrder
 import com.vextreme.vexlife.android.vexstream.collection.VexStreamCollectionPlaybackRequest
-import com.vextreme.vexlife.android.vexstream.collection.rememberVexStreamCollectionPlaybackConnection
+import com.vextreme.vexlife.android.vexstream.collection.rememberVexStreamCollectionPlayback
 import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCopyConnection
-import com.vextreme.vexlife.android.vexstream.track.rememberVexStreamTrackPlaybackConnection
+import com.vextreme.vexlife.android.vexstream.track.rememberVexStreamTrackPlayback
 
 /**
  * Library-level VexStream Android presentation.
@@ -196,7 +196,7 @@ internal fun VexStreamLibraryFabActions(
     resolver: VexStreamPlaybackSourceResolver?,
 ) {
     val connection =
-        rememberVexStreamCollectionPlaybackConnection(
+        rememberVexStreamCollectionPlayback(
             resolver =
                 resolver,
         )
@@ -283,7 +283,7 @@ internal fun VexStreamSongsPane(
     onVisitArtist: (String) -> Unit,
 ) {
     val trackPlaybackConnection =
-        rememberVexStreamTrackPlaybackConnection(
+        rememberVexStreamTrackPlayback(
             resolver =
                 resolver,
         )
@@ -346,7 +346,7 @@ internal fun VexStreamDownloadsPane(
     onVisitArtist: (String) -> Unit,
 ) {
     val trackPlaybackConnection =
-        rememberVexStreamTrackPlaybackConnection(
+        rememberVexStreamTrackPlayback(
             resolver =
                 resolver,
         )

@@ -45,16 +45,14 @@ import com.vextreme.vexlife.android.VexApplication
 import com.vextreme.vexlife.android.data.vexstream.VexStreamArtworkStore
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
-import com.vextreme.vexlife.android.vexstream.playback.PartnerVexStreamPlaybackConnection
+import com.vextreme.vexlife.android.vexstream.playback.activateVexStreamPlayback
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackTrace
-import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
 import com.vextreme.vexlife.android.vexstream.player.withVexStreamPlayerRequestConnection
-import com.vextreme.vexlife.android.vexstream.queue.PartnerVexStreamQueueConnection
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
+import com.vextreme.vexlife.android.vexstream.queue.activateVexStreamQueue
 import com.vextreme.vexlife.android.widget.VexGlanceAppWidget
-import com.vextreme.vexlife.android.widget.VexWidget
 import com.vextreme.vexlife.android.widget.VexWidgetActionCallback
 import com.vextreme.vexlife.android.widget.VexWidgetActionRef
 import com.vextreme.vexlife.android.widget.VexWidgetPreferenceCodec
@@ -77,10 +75,7 @@ internal data class VexStreamPlaybackWidgetSurfaceState(
     val showPause: Boolean,
     val nextEnabled: Boolean,
 ) :
-    VexWidgetSurfaceState,
-    VexWidget.SurfaceState<
-        VexStreamPlaybackWidget
-    >
+    VexWidgetSurfaceState
 
 private object VexStreamPlaybackWidgetStateKeys {
     val Title =
@@ -231,15 +226,9 @@ internal data class VexStreamPlaybackWidgetProjection(
     val showPause: Boolean,
     val nextEnabled: Boolean,
 ) :
-    VexWidgetProjection,
-    VexWidget.Projection<
-        VexStreamPlaybackWidget
-    >
+    VexWidgetProjection
 
-internal object VexStreamPlaybackWidgetActions :
-    VexWidget.Action<
-        VexStreamPlaybackWidget
-    > {
+internal object VexStreamPlaybackWidgetActions {
     val Previous =
         VexWidgetActionRef(
             "vexstream.widget.previous",
@@ -903,29 +892,55 @@ class VexStreamPlaybackWidgetActionCallback :
                                     .processExecutionRoot,
                             )
 
-                    PartnerVexStreamPlaybackConnection(
+                    activateVexStreamPlayback(
                         family =
                             family,
+                        control =
+                            command.control,
+                        connection =
+                            playerConnection,
                         executionRoot =
                             executionRoot,
-                        effectConnection =
-                            playerConnection,
-                    ).activate(
-                        command.control,
                     )
                         ?.join()
                 }
 
-                is VexStreamPlaybackWidgetCommand.Queue ->
-                    PartnerVexStreamQueueConnection(
-                        store =
-                            appContext
-                                .vexStreamPlayerStore(),
-                        effectConnection =
+                is VexStreamPlaybackWidgetCommand.Queue -> {
+                    val application =
+                        appContext as?
+                            VexApplication
+                            ?: error(
+                                "VexStream Widget requires VexApplication as the process composition root",
+                            )
+                    val family =
+                        application
+                            .dependencies
+                            .resolve(
+                                application
+                                    .dependencyModule
+                                    .queueFamily,
+                            )
+                    val executionRoot =
+                        application
+                            .dependencies
+                            .resolve(
+                                application
+                                    .dependencyModule
+                                    .processExecutionRoot,
+                            )
+
+                    activateVexStreamQueue(
+                        family =
+                            family,
+                        control =
+                            command.control,
+                        connection =
                             playerConnection,
-                    ).activate(
-                        command.control,
+                        executionRoot =
+                            executionRoot,
                     )
+                        ?.join()
+                }
             }
             VexStreamPlaybackTrace.record(
                 stage =
@@ -1029,25 +1044,6 @@ private fun Context.vexStreamPlaybackWidgetRelay():
                 .playbackWidgetRelay,
         )
 }
-
-private fun Context.vexStreamPlayerStore():
-    VexStreamPlayerStore {
-    val vexApplication =
-        applicationContext as?
-            VexApplication
-            ?: error(
-                "VexStream Widget requires VexApplication as the process composition root",
-            )
-
-    return vexApplication
-        .dependencies
-        .resolve(
-            vexApplication
-                .dependencyModule
-                .playerStore,
-        )
-}
-
 
 internal suspend fun retryVexStreamPlaybackWidgetPublication(
     publish: suspend () -> Boolean,

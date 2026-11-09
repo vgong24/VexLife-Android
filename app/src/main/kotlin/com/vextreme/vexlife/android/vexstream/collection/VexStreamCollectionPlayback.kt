@@ -1,3 +1,5 @@
+@file:OptIn(com.vextreme.vexlife.android.execution.VexExecution.RelationshipFoundationApi::class)
+
 package com.vextreme.vexlife.android.vexstream.collection
 
 import androidx.compose.runtime.Composable
@@ -13,11 +15,7 @@ import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueShuffleTargetOrder
 import com.vextreme.vexlife.android.vexstream.track.VexStreamTrackPlaybackResolver
 import com.vextreme.vexlife.android.vexstream.track.prepareVexStreamTrackArtworkBestEffort
-import java.util.concurrent.atomic.AtomicLong
 import kotlin.random.Random
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.receiveAsFlow
 
 internal enum class VexStreamCollectionPlaybackOrder {
     Natural,
@@ -36,103 +34,30 @@ internal data class VexStreamCollectionPlaybackRequest(
 )
 
 /**
- * Provider realization needed after Collection source/order meaning has already been resolved.
- */
-internal interface VexStreamCollectionPlaybackRealization {
-    val isCollectionPlaybackAvailable:
-        Boolean
-
-    suspend fun realizeCollectionPlayback(
-        resolved:
-            ResolvedCollectionPlayback,
-    ):
-        Boolean
-}
-
-/**
- * Feature-local payload boundary for rendered collection -> Media3 playback.
+ * Feature-local Collection playback surface.
  *
- * Availability is a cheap projection only. Activation resolves media on managed IO, prepares only
- * the first ordered/current track's ancillary artwork, rechecks provider commands, then commits on
- * the Media3 application looper.
+ * This is not a Partner Connection. It owns Collection source/order preparation and a disposable
+ * VexExecution lifetime, then addresses the actual Player Partner request Connection.
  */
-internal interface VexStreamCollectionPlaybackConnection {
-    fun isAvailable(
-        request: VexStreamCollectionPlaybackRequest,
-    ): Boolean
-
-    fun play(
-        request: VexStreamCollectionPlaybackRequest,
-    ): Boolean
-}
-
-@Composable
-internal fun rememberVexStreamCollectionPlaybackConnection(
-    resolver:
-        VexStreamTrackPlaybackResolver?,
-):
-    VexStreamCollectionPlaybackConnection? {
-    val owner:
-        VexStreamPlayerConnectionViewModel =
-        viewModel()
-    val realization =
-        owner.playerRequestConnection
-    val connection =
-        remember(
-            owner.executionRoot,
-            resolver,
-            realization,
-        ) {
-            if (
-                resolver ==
-                null ||
-                realization ==
-                null
-            ) {
-                null
-            } else {
-                PartnerVexStreamCollectionPlaybackConnection(
-                    executionRoot =
-                        owner.executionRoot,
-                    resolver =
-                        resolver,
-                    realization =
-                        realization,
-                )
-            }
-        }
-
-    DisposableEffect(
-        connection,
-    ) {
-        onDispose {
-            connection?.shutdown()
-        }
-    }
-
-    return connection
-}
-
-internal class PartnerVexStreamCollectionPlaybackConnection(
-    executionRoot:
+internal class VexStreamCollectionPlayback(
+    root:
         VexExecutionRoot,
     private val resolver:
         VexStreamTrackPlaybackResolver,
-    private val realization:
-        VexStreamCollectionPlaybackRealization,
-) :
-    VexStreamCollectionPlaybackConnection {
+    private val connection:
+        VexStreamPlayerPartner.Connection.Request,
+) {
     private val execution =
-        VexStreamCollectionPlaybackExecution(
+        Execution(
             root =
-                executionRoot,
+                root,
             resolver =
                 resolver,
-            realization =
-                realization,
+            connection =
+                connection,
         )
 
-    override fun isAvailable(
+    fun isAvailable(
         request:
             VexStreamCollectionPlaybackRequest,
     ):
@@ -140,9 +65,9 @@ internal class PartnerVexStreamCollectionPlaybackConnection(
         vexStreamCollectionSourceProjectedAvailable(
             request.tracks,
         ) &&
-            realization.isCollectionPlaybackAvailable
+            connection.mediaPlaybackAvailable
 
-    override fun play(
+    fun play(
         request:
             VexStreamCollectionPlaybackRequest,
     ):
@@ -155,139 +80,149 @@ internal class PartnerVexStreamCollectionPlaybackConnection(
             return false
         }
 
-        return execution.play(
+        execution.play(
             request,
         )
+        return true
     }
 
     fun shutdown() {
         execution.shutdown()
     }
-}
 
-internal class VexStreamCollectionPlaybackExecution(
-    root:
-        VexExecutionRoot,
-    private val resolver:
-        VexStreamTrackPlaybackResolver,
-    private val realization:
-        VexStreamCollectionPlaybackRealization,
-) :
-    VexExecution(
-        root,
-    ) {
-    private data class PlayIntent(
-        val sequence: Long,
-        val request:
-            VexStreamCollectionPlaybackRequest,
-    )
+    private class Execution(
+        root:
+            VexExecutionRoot,
+        private val resolver:
+            VexStreamTrackPlaybackResolver,
+        private val connection:
+            VexStreamPlayerPartner.Connection.Request,
+    ) :
+        VexExecution(
+            root,
+        ) {
+        private object Play :
+            VexExecution.RelationshipId
 
-    private val playSequence =
-        AtomicLong(
-            0L,
-        )
-    private val requests =
-        Channel<
-            PlayIntent
-        >(
-            capacity =
-                Channel.CONFLATED,
-        )
+        fun play(
+            request:
+                VexStreamCollectionPlaybackRequest,
+        ) {
+            beginLatest(
+                relationshipId =
+                    Play,
+                operation =
+                    ::resolve,
+                argument =
+                    request,
+            )
+        }
 
-    init {
-        launchForCollect(
-            source =
-                ::requestsForExecution,
-            restartOnSourceFailure =
-                false,
-        ) { intent ->
-            resolveForExecution(
-                intent,
+        fun shutdown() {
+            forceStopOwned(
+                "VexStream Collection playback disposed",
+            )
+        }
+
+        private suspend fun resolve(
+            request:
+                VexStreamCollectionPlaybackRequest,
+        ) {
+            var resolved =
+                resolveVexStreamCollectionPlayback(
+                    request =
+                        request,
+                    resolver =
+                        resolver,
+                )
+                    ?: return
+
+            val currentState =
+                resolved.orderedStates
+                    .firstOrNull()
+            if (
+                currentState !=
+                null
+            ) {
+                prepareVexStreamTrackArtworkBestEffort(
+                    resolver =
+                        resolver,
+                    state =
+                        currentState,
+                )
+
+                resolver.media(
+                    currentState,
+                )?.let { refreshedCurrent ->
+                    resolved =
+                        resolved.copy(
+                            items =
+                                listOf(
+                                    refreshedCurrent,
+                                ) +
+                                    resolved.items
+                                        .drop(
+                                            1,
+                                        ),
+                        )
+                }
+            }
+
+            connection.playMedia(
+                items =
+                    resolved.items,
+                selectedIndex =
+                    0,
             )
         }
     }
+}
 
-    fun play(
-        request: VexStreamCollectionPlaybackRequest,
-    ): Boolean =
-        requests
-            .trySend(
-                PlayIntent(
-                    sequence =
-                        playSequence.incrementAndGet(),
-                    request = request,
-                ),
-            )
-            .isSuccess
-
-    fun shutdown() {
-        requests.close()
-        forceStopOwned(
-            "VexStream Collection playback disposed",
-        )
-    }
-
-    private fun requestsForExecution():
-        Flow<
-            PlayIntent
-        > =
-        requests.receiveAsFlow()
-
-    private suspend fun resolveForExecution(
-        intent: PlayIntent,
-    ) {
-        var resolved =
-            resolveVexStreamCollectionPlayback(
-                request =
-                    intent.request,
-                resolver = resolver,
-            )
-                ?: return
-
-        val currentState =
-            resolved.orderedStates
-                .firstOrNull()
-        if (
-            currentState != null
+@Composable
+internal fun rememberVexStreamCollectionPlayback(
+    resolver:
+        VexStreamTrackPlaybackResolver?,
+):
+    VexStreamCollectionPlayback? {
+    val owner:
+        VexStreamPlayerConnectionViewModel =
+        viewModel()
+    val connection =
+        owner.playerRequestConnection
+    val playback =
+        remember(
+            owner.executionRoot,
+            resolver,
+            connection,
         ) {
-            prepareVexStreamTrackArtworkBestEffort(
-                resolver = resolver,
-                state = currentState,
-            )
-
-            resolver.media(
-                currentState,
-            )?.let { refreshedCurrent ->
-                resolved =
-                    resolved.copy(
-                        items =
-                            listOf(
-                                refreshedCurrent,
-                            ) +
-                                resolved.items
-                                    .drop(
-                                        1,
-                                    ),
-                    )
+            if (
+                resolver ==
+                null ||
+                connection ==
+                null
+            ) {
+                null
+            } else {
+                VexStreamCollectionPlayback(
+                    root =
+                        owner.executionRoot,
+                    resolver =
+                        resolver,
+                    connection =
+                        connection,
+                )
             }
         }
 
-        if (
-            playSequence.get() !=
-            intent.sequence
-        ) {
-            return
-        }
-
-        if (
-            playSequence.get() ==
-            intent.sequence
-        ) {
-            realization.realizeCollectionPlayback(
-                resolved,
-            )
+    DisposableEffect(
+        playback,
+    ) {
+        onDispose {
+            playback?.shutdown()
         }
     }
+
+    return playback
 }
 
 internal data class ResolvedCollectionPlayback(
@@ -349,21 +284,6 @@ internal fun vexStreamCollectionSourceProjectedAvailable(
         it.availability !=
             VexStreamTrackAvailability.UNAVAILABLE
     }
-
-internal fun vexStreamCollectionPlaybackCommandsAvailable(
-    changeMediaItemsAvailable: Boolean,
-    prepareAvailable: Boolean,
-    playAvailable: Boolean,
-    shuffleEnabled: Boolean,
-    setShuffleModeAvailable: Boolean,
-): Boolean =
-    changeMediaItemsAvailable &&
-        prepareAvailable &&
-        playAvailable &&
-        (
-            !shuffleEnabled ||
-                setShuffleModeAvailable
-        )
 
 /**
  * Shuffle All is a one-shot collection permutation, not persistent Media3 shuffle traversal.

@@ -19,6 +19,10 @@ import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
 import com.vextreme.vexlife.android.vexstream.playback.observeVexStreamPlaybackPlayerStore
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerObservationReceiver
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueFamily
+import com.vextreme.vexlife.android.vexstream.queue.observeVexStreamQueuePlayerStore
+import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatFamily
+import com.vextreme.vexlife.android.vexstream.repeat.observeVexStreamRepeatPlayerStore
 import com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetRelay
 import com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetUpdateExecution
 
@@ -137,6 +141,22 @@ internal class VexApplicationDependencyModule(
                 playerStore,
         )
 
+    val queueFamily =
+        QueueFamilyProvider(
+            executionRoot =
+                processExecutionRoot,
+            playerStore =
+                playerStore,
+        )
+
+    val repeatFamily =
+        RepeatFamilyProvider(
+            executionRoot =
+                processExecutionRoot,
+            playerStore =
+                playerStore,
+        )
+
     val navigationSession =
         NavigationSessionProvider()
 
@@ -186,6 +206,8 @@ internal class VexApplicationDependencyModule(
             processExecutionRoot,
             playerStore,
             playbackFamily,
+            queueFamily,
+            repeatFamily,
             navigationSession,
             backgroundServiceRelay,
             playbackWidgetRelay,
@@ -321,6 +343,96 @@ internal class VexApplicationDependencyModule(
                 VexStreamPlaybackFamily()
 
             observeVexStreamPlaybackPlayerStore(
+                family =
+                    family,
+                store =
+                    dependencies.require(
+                        playerStore,
+                    ),
+                executionRoot =
+                    dependencies.require(
+                        executionRoot,
+                    ),
+            )
+
+            return family
+        }
+    }
+
+    /** Queue semantic owner maintained from Player Store outside truth. */
+    internal class QueueFamilyProvider(
+        private val executionRoot:
+            VexDependencyProvider<
+                VexExecutionRoot
+            >,
+        private val playerStore:
+            VexDependencyProvider<
+                VexStreamPlayerStore
+            >,
+    ) :
+        VexDependencyProvider<
+            VexStreamQueueFamily
+        >(
+            dependencies =
+                listOf(
+                    executionRoot,
+                    playerStore,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexStreamQueueFamily {
+            val family =
+                VexStreamQueueFamily()
+
+            observeVexStreamQueuePlayerStore(
+                family =
+                    family,
+                store =
+                    dependencies.require(
+                        playerStore,
+                    ),
+                executionRoot =
+                    dependencies.require(
+                        executionRoot,
+                    ),
+            )
+
+            return family
+        }
+    }
+
+    /** Repeat semantic owner maintained from Player Store outside truth. */
+    internal class RepeatFamilyProvider(
+        private val executionRoot:
+            VexDependencyProvider<
+                VexExecutionRoot
+            >,
+        private val playerStore:
+            VexDependencyProvider<
+                VexStreamPlayerStore
+            >,
+    ) :
+        VexDependencyProvider<
+            VexStreamRepeatFamily
+        >(
+            dependencies =
+                listOf(
+                    executionRoot,
+                    playerStore,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexStreamRepeatFamily {
+            val family =
+                VexStreamRepeatFamily()
+
+            observeVexStreamRepeatPlayerStore(
                 family =
                     family,
                 store =

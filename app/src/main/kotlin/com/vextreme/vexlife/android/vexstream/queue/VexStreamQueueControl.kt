@@ -1,11 +1,9 @@
 package com.vextreme.vexlife.android.vexstream.queue
 
-import com.vextreme.vexlife.android.behavior.VexBehaviorBlueprint
-import com.vextreme.vexlife.android.behavior.VexBehaviorControlBlueprint
-import com.vextreme.vexlife.android.behavior.VexBehaviorFamily
+import com.vextreme.vexlife.android.behavior.VexFamily
 
 enum class VexStreamQueueControl :
-    VexBehaviorFamily.Control<
+    VexFamily.Control<
         VexStreamQueueFamily
     > {
     Previous,
@@ -14,36 +12,5 @@ enum class VexStreamQueueControl :
     Clear,
 }
 
-internal fun VexBehaviorBlueprint<
-    VexStreamQueueFamily,
-    VexStreamQueueState,
-    VexStreamQueueAct,
-    VexStreamQueueEffect
->.vexStreamQueueControls():
-    VexBehaviorControlBlueprint<
-        VexStreamQueueFamily,
-        VexStreamQueueState,
-        VexStreamQueueAct,
-        VexStreamQueueEffect,
-        VexStreamQueueControl
-    > =
-    controls<VexStreamQueueControl> {
-        control(
-            VexStreamQueueControl.Previous,
-            VexStreamQueueAct.Previous,
-        )
-        control(
-            VexStreamQueueControl.Next,
-            VexStreamQueueAct.Next,
-        )
-        control(
-            VexStreamQueueControl.Shuffle,
-            VexStreamQueueAct.Shuffle,
-        )
-        control(
-            VexStreamQueueControl.Clear,
-            VexStreamQueueAct.Clear,
-        )
-    }
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][QUEUE][DIRECT-FAMILY]

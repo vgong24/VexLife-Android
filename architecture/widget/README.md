@@ -9,40 +9,12 @@ product State owner or effect runtime.
 
 The first real consumer is VexStream playback, but this module does not contain music vocabulary.
 
-## Rooted Widget coordinate
-
-This draft is evaluating whether Widget has earned a reusable rooted coordinate for the distinct
-remote-surface responsibilities already present in the Widget foundation: durable presentation
-custody, remote-host realization and stable interaction doorways over truth owned elsewhere.
-
-```text
-VexWidget
-├─ Relay
-├─ SurfaceState
-├─ Projection
-└─ Action
-   └─ Ref
-```
-
-That rooted tree is candidate architecture in the current PR, not accepted merely because the names
-exist in source. The existing SurfaceState / Projection / ActionRef mechanics remain independently
-inspectable.
-
-A concrete `Widget.Relay` may reuse `VexCompoundRelay` only when the Widget genuinely needs a
-relationship current across independent owners. The VexStream candidate uses the established Relay
-dependency mechanism to observe Player Store CURRENT and Playback Family CURRENT directly; it does
-not add origin-specific admission verbs.
-
 ## Current architecture
 
 ```text
 product-owned State / provider truth
         |
-        | concrete Widget.Relay when independent owners must converge
-        v
-bounded Widget Relay output
-        |
-        | feature-owned surface mapping
+        | feature-owned pure mapping
         v
 typed VexWidgetSurfaceState
         |
@@ -125,32 +97,26 @@ There is deliberately no revision counter, Boolean invalidation toggle or hash s
 `A -> B -> A`, both transitions are real because each new value is compared to the exact current
 surface value. Exact duplicate `A -> A` is suppressed.
 
-## SCAE relationship
+## Product relationship
 
-The widget foundation sits downstream of SCAE rather than becoming another family:
+The widget foundation sits downstream of rightful product/provider owners rather than becoming
+another semantic root:
 
 ```text
-CURRENT product State + Controls
--> existing Behavior Projection
-
-provider/read truth + existing Projection(s)
--> feature-owned widget SurfaceState
+Partner / Store CURRENT ----\
+                             -> feature relationship mapping -> Widget SurfaceState
+Family CURRENT -------------/
 
 SurfaceState
 -> widget Projection
 -> RemoteViews
 ```
 
-Controls still return through the rightful product family. SurfaceState is remote presentation
-custody only.
+A concrete feature may use an existing Relay when several independently-owned currents genuinely
+form one widget-facing relationship current. Controls still return through the rightful Family or
+request boundary. SurfaceState is remote presentation custody only.
 
 ## Source roles
-
-`VexWidget`
-: recursive root coordinate for the remote-surface responsibility. Concrete Relay output,
-SurfaceState, Projection and Action vocabularies carry the exact Widget coordinate so ownership is
-compiler-visible rather than inferred from package or naming, without absorbing Family, Partner,
-Service, Execution or Relay ownership.
 
 `VexWidgetSurfaceState`
 : marker for typed durable widget surface snapshots.
@@ -189,9 +155,10 @@ The first consumer remains deliberately compact:
 artwork | title/artist | previous | play/pause | next
 ```
 
-VexStream maps Media3/provider truth + existing Playback/Queue projections into one typed widget
-SurfaceState. Artwork availability is presentation truth, so artwork backfill uses `transformAll`
-to change that exact field rather than forcing a synthetic revision.
+VexStream's Playback Widget uses an ordinary Compound Relay over bounded Player Store + Playback
+Family current, then maps that relationship output into one typed Widget SurfaceState. Artwork
+availability is presentation truth, so artwork backfill uses `transformAll` to change that exact
+field rather than forcing a synthetic revision.
 
 VexStream-specific meaning remains with:
 
@@ -218,4 +185,4 @@ vexVerifyLocal
 
 A launcher-hosted appearance/update claim still needs Android/device or lived proof.
 
-<!-- [VXG RealForever][ANDROID][APP-WIDGET][GLANCE][SCAE] -->
+<!-- [VXG RealForever][ANDROID][APP-WIDGET][GLANCE] -->
