@@ -12,6 +12,10 @@ import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackProjecti
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackProjectionFor
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueFamily
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueState
+import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueProjectionFor
 
 /**
  * Bounded Player-origin facts required by the Playback Widget.
@@ -27,10 +31,6 @@ internal data class VexStreamPlaybackWidgetPlayerInput(
         String,
     val artworkUri:
         String?,
-    val previousAvailable:
-        Boolean,
-    val nextAvailable:
-        Boolean,
 ) {
     fun deepCopy():
         VexStreamPlaybackWidgetPlayerInput =
@@ -43,8 +43,6 @@ internal data class VexStreamPlaybackWidgetPlayerInput(
                 title = "",
                 artist = "",
                 artworkUri = null,
-                previousAvailable = false,
-                nextAvailable = false,
             )
     }
 }
@@ -60,6 +58,9 @@ internal data class VexStreamPlaybackWidgetRelayInputState(
     val playback:
         VexStreamPlaybackState? =
         null,
+    val queue:
+        VexStreamQueueState? =
+        null,
 ) :
     VexInputState<
         VexStreamPlaybackWidgetRelayInputState
@@ -72,6 +73,9 @@ internal data class VexStreamPlaybackWidgetRelayInputState(
                     ?.deepCopy(),
             playback =
                 playback
+                    ?.deepCopyForWidgetRelay(),
+            queue =
+                queue
                     ?.deepCopyForWidgetRelay(),
         )
 }
@@ -111,9 +115,12 @@ internal data class VexStreamPlaybackWidgetRelayOutputState(
 }
 
 /**
- * Playback Widget relationship current over bounded Player Store + Playback Family truth.
+ * Playback Widget relationship current over bounded Player Store + Playback Family + Queue Family
+ * truth.
  *
- * The Relay observes the rightful Player Store and Playback Family currents directly through the
+ * Player Store contributes metadata/artwork, Playback Family contributes Play/Pause meaning, and
+ * Queue Family contributes Previous/Next meaning. The Relay observes those rightful currents through
+ * the
  * established Compound Relay dependency mechanism. It does not invent transaction labels or mutate
  * either owner. Each input patch is serialized against the Relay's retained relationship current.
  */
@@ -124,6 +131,8 @@ internal class VexStreamPlaybackWidgetRelay(
         VexStreamPlayerStore,
     playbackFamily:
         VexStreamPlaybackFamily,
+    queueFamily:
+        VexStreamQueueFamily,
 ) :
     VexCompoundRelay<
         VexStreamPlaybackWidgetRelayInputState,
@@ -141,6 +150,10 @@ internal class VexStreamPlaybackWidgetRelay(
                     playbackFamily
                         .currentState
                         .deepCopyForWidgetRelay(),
+                queue =
+                    queueFamily
+                        .currentState
+                        .deepCopyForWidgetRelay(),
             ),
         initialOutputState =
             vexStreamPlaybackWidgetRelayOutput(
@@ -148,8 +161,10 @@ internal class VexStreamPlaybackWidgetRelay(
                     playerStore
                         .current
                         .toVexStreamPlaybackWidgetPlayerInput(),
-                familyState =
+                playbackState =
                     playbackFamily.currentState,
+                queueState =
+                    queueFamily.currentState,
             ),
         executionRoot =
             executionRoot,
@@ -178,6 +193,19 @@ internal class VexStreamPlaybackWidgetRelay(
                 ) { state ->
                     VexStreamPlaybackWidgetRelayInputState(
                         playback =
+                            state
+                                .deepCopyForWidgetRelay(),
+                    )
+                }
+
+                observe(
+                    dependencyRef =
+                        "queue.family.current",
+                    flow =
+                        queueFamily.states,
+                ) { state ->
+                    VexStreamPlaybackWidgetRelayInputState(
+                        queue =
                             state
                                 .deepCopyForWidgetRelay(),
                     )
@@ -215,6 +243,12 @@ internal class VexStreamPlaybackWidgetRelay(
                 ?: error(
                     "Playback Widget Relay requires retained Playback Family input",
                 )
+        val queue =
+            inputState.queue
+                ?: previous.queue
+                ?: error(
+                    "Playback Widget Relay requires retained Queue Family input",
+                )
 
         return currentState.copy(
             inputState =
@@ -223,13 +257,17 @@ internal class VexStreamPlaybackWidgetRelay(
                         player.deepCopy(),
                     playback =
                         playback.deepCopyForWidgetRelay(),
+                    queue =
+                        queue.deepCopyForWidgetRelay(),
                 ),
             outputState =
                 vexStreamPlaybackWidgetRelayOutput(
                     player =
                         player,
-                    familyState =
+                    playbackState =
                         playback,
+                    queueState =
+                        queue,
                 ),
         )
     }
@@ -238,8 +276,10 @@ internal class VexStreamPlaybackWidgetRelay(
 internal fun vexStreamPlaybackWidgetRelayOutput(
     player:
         VexStreamPlaybackWidgetPlayerInput,
-    familyState:
+    playbackState:
         VexStreamPlaybackState,
+    queueState:
+        VexStreamQueueState,
 ):
     VexStreamPlaybackWidgetRelayOutputState {
     return VexStreamPlaybackWidgetRelayOutputState(
@@ -252,13 +292,21 @@ internal fun vexStreamPlaybackWidgetRelayOutput(
         artworkUri =
             player.artworkUri,
         previousEnabled =
-            player.previousAvailable,
+            vexStreamQueueProjectionFor(
+                queueState,
+            )[
+                VexStreamQueueControl.Previous
+            ].isAvailable,
         playback =
             vexStreamPlaybackProjectionFor(
-                familyState,
+                playbackState,
             ),
         nextEnabled =
-            player.nextAvailable,
+            vexStreamQueueProjectionFor(
+                queueState,
+            )[
+                VexStreamQueueControl.Next
+            ].isAvailable,
     )
 }
 
@@ -281,12 +329,6 @@ private fun VexStreamPlayerStore.Snapshot.toVexStreamPlaybackWidgetPlayerInput()
                     currentMedia.artist,
                 artworkUri =
                     currentMedia.artworkUri,
-                previousAvailable =
-                    queueNavigation
-                        .previousAvailable,
-                nextAvailable =
-                    queueNavigation
-                        .nextAvailable,
             )
     }
 
@@ -310,6 +352,18 @@ private fun VexStreamPlaybackState.deepCopyForWidgetRelay():
             copy()
 
         is VexStreamPlaybackState.Ended ->
+            copy()
+    }
+
+private fun VexStreamQueueState.deepCopyForWidgetRelay():
+    VexStreamQueueState =
+    when (
+        this
+    ) {
+        VexStreamQueueState.Empty ->
+            VexStreamQueueState.Empty
+
+        is VexStreamQueueState.NonEmpty ->
             copy()
     }
 

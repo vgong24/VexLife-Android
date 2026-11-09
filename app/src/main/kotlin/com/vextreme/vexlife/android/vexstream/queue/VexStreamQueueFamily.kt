@@ -98,37 +98,8 @@ internal class VexStreamQueueFamily(
             VexStreamQueueState,
     ):
         VexStreamQueueProjection =
-        VexStreamQueueProjection(
-            state =
-                state,
-            previousAvailable =
-                isControlAvailable(
-                    state =
-                        state,
-                    control =
-                        VexStreamQueueControl.Previous,
-                ),
-            nextAvailable =
-                isControlAvailable(
-                    state =
-                        state,
-                    control =
-                        VexStreamQueueControl.Next,
-                ),
-            shuffleAvailable =
-                isControlAvailable(
-                    state =
-                        state,
-                    control =
-                        VexStreamQueueControl.Shuffle,
-                ),
-            clearAvailable =
-                isControlAvailable(
-                    state =
-                        state,
-                    control =
-                        VexStreamQueueControl.Clear,
-                ),
+        vexStreamQueueProjectionFor(
+            state,
         )
 
     val currentQueueProjection:
@@ -137,37 +108,6 @@ internal class VexStreamQueueFamily(
             projectionFor(
                 currentState,
             )
-
-    private fun isControlAvailable(
-        state:
-            VexStreamQueueState,
-        control:
-            VexStreamQueueControl,
-    ):
-        Boolean =
-        when (
-            state
-        ) {
-            VexStreamQueueState.Empty ->
-                false
-
-            is VexStreamQueueState.NonEmpty ->
-                when (
-                    control
-                ) {
-                    VexStreamQueueControl.Previous ->
-                        state.previousAvailable
-
-                    VexStreamQueueControl.Next ->
-                        state.nextAvailable
-
-                    VexStreamQueueControl.Shuffle ->
-                        state.shuffleAvailable
-
-                    VexStreamQueueControl.Clear ->
-                        state.clearAvailable
-                }
-        }
 
     object Act {
         class Method(
@@ -209,6 +149,76 @@ internal class VexStreamQueueFamily(
         }
     }
 }
+
+internal fun vexStreamQueueProjectionFor(
+    state:
+        VexStreamQueueState,
+):
+    VexStreamQueueProjection =
+    VexStreamQueueProjection(
+        state =
+            state,
+        previousAvailable =
+            vexStreamQueueControlAvailable(
+                state =
+                    state,
+                control =
+                    VexStreamQueueControl.Previous,
+            ),
+        nextAvailable =
+            vexStreamQueueControlAvailable(
+                state =
+                    state,
+                control =
+                    VexStreamQueueControl.Next,
+            ),
+        shuffleAvailable =
+            vexStreamQueueControlAvailable(
+                state =
+                    state,
+                control =
+                    VexStreamQueueControl.Shuffle,
+            ),
+        clearAvailable =
+            vexStreamQueueControlAvailable(
+                state =
+                    state,
+                control =
+                    VexStreamQueueControl.Clear,
+            ),
+    )
+
+private fun vexStreamQueueControlAvailable(
+    state:
+        VexStreamQueueState,
+    control:
+        VexStreamQueueControl,
+):
+    Boolean =
+    when (
+        state
+    ) {
+        VexStreamQueueState.Empty ->
+            false
+
+        is VexStreamQueueState.NonEmpty ->
+            when (
+                control
+            ) {
+                VexStreamQueueControl.Previous ->
+                    state.previousAvailable
+
+                VexStreamQueueControl.Next ->
+                    state.nextAvailable
+
+                VexStreamQueueControl.Shuffle ->
+                    state.shuffleAvailable
+
+                VexStreamQueueControl.Clear ->
+                    state.clearAvailable
+            }
+    }
+
 
 internal fun activateVexStreamQueue(
     family:

@@ -156,7 +156,9 @@ artwork | title/artist | previous | play/pause | next
 ```
 
 VexStream's Playback Widget uses an ordinary Compound Relay over bounded Player Store + Playback
-Family current, then maps that relationship output into one typed Widget SurfaceState. Artwork
+Family + Queue Family current, then maps that relationship output into one typed Widget SurfaceState.
+Player Store contributes metadata/artwork, Playback Family contributes Play/Pause meaning, and Queue
+Family contributes Previous/Next meaning. Artwork
 availability is presentation truth, so artwork backfill uses `transformAll` to change that exact
 field rather than forcing a synthetic revision.
 

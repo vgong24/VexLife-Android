@@ -178,6 +178,8 @@ internal class VexApplicationDependencyModule(
                 playerStore,
             playbackFamily =
                 playbackFamily,
+            queueFamily =
+                queueFamily,
         )
 
     val playerObservationReceiver =
@@ -525,10 +527,10 @@ internal class VexApplicationDependencyModule(
     }
 
     /**
-     * Process-lived Widget relationship convergence over bounded Player + Playback Family truth.
+     * Process-lived Widget relationship convergence over bounded Player + Playback + Queue truth.
      *
-     * The Relay owns only the Widget-facing relationship current. Player Store and Playback Family
-     * remain the rightful owners of their source truths.
+     * The Relay owns only the Widget-facing relationship current. Player Store, Playback Family and
+     * Queue Family remain the rightful owners of their source truths.
      */
     internal class PlaybackWidgetRelayProvider(
         private val executionRoot:
@@ -543,6 +545,10 @@ internal class VexApplicationDependencyModule(
             VexDependencyProvider<
                 VexStreamPlaybackFamily
             >,
+        private val queueFamily:
+            VexDependencyProvider<
+                VexStreamQueueFamily
+            >,
     ) :
         VexDependencyProvider<
             VexStreamPlaybackWidgetRelay
@@ -552,6 +558,7 @@ internal class VexApplicationDependencyModule(
                     executionRoot,
                     playerStore,
                     playbackFamily,
+                    queueFamily,
                 ),
         ) {
         override fun create(
@@ -571,6 +578,10 @@ internal class VexApplicationDependencyModule(
                 playbackFamily =
                     dependencies.require(
                         playbackFamily,
+                    ),
+                queueFamily =
+                    dependencies.require(
+                        queueFamily,
                     ),
             )
     }

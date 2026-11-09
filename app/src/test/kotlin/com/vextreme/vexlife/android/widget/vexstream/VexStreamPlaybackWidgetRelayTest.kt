@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.widget.vexstream
 
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackPhase
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
@@ -24,8 +25,11 @@ class VexStreamPlaybackWidgetRelayTest {
             vexStreamPlaybackWidgetRelayOutput(
                 player =
                     playerInput(),
-                familyState =
+                playbackState =
                     familyState,
+                queueState =
+                    queueState(),
+
             )
 
         assertSame(
@@ -41,17 +45,24 @@ class VexStreamPlaybackWidgetRelayTest {
     }
 
     @Test
-    fun playerOriginContributesOnlyTheBoundedWidgetFacts() {
+    fun queueFamilyOriginOwnsPreviousAndNextAvailability() {
         val output =
             vexStreamPlaybackWidgetRelayOutput(
                 player =
                     playerInput(),
-                familyState =
+                playbackState =
                     VexStreamPlaybackState.Media(
                         playRequested = false,
                         phase =
                             VexStreamPlaybackPhase.Ready,
                         playPauseAvailable = true,
+                    ),
+                queueState =
+                    queueState(
+                        previousAvailable =
+                            true,
+                        nextAvailable =
+                            false,
                     ),
             )
 
@@ -77,8 +88,10 @@ class VexStreamPlaybackWidgetRelayTest {
             vexStreamPlaybackWidgetRelayOutput(
                 player =
                     playerInput(),
-                familyState =
+                playbackState =
                     VexStreamPlaybackState.NoMedia,
+                queueState =
+                    VexStreamQueueState.Empty,
             )
 
         assertSame(
@@ -90,6 +103,26 @@ class VexStreamPlaybackWidgetRelayTest {
         )
     }
 
+    private fun queueState(
+        previousAvailable:
+            Boolean =
+            true,
+        nextAvailable:
+            Boolean =
+            false,
+    ):
+        VexStreamQueueState =
+        VexStreamQueueState.NonEmpty(
+            previousAvailable =
+                previousAvailable,
+            nextAvailable =
+                nextAvailable,
+            shuffleAvailable =
+                false,
+            clearAvailable =
+                true,
+        )
+
     private fun playerInput():
         VexStreamPlaybackWidgetPlayerInput =
         VexStreamPlaybackWidgetPlayerInput(
@@ -97,8 +130,6 @@ class VexStreamPlaybackWidgetRelayTest {
             title = "Track 1",
             artist = "Artist",
             artworkUri = "file:///artwork",
-            previousAvailable = true,
-            nextAvailable = false,
         )
 }
 

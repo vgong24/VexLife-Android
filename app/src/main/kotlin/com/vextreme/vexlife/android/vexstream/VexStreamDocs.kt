@@ -57,7 +57,7 @@ package com.vextreme.vexlife.android.vexstream
  * used as a hammer where they do not preserve the lived contract.
  *
  * Widget is downstream presentation custody. The Playback Widget may use a Compound Relay when it
- * genuinely relates independent Player Store + Playback Family currents, but Widget does not become
+ * genuinely relates independent Player Store + Playback Family + Queue Family currents, but Widget does not become
  * another semantic Family/Partner root.
  *
  * Repository/catalog/offline/pairing concerns remain with their existing rightful data/repository

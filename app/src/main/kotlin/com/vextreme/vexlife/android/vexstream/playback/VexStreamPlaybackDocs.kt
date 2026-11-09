@@ -63,7 +63,7 @@ package com.vextreme.vexlife.android.vexstream.playback
  * ## Widget
  *
  * The Playback Widget's [com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetRelay]
- * is an ordinary Compound Relay over bounded Player Store + Playback Family currents. Widget durable
+ * is an ordinary Compound Relay over bounded Player Store + Playback Family + Queue Family currents. Widget durable
  * SurfaceState / Projection / ActionRef remain presentation mechanics; no peer VexWidget semantic
  * root is required.
  *
