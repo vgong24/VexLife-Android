@@ -327,8 +327,9 @@ abstract class VexFamily<
          *
          * The accepted Act already carries its Begin, authored Approach, maintained RelationshipId
          * when required, and live Family owner. The Method adds only the concrete means for the
-         * exact Effect authored by Begin. [launch] verifies that provenance, then hands the completed
-         * occurrence to VexExecution, which adds Job custody rather than another semantic decision.
+         * exact Effect authored by Begin. [launch] verifies that provenance, then entrusts the
+         * prepared consequence to VexExecution. VexExecution forms and holds the actual Job occurrence;
+         * it adds runtime custody rather than another semantic decision.
          *
          * [beforeOperation] observes the attempt boundary. [onResult] receives genuinely new Method
          * outcome information. Neither callback authors Effect, Approach, RelationshipId, or owner.
