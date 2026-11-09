@@ -333,6 +333,10 @@ abstract class VexFamily<
          *
          * [beforeOperation] observes the attempt boundary. [onResult] receives genuinely new Method
          * outcome information. Neither callback authors Effect, Approach, RelationshipId, or owner.
+         *
+         * Relationship/provenance/custody-establishment failures happen before a Job occurrence is
+         * formed and therefore throw synchronously from [launch]. Once custody exists, an exception
+         * escaping Method invocation is reported as [VexMethod.Result.Error] through [onResult].
          */
         fun <SuccessOutput, FailureOutput> launch(
             executionRoot:
