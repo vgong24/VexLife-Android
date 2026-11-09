@@ -134,7 +134,9 @@ class ThemeModeTest {
                         ThemeMode.Dark,
                 ),
             ),
-            darkAct?.effect,
+            darkAct
+                ?.begin
+                ?.effect,
         )
         assertEquals(
             VexExecution.Approach.Latest,
@@ -163,7 +165,9 @@ class ThemeModeTest {
                         ThemeMode.Dark,
                 ),
             ),
-            sameAct?.effect,
+            sameAct
+                ?.begin
+                ?.effect,
         )
     }
 
