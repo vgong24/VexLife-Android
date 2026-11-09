@@ -81,6 +81,13 @@ internal class ThemeModeFamily(
         Parameter.Mode? =
         null
 
+    /**
+     * Accept one Select while establishing its currentness fence.
+     *
+     * This is not a standalone realization API. A successful return leaves the accepted selection
+     * unsettled until the ThemeMode realization boundary either establishes execution custody and
+     * observes its termination, or explicitly settles the fence when that handoff fails.
+     */
     internal fun activateSelection(
         control:
             Control.Select,
