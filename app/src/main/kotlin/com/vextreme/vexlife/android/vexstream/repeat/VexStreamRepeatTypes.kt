@@ -1,5 +1,10 @@
 package com.vextreme.vexlife.android.vexstream.repeat
 
+internal data class VexStreamRepeatControlProjection(
+    val isAvailable:
+        Boolean,
+)
+
 internal data class VexStreamRepeatProjection(
     val state:
         VexStreamRepeatState,
@@ -10,12 +15,15 @@ internal data class VexStreamRepeatProjection(
         control:
             VexStreamRepeatControl,
     ):
-        Boolean =
+        VexStreamRepeatControlProjection =
         when (
             control
         ) {
             VexStreamRepeatControl.Toggle ->
-                toggleAvailable
+                VexStreamRepeatControlProjection(
+                    isAvailable =
+                        toggleAvailable,
+                )
         }
 }
 

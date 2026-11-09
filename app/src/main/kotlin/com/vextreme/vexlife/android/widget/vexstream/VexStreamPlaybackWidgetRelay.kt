@@ -296,7 +296,7 @@ internal fun vexStreamPlaybackWidgetRelayOutput(
                 queueState,
             )[
                 VexStreamQueueControl.Previous
-            ],
+            ].isAvailable,
         playback =
             vexStreamPlaybackProjectionFor(
                 playbackState,
@@ -306,7 +306,7 @@ internal fun vexStreamPlaybackWidgetRelayOutput(
                 queueState,
             )[
                 VexStreamQueueControl.Next
-            ],
+            ].isAvailable,
     )
 }
 

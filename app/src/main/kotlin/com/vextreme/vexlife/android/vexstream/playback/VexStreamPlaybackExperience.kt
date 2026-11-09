@@ -9,11 +9,7 @@ import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.vexstream.VexStreamMusicViewModel
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 
-/**
- * Feature-local Compose binding for Playback Family meaning plus Player read data.
- *
- * This is presentation composition, not a reusable VexArchitecture Experience root.
- */
+/** UI-facing membrane for the process-shared VexStream Playback Family. */
 internal interface VexStreamPlaybackExperience {
     val displayState:
         VexStreamPlaybackDisplayState

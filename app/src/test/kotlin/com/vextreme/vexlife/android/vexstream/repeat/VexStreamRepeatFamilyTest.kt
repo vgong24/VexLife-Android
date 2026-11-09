@@ -23,7 +23,7 @@ class VexStreamRepeatFamilyTest {
         assertTrue(
             family.currentRepeatProjection[
                 VexStreamRepeatControl.Toggle
-            ],
+            ].isAvailable,
         )
         assertSame(
             VexStreamRepeatEffect.RequestEnableAll,
@@ -71,7 +71,7 @@ class VexStreamRepeatFamilyTest {
         assertFalse(
             family.currentRepeatProjection[
                 VexStreamRepeatControl.Toggle
-            ],
+            ].isAvailable,
         )
         assertSame(
             null,

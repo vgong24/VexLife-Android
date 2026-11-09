@@ -48,10 +48,11 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackReadState
 import com.vextreme.vexlife.android.vexstream.rememberVexStreamPlayerRequestConnection
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueOccurrence
 import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueExperience
-import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
-import com.vextreme.vexlife.android.vexstream.player.vexStreamPlayerQueueOccurrences
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueReorderDirection
 import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueAdjacentMoveTarget
+import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueOccurrences
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatControl
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatState
 import com.vextreme.vexlife.android.vexstream.repeat.rememberVexStreamRepeatExperience
@@ -102,7 +103,7 @@ internal fun VexStreamQueueContent(
         remember(
             queueMediaIds,
         ) {
-            vexStreamPlayerQueueOccurrences(
+            vexStreamQueueOccurrences(
                 queueMediaIds,
             )
         }
@@ -112,7 +113,7 @@ internal fun VexStreamQueueContent(
         mutableStateOf<String?>(null)
     }
     var draggedOccurrence by remember {
-        mutableStateOf<VexStreamPlayerPartner.QueueOccurrence?>(null)
+        mutableStateOf<VexStreamQueueOccurrence?>(null)
     }
     var dragOffsetPx by remember {
         mutableFloatStateOf(0f)
@@ -214,7 +215,8 @@ internal fun VexStreamQueueContent(
                         queueProjection
                             ?.get(
                                 VexStreamQueueControl.Shuffle,
-                            ) == true,
+                            )
+                            ?.isAvailable == true,
                 )
                 VexIconButton(
                     element = VexStreamMusicScreen.ToggleRepeat,
@@ -223,7 +225,8 @@ internal fun VexStreamQueueContent(
                         repeatProjection
                             ?.get(
                                 VexStreamRepeatControl.Toggle,
-                            ) == true,
+                            )
+                            ?.isAvailable == true,
                     selected =
                         repeatProjection
                             ?.state is
@@ -236,7 +239,8 @@ internal fun VexStreamQueueContent(
                         queueProjection
                             ?.get(
                                 VexStreamQueueControl.Clear,
-                            ) == true,
+                            )
+                            ?.isAvailable == true,
                 )
             }
 
@@ -536,9 +540,9 @@ VexStreamPresentationRefs
                                                     target >
                                                     currentOccurrence.index
                                                 ) {
-                                                    VexStreamPlayerPartner.QueueMove.Later
+                                                    VexStreamQueueReorderDirection.Later
                                                 } else {
-                                                    VexStreamPlayerPartner.QueueMove.Earlier
+                                                    VexStreamQueueReorderDirection.Earlier
                                                 }
                                             val moved =
                                                 playerRequestConnection

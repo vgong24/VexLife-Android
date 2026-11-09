@@ -20,7 +20,7 @@ class VexStreamPlayerStoreTest {
             val store =
                 VexStreamPlayerStore()
             val receiver =
-                VexStreamPlayerPartner.Connection.Receiver(
+                VexStreamPlayerObservationReceiver(
                     store =
                         store,
                 )

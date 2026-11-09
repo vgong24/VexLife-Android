@@ -11,7 +11,7 @@ internal class Media3PlayerConnection(
     private val player:
         Player,
     private val receiver:
-        VexStreamPlayerPartner.Connection.Receiver,
+        VexStreamPlayerObservationReceiver,
     private val executionRoot:
         VexExecutionRoot,
     private val clock:

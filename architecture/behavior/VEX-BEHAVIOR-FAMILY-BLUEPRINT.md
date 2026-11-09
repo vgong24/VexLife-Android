@@ -936,12 +936,10 @@ Family Control
 | Repeat Family | [VexStreamRepeatFamily](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/repeat/VexStreamRepeatFamily.kt) |
 | Playback pending reconciliation | [VexStreamPlaybackPending](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackPending.kt) |
 | Music configuration composition / request-progress lifetime host | [VexStreamMusicViewModel](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/VexStreamMusicViewModel.kt) |
+| Playback UI membrane | [VexStreamPlaybackExperience](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackExperience.kt) |
+| Queue UI membrane | [VexStreamQueueExperience](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/queue/VexStreamQueueExperience.kt) |
+| Repeat UI membrane | [VexStreamRepeatExperience](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/repeat/VexStreamRepeatExperience.kt) |
 | Widget relationship | [VexStreamPlaybackWidgetRelay](../../app/src/main/kotlin/com/vextreme/vexlife/android/widget/vexstream/VexStreamPlaybackWidgetRelay.kt) |
-
-Playback / Queue / Repeat `*Experience` helpers remain feature-local Compose binding only. They are
-not another semantic owner, a parent Music Family, or a reusable VexArchitecture root. The three
-Families stay sibling semantic owners because their State / Control / Effect questions are
-independent; consumers compose only the bounded currents they actually need.
 
 Track / Collection playback remain payload/source-resolution workflows rather than being promoted to
 Families without an independently meaningful State/Control question. Their execution uses canonical

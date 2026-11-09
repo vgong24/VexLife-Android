@@ -371,68 +371,6 @@ internal object VexStreamPlayerPartner :
                 Snapshot
         }
 
-        /**
-         * Connection-side handoff into retained Player Store admission.
-         *
-         * This is the concrete Player binding of the reusable Partner Receiver contract. Provider
-         * representation has already become Partner Signal / Observation before reaching this seam.
-         * Connection lifecycle admission remains visible here because opening/closing one provider
-         * occurrence is part of the Player relationship rather than a second Store API invented by
-         * Media3.
-         */
-        class Receiver(
-            private val store:
-                VexStreamPlayerStore,
-        ) :
-            VexPartner.Connection.Receiver<
-                VexStreamPlayerPartner,
-                Signal,
-                Observation
-            > {
-            suspend fun connectionOpened(
-                connectionId:
-                    Id,
-                observations:
-                    List<Observation>,
-            ) {
-                store.connectionOpened(
-                    connectionId =
-                        connectionId,
-                    observations =
-                        observations,
-                )
-            }
-
-            suspend fun receive(
-                observations:
-                    List<Observation>,
-            ) {
-                store.receive(
-                    observations,
-                )
-            }
-
-            override suspend fun receive(
-                observation:
-                    Observation,
-            ) {
-                receive(
-                    listOf(
-                        observation,
-                    ),
-                )
-            }
-
-            suspend fun connectionClosed(
-                connectionId:
-                    Id,
-            ) {
-                store.connectionClosed(
-                    connectionId,
-                )
-            }
-        }
-
         data class Observation(
             override val connectionId:
                 Id,

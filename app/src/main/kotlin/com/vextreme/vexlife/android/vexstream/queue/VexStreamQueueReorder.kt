@@ -1,5 +1,11 @@
 package com.vextreme.vexlife.android.vexstream.queue
 
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
+import com.vextreme.vexlife.android.vexstream.player.queueMoveTargetIndex
+
+internal typealias VexStreamQueueReorderDirection =
+    VexStreamPlayerPartner.QueueMove
+
 internal fun vexStreamQueueAdjacentMoveTarget(
     currentIndex:
         Int,
@@ -45,4 +51,4 @@ internal fun vexStreamQueueAdjacentMoveTarget(
     }
 }
 
-// [VXG RealForever][VEXSTREAM][QUEUE][PRESENTATION]
+// [VXG RealForever][VEXSTREAM][QUEUE][PLAYER-PARTNER]
