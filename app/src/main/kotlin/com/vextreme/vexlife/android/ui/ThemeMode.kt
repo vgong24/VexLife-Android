@@ -352,11 +352,12 @@ internal class ThemeModeFamily(
                 when (currentState) {
                     ThemeMode.NotSet ->
                         admit(
-                            control.mode.mode,
-                            begin =
-                                beginLatest(
-                                    effect,
-                                ),
+                            state =
+                                control.mode.mode,
+                            effect =
+                                effect,
+                            approach =
+                                VexExecution.Approach.Latest,
                         )
 
                     ThemeMode.Light,
@@ -370,17 +371,19 @@ internal class ThemeModeFamily(
                              * same State does not erase the Effect.
                              */
                             stay(
-                                beginLatest(
+                                effect =
                                     effect,
-                                ),
+                                approach =
+                                    VexExecution.Approach.Latest,
                             )
                         } else {
                             admit(
-                                control.mode.mode,
-                                begin =
-                                    beginLatest(
-                                        effect,
-                                    ),
+                                state =
+                                    control.mode.mode,
+                                effect =
+                                    effect,
+                                approach =
+                                    VexExecution.Approach.Latest,
                             )
                         }
                 }
@@ -478,7 +481,7 @@ internal fun activateThemeMode(
                     executionRoot,
                 ),
             ) {
-                "ThemeMode Save Effect requires an executable Act Begin"
+                "ThemeMode Save Effect requires an executable Act consequence"
             }
                 .method(
                     method =

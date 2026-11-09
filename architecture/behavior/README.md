@@ -69,7 +69,9 @@ Result != Cancellation.
 
 The older exposition below is retained as lineage/background. Where it conflicts with
 FAMILY-CIRCUIT.md, VexFamily.kt, or current tests, follow current source rather than reconstructing
-historical grammar.
+historical grammar. Historical `Act.Begin`, `begin*`, and `admitCurrent` examples below are not a
+second supported Direct Family authoring path. Current Act carries Effect + Approach directly;
+already-reconciled outside truth enters through `observe(State)`.
 
 The Direct `VexFamily` foundation accepted on main through
 [PR #193](https://github.com/vgong24/VexLife-Android/pull/193) is the smallest readable Family circuit for:
@@ -78,8 +80,8 @@ The Direct `VexFamily` foundation accepted on main through
 CURRENT State + incoming Control
 -> Act outcome
 -> stay / admit
--> optional begin
--> current State / execution
+-> optional Effect + authored Approach
+-> current State / later VexExecution realization
 ~~~
 
 ## Partner circuit patient-zero candidate
@@ -188,12 +190,12 @@ Store -> Family observation
 
 Family consequence
     accepted Control relationship
-    + authored Begin Approach
+    + authored Effect + Approach
     -> Family-derived RelationshipId
     -> Method Job(s)
 ~~~
 
-Pump requests use Begin(Queued · Effect.RequestPumpDelivery): sequencing is authored by Family and
+Pump requests use Effect.RequestPumpDelivery + Approach.Queued: sequencing is authored by Family and
 consumed by launchWith()/VexExecution rather than re-decided by Method.
 
 ### Room / restart

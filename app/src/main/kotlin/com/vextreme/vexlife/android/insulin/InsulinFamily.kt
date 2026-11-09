@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.insulin
 
 import com.vextreme.vexlife.android.behavior.VexFamily
 import com.vextreme.vexlife.android.behavior.VexMethod
+import com.vextreme.vexlife.android.execution.VexExecution
 
 /**
  * Semantic owner for the shared insulin-domain Store patient zero.
@@ -249,12 +250,13 @@ internal class InsulinFamily :
                 ) {
                     is Control.RequestPumpDelivery ->
                         stay(
-                            beginQueued(
+                            effect =
                                 Effect.RequestPumpDelivery(
                                     amount =
                                         control.amount,
                                 ),
-                            ),
+                            approach =
+                                VexExecution.Approach.Queued,
                         )
                 }
 
@@ -264,12 +266,13 @@ internal class InsulinFamily :
                 ) {
                     is Control.RequestPumpDelivery ->
                         stay(
-                            beginQueued(
+                            effect =
                                 Effect.RequestPumpDelivery(
                                     amount =
                                         control.amount,
                                 ),
-                            ),
+                            approach =
+                                VexExecution.Approach.Queued,
                         )
                 }
         }

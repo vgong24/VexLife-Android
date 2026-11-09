@@ -2,6 +2,7 @@
 
 package com.vextreme.vexlife.android.insulin
 
+import com.vextreme.vexlife.android.execution.VexExecution
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -54,9 +55,8 @@ class InsulinPartnerCircuitTest {
                 method.parameter,
             )
             assertEquals(
-                com.vextreme.vexlife.android.execution.VexExecution.Approach.Queued,
-                act.begin
-                    ?.approach,
+                VexExecution.Approach.Queued,
+                act?.approach,
             )
             assertNotNull(
                 act.relationshipId,
