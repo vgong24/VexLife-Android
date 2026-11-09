@@ -36,7 +36,9 @@ class InsulinPartnerCircuitTest {
 
             val begin =
                 checkNotNull(
-                    act?.begin,
+                    act
+                        ?.authored
+                        ?.begin,
                 )
             val effect =
                 begin.effect as
@@ -59,7 +61,8 @@ class InsulinPartnerCircuitTest {
             )
             assertEquals(
                 com.vextreme.vexlife.android.execution.VexExecution.Approach.Queued,
-                act.begin
+                act.authored
+                    .begin
                     ?.approach,
             )
             assertNotNull(

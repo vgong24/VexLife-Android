@@ -54,7 +54,9 @@ class ThemeModeTest {
 
         val begin =
             checkNotNull(
-                act?.begin,
+                act
+                    ?.authored
+                    ?.begin,
             )
         val effect =
             begin.effect as
@@ -135,12 +137,15 @@ class ThemeModeTest {
                 ),
             ),
             darkAct
+                ?.authored
                 ?.begin
                 ?.effect,
         )
         assertEquals(
             VexExecution.Approach.Latest,
-            darkAct?.begin
+            darkAct
+                ?.authored
+                ?.begin
                 ?.approach,
         )
 
@@ -166,6 +171,7 @@ class ThemeModeTest {
                 ),
             ),
             sameAct
+                ?.authored
                 ?.begin
                 ?.effect,
         )

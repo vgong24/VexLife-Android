@@ -242,6 +242,7 @@ class VexFamilyHighConfidenceTest {
                 value = "one",
             ),
             accepted
+                ?.authored
                 ?.begin
                 ?.effect,
         )
@@ -321,24 +322,26 @@ class VexFamilyHighConfidenceTest {
             try {
                 val begin =
                     checkNotNull(
-                        act.begin,
+                        act.realizationBegin,
                     )
                 val effect =
                     begin.effect as
                         ValueFamily.Effect.Save
                 val job =
-                    act.launch(
-                        executionRoot =
-                            root,
-                        method =
-                            ValueFamily.ThrowingSaveMethod(
-                                effect =
-                                    effect,
-                            ),
-                        onResult = { result ->
-                            received =
-                                result
-                        },
+                    checkNotNull(
+                        act.launch(
+                            executionRoot =
+                                root,
+                            method =
+                                ValueFamily.ThrowingSaveMethod(
+                                    effect =
+                                        effect,
+                                ),
+                            onResult = { result ->
+                                received =
+                                    result
+                            },
+                        ),
                     )
 
                 job.join()
