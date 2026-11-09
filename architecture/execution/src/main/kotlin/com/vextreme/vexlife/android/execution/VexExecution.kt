@@ -1581,28 +1581,56 @@ abstract class VexExecution protected constructor(
                 (Throwable) -> Unit =
                 {},
         ):
-            Job =
-            admit(
-                executionRoot =
-                    executionRoot,
-                owner =
-                    owner,
-                approach =
-                    approach,
-                relationshipId =
-                    relationshipId,
-                operation =
-                    operation,
-                beforeOperation =
-                    beforeOperation,
-                onResult =
-                    onResult,
-                onFailure =
-                    onFailure,
-            )
-                .also { job ->
-                    job.start()
-                }
+            Job {
+            val execution =
+                executionRoot
+                    .directExecution(
+                        owner,
+                    )
+
+            return when (
+                approach
+            ) {
+                Approach.Independent ->
+                    execution.begin(
+                        operation =
+                            operation,
+                        beforeOperation =
+                            beforeOperation,
+                        onResult =
+                            onResult,
+                        onFailure =
+                            onFailure,
+                    )
+
+                Approach.Earliest,
+                Approach.Latest,
+                Approach.Queued,
+                ->
+                    execution.beginRelationship(
+                        approach =
+                            approach,
+                        relationshipId =
+                            requireNotNull(
+                                relationshipId,
+                            ) {
+                                approach.name +
+                                    " execution requires RelationshipId"
+                            },
+                        source =
+                            operation,
+                        operation = {
+                            operation()
+                        },
+                        beforeOperation =
+                            beforeOperation,
+                        onResult =
+                            onResult,
+                        onFailure =
+                            onFailure,
+                    )
+            }
+        }
 
         /**
          * Consume an already-authored overlap Approach without making the feature translate that
