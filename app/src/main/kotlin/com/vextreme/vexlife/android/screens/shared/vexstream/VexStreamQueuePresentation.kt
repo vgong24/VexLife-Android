@@ -48,11 +48,10 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackReadState
 import com.vextreme.vexlife.android.vexstream.rememberVexStreamPlayerRequestConnection
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
-import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueOccurrence
 import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueExperience
-import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueReorderDirection
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
+import com.vextreme.vexlife.android.vexstream.player.vexStreamPlayerQueueOccurrences
 import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueAdjacentMoveTarget
-import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueOccurrences
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatControl
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatState
 import com.vextreme.vexlife.android.vexstream.repeat.rememberVexStreamRepeatExperience
@@ -103,7 +102,7 @@ internal fun VexStreamQueueContent(
         remember(
             queueMediaIds,
         ) {
-            vexStreamQueueOccurrences(
+            vexStreamPlayerQueueOccurrences(
                 queueMediaIds,
             )
         }
@@ -113,7 +112,7 @@ internal fun VexStreamQueueContent(
         mutableStateOf<String?>(null)
     }
     var draggedOccurrence by remember {
-        mutableStateOf<VexStreamQueueOccurrence?>(null)
+        mutableStateOf<VexStreamPlayerPartner.QueueOccurrence?>(null)
     }
     var dragOffsetPx by remember {
         mutableFloatStateOf(0f)
@@ -537,9 +536,9 @@ VexStreamPresentationRefs
                                                     target >
                                                     currentOccurrence.index
                                                 ) {
-                                                    VexStreamQueueReorderDirection.Later
+                                                    VexStreamPlayerPartner.QueueMove.Later
                                                 } else {
-                                                    VexStreamQueueReorderDirection.Earlier
+                                                    VexStreamPlayerPartner.QueueMove.Earlier
                                                 }
                                             val moved =
                                                 playerRequestConnection

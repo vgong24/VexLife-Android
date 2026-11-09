@@ -34,9 +34,9 @@ package com.vextreme.vexlife.android.vexstream.queue
  * inventing feature-local Connection interfaces or forcing payload requests into finite Family
  * Controls.
  *
- * [VexStreamQueueOccurrence] is an alias for the Player Partner's current queue occurrence
- * coordinate. The concrete Player Connection rechecks media ID / occurrence / index and provider
- * command authority before mutation.
+ * Queue-row currentness uses [com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner.QueueOccurrence]
+ * directly. The concrete Player Connection rechecks media ID / occurrence / index and provider
+ * command authority before mutation; Queue does not rename that Partner-owned coordinate.
  *
  * Repeat and Playback remain sibling semantic Families; Queue does not copy their truth.
  */

@@ -8,7 +8,6 @@ import androidx.media3.session.MediaSessionService
 import com.vextreme.vexlife.android.VexApplication
 import com.vextreme.vexlife.android.behavior.VexService
 import com.vextreme.vexlife.android.vexstream.player.Media3PlayerConnection
-import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerObservationReceiver
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackTrace
@@ -116,7 +115,7 @@ class VexStreamPlaybackService :
                 .resolve(
                     vexApplication
                         .dependencyModule
-                        .playerObservationReceiver,
+                        .playerReceiver,
                 )
         val playerConnection =
             Media3PlayerConnection(

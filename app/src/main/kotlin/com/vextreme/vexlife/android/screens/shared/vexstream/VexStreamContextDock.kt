@@ -37,7 +37,7 @@ import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlayback
 import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackSeekPositionMs
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
 import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueExperience
-import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueOccurrences
+import com.vextreme.vexlife.android.vexstream.player.vexStreamPlayerQueueOccurrences
 
 private const val VEXSTREAM_CONTEXT_DOCK_PAGE_REF =
     "vexstream.now-playing"
@@ -358,7 +358,7 @@ private fun VexStreamContextDockContent(
                         ?.items
                         .orEmpty()
                 val queueOccurrences =
-                    vexStreamQueueOccurrences(
+                    vexStreamPlayerQueueOccurrences(
                         queueItems.map {
                             it.mediaId
                         },

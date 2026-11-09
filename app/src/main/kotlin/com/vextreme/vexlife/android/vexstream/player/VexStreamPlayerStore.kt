@@ -1,6 +1,5 @@
 package com.vextreme.vexlife.android.vexstream.player
 
-import com.vextreme.vexlife.android.behavior.VexPartner
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -517,62 +516,5 @@ private fun VexStreamPlayerStore.Snapshot.Available.withSignal(
                     signal,
             )
     }
-
-internal class VexStreamPlayerObservationReceiver(
-    private val store:
-        VexStreamPlayerStore,
-) :
-    VexPartner.Connection.Receiver<
-        VexStreamPlayerPartner,
-        VexStreamPlayerPartner.Signal,
-        VexStreamPlayerPartner.Connection.Observation
-    > {
-    suspend fun connectionOpened(
-        connectionId:
-            VexStreamPlayerPartner.Connection.Id,
-        observations:
-            List<
-                VexStreamPlayerPartner.Connection.Observation
-            >,
-    ) {
-        store.connectionOpened(
-            connectionId =
-                connectionId,
-            observations =
-                observations,
-        )
-    }
-
-    suspend fun receive(
-        observations:
-            List<
-                VexStreamPlayerPartner.Connection.Observation
-            >,
-    ) {
-        store.receive(
-            observations,
-        )
-    }
-
-    override suspend fun receive(
-        observation:
-            VexStreamPlayerPartner.Connection.Observation,
-    ) {
-        receive(
-            listOf(
-                observation,
-            ),
-        )
-    }
-
-    suspend fun connectionClosed(
-        connectionId:
-            VexStreamPlayerPartner.Connection.Id,
-    ) {
-        store.connectionClosed(
-            connectionId,
-        )
-    }
-}
 
 // [VXG RealForever][VEXSTREAM][PLAYER-STORE]

@@ -17,7 +17,7 @@ import com.vextreme.vexlife.android.ui.SharedPreferencesThemeModeStore
 import com.vextreme.vexlife.android.ui.ThemeModeStore
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
 import com.vextreme.vexlife.android.vexstream.playback.observeVexStreamPlaybackPlayerStore
-import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerObservationReceiver
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueFamily
 import com.vextreme.vexlife.android.vexstream.queue.observeVexStreamQueuePlayerStore
@@ -182,8 +182,8 @@ internal class VexApplicationDependencyModule(
                 queueFamily,
         )
 
-    val playerObservationReceiver =
-        PlayerObservationReceiverProvider(
+    val playerReceiver =
+        PlayerReceiverProvider(
             playerStore =
                 playerStore,
         )
@@ -213,7 +213,7 @@ internal class VexApplicationDependencyModule(
             navigationSession,
             backgroundServiceRelay,
             playbackWidgetRelay,
-            playerObservationReceiver,
+            playerReceiver,
             playbackWidgetUpdateExecution,
         )
 
@@ -586,15 +586,15 @@ internal class VexApplicationDependencyModule(
             )
     }
 
-    /** Player Partner Observation handoff into the Player Store. */
-    internal class PlayerObservationReceiverProvider(
+    /** Concrete Player Partner Connection Receiver bound to the process Player Store. */
+    internal class PlayerReceiverProvider(
         private val playerStore:
             VexDependencyProvider<
                 VexStreamPlayerStore
             >,
     ) :
         VexDependencyProvider<
-            VexStreamPlayerObservationReceiver
+            VexStreamPlayerPartner.Connection.Receiver
         >(
             dependencies =
                 listOf(
@@ -605,8 +605,8 @@ internal class VexApplicationDependencyModule(
             dependencies:
                 VexDependencyBuildScope,
         ):
-            VexStreamPlayerObservationReceiver =
-            VexStreamPlayerObservationReceiver(
+            VexStreamPlayerPartner.Connection.Receiver =
+            VexStreamPlayerPartner.Connection.Receiver(
                 store =
                     dependencies.require(
                         playerStore,
