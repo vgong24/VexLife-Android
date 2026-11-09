@@ -393,8 +393,13 @@ internal class ThemeModeFamily(
  * Realize one accepted ThemeMode Act from its already-authored relationship.
  *
  * ThemeModeFamily already authored the semantic Effect and its execution Approach. This boundary
- * hands that exact relationship to VexExecution, reports facts that become true, and returns
- * observed Store truth to the same Family.
+ * binds the exact Effect to the concrete Store Method and entrusts that accepted relationship to
+ * VexExecution custody.
+ *
+ * A successful Method Result carries the Store's physical-commit fact into ThemeMode-owned
+ * reconciliation. The maintained Store Flow is a separate observation route. They may converge on
+ * the same semantic ThemeMode truth only after each route has independently earned that fact;
+ * Result and Observation are not interchangeable evidence.
  */
 internal fun activateThemeMode(
     family:
