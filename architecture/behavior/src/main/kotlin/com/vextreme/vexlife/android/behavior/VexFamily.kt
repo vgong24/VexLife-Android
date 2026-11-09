@@ -18,11 +18,13 @@ import kotlinx.coroutines.flow.asStateFlow
  * It owns that meaning and the one current semantic State holder.
  *
  * WHAT IT RELATES TO
- * A caller may call [activate], bind the returned accepted Act to one Family-owned executable
- * [Act.Method] through [Act.launch], and let VexExecution provide Job custody while the Method
- * touches the rightful Store/provider boundary. Already-reconciled semantic reality returns through
- * [observe]. Dependency construction may create a Family, but Family does not know that a dependency
- * system exists.
+ * [act] authors pure semantic meaning. [activate] accepts that meaning into this live Family,
+ * applying immediate State and binding the runtime responsibility coordinates required by the
+ * authored [Act.Begin]. A caller may then bind that Begin's exact Effect to one Family-owned
+ * executable [Act.Method] and use [Act.launch] to entrust the accepted, prepared consequence to
+ * VexExecution Job custody. Already-reconciled semantic reality returns through [observe].
+ * Dependency construction may create a Family, but Family does not know that a dependency system
+ * exists.
  *
  * WHAT IT ADDRESSES / WHY THIS SHAPE EXISTS
  * Keeping State + Control -> Act in one synchronous semantic owner prevents provider mechanics,
@@ -239,12 +241,13 @@ abstract class VexFamily<
      * One lawful outcome resolved from exact CURRENT State + Control.
      *
      * [admittedState] is immediate semantic State meaning.
-     * [begin] is an inert description of the optional runtime transformation and its overlap law.
+     * [begin] is an inert description of the optional runtime consequence and its overlap law.
      *
      * Begin is authored here because Independent / Earliest / Latest / Queued describe the
-     * relationship of THIS Act. It does not launch a coroutine, call a Store, or log anything while
-     * [act] is being resolved. The caller of [activate] later hands this already-authored consequence
-     * to VexExecution.
+     * relationship of THIS Act. It says that runtime consequence remains after the semantic decision;
+     * it does not launch a coroutine, call a Store, or log anything while [act] is being resolved.
+     * [activate] later accepts this Act into the live Family before any realization may enter
+     * VexExecution custody.
      */
     @ConsistentCopyVisibility
     data class Act<
@@ -289,8 +292,10 @@ abstract class VexFamily<
         /**
          * Family-owned specialization of the reusable [VexMethod] contract.
          *
-         * Family kinship stays here because this Method realizes one accepted Family Act. The
-         * executable/result contract itself is shared through [VexMethod].
+         * A Method gives one exact authored Effect its concrete means of realization, such as a
+         * Store or live Connection, without re-authoring the Effect, Approach, RelationshipId, or
+         * Family owner. Family kinship stays here because this Method realizes one accepted Family
+         * Act. The executable/result contract itself is shared through [VexMethod].
          */
         interface Method<
             Family,
@@ -318,11 +323,15 @@ abstract class VexFamily<
         }
 
         /**
-         * Launch one exact Method for this accepted Act.
+         * Entrust one prepared runtime consequence from this accepted Act to execution custody.
          *
-         * The Act already owns Begin / Approach / RelationshipId / live Family owner. The Method
-         * must carry the exact same Effect object as Begin. VexExecution receives that completed
-         * relationship and owns only coroutine Job custody.
+         * The accepted Act already carries its Begin, authored Approach, maintained RelationshipId
+         * when required, and live Family owner. The Method adds only the concrete means for the
+         * exact Effect authored by Begin. [launch] verifies that provenance, then hands the completed
+         * occurrence to VexExecution, which adds Job custody rather than another semantic decision.
+         *
+         * [beforeOperation] observes the attempt boundary. [onResult] receives genuinely new Method
+         * outcome information. Neither callback authors Effect, Approach, RelationshipId, or owner.
          */
         fun <SuccessOutput, FailureOutput> launch(
             executionRoot:
@@ -764,11 +773,14 @@ abstract class VexFamily<
      *
      *     act(CURRENT State, Control)
      *     -> bind maintained RelationshipId when Begin requires one
+     *     -> bind the live Family as execution owner
      *     -> admit immediate State when present
      *     -> return accepted Act
      *
-     * Family never realizes [Act.begin]. The caller hands that consequence to VexExecution after
-     * activation; this keeps availability/act resolution side-effect free.
+     * Acceptance turns pure semantic meaning into this live Family's current responsibility without
+     * realizing [Act.begin]. A caller may later bind the Begin Effect to a concrete Method and hand
+     * that prepared consequence to VexExecution through Act.launch(...). This keeps availability /
+     * act resolution side-effect free.
      */
     fun activate(
         control:
