@@ -477,7 +477,19 @@ internal fun activateThemeMode(
 
     val begin =
         act.begin
-            ?: return true
+            ?: run {
+                when (
+                    control
+                ) {
+                    is ThemeModeFamily.Control.Select ->
+                        family.selectionRealizationFinished(
+                            control.mode,
+                        )
+                }
+                error(
+                    "ThemeMode Select Act must carry Begin",
+                )
+            }
 
     when (
         val effect =
