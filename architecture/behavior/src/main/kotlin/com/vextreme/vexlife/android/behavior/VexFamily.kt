@@ -415,9 +415,10 @@ abstract class VexFamily<
                     "Only an accepted Act whose authored Act has Begin may launch a Method"
                 }
 
-                return realizationAdmission(
-                    executionRoot,
-                ) { currentBegin ->
+                val job =
+                    realizationAdmission(
+                        executionRoot,
+                    ) { currentBegin ->
                     check(
                         method.effect ===
                             currentBegin.effect,
@@ -425,7 +426,7 @@ abstract class VexFamily<
                         "Act Method must carry the exact accepted realization Effect"
                     }
 
-                    VexExecution.begin(
+                    VexExecution.admit(
                         executionRoot =
                             executionRoot,
                         owner =
@@ -453,6 +454,11 @@ abstract class VexFamily<
                         },
                     )
                 }
+
+                job
+                    ?.start()
+
+                return job
             }
 
         internal fun acceptedBy(

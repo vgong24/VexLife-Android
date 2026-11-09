@@ -579,6 +579,41 @@ abstract class VexExecution protected constructor(
         return true
     }
 
+    private fun <Result> admit(
+        operation:
+            KSuspendFunction0<Result>,
+        beforeOperation:
+            () -> Unit =
+            {},
+        onResult:
+            (Result) -> Unit =
+            {},
+        onFailure:
+            (Throwable) -> Unit =
+            {},
+    ):
+        Job =
+        synchronized(
+            lock,
+        ) {
+            admitSourceJobLocked(
+                source =
+                    operation,
+            ) {
+                executeOperation(
+                    operation = {
+                        operation()
+                    },
+                    beforeOperation =
+                        beforeOperation,
+                    onResult =
+                        onResult,
+                    onFailure =
+                        onFailure,
+                )
+            }
+        }
+
     protected fun <Result> begin(
         operation:
             KSuspendFunction0<Result>,
@@ -593,22 +628,19 @@ abstract class VexExecution protected constructor(
             {},
     ):
         Job =
-        launchSource(
-            source =
+        admit(
+            operation =
                 operation,
-        ) {
-            executeOperation(
-                operation = {
-                    operation()
-                },
-                beforeOperation =
-                    beforeOperation,
-                onResult =
-                    onResult,
-                onFailure =
-                    onFailure,
-            )
-        }
+            beforeOperation =
+                beforeOperation,
+            onResult =
+                onResult,
+            onFailure =
+                onFailure,
+        )
+            .also { job ->
+                job.start()
+            }
 
     protected fun <Argument, Result> begin(
         operation:
@@ -971,7 +1003,7 @@ abstract class VexExecution protected constructor(
         return job
     }
 
-    private fun <Result> beginRelationship(
+    private fun <Result> admitRelationship(
         approach:
             Approach,
         relationshipId:
@@ -987,14 +1019,10 @@ abstract class VexExecution protected constructor(
         onFailure:
             (Throwable) -> Unit,
     ):
-        Job {
-        var shouldStart =
-            false
-
-        val job =
-            synchronized(
-                lock,
-            ) {
+        Job =
+        synchronized(
+            lock,
+        ) {
                 val existingLane =
                     relationships[
                         relationshipId
@@ -1082,6 +1110,20 @@ abstract class VexExecution protected constructor(
                                 "." +
                                 source.name,
                     ) {
+                        if (
+                            approach ==
+                            Approach.Latest
+                        ) {
+                            predecessors
+                                .forEach { predecessor ->
+                                    predecessor.cancel(
+                                        CancellationException(
+                                            "superseded by latest execution relationship",
+                                        ),
+                                    )
+                                }
+                        }
+
                         predecessors
                             .forEach { predecessor ->
                                 predecessor.join()
@@ -1154,32 +1196,45 @@ abstract class VexExecution protected constructor(
                     }
                 }
 
-                if (
-                    approach ==
-                    Approach.Latest
-                ) {
-                    activeJobs.forEach { predecessor ->
-                        predecessor.cancel(
-                            CancellationException(
-                                "superseded by latest execution relationship",
-                            ),
-                        )
-                    }
-                }
-
-                shouldStart =
-                    true
                 admitted
             }
 
-        if (
-            shouldStart
-        ) {
-            job.start()
-        }
-
-        return job
-    }
+    private fun <Result> beginRelationship(
+        approach:
+            Approach,
+        relationshipId:
+            RelationshipId,
+        source:
+            KCallable<*>,
+        operation:
+            suspend () -> Result,
+        beforeOperation:
+            () -> Unit,
+        onResult:
+            (Result) -> Unit,
+        onFailure:
+            (Throwable) -> Unit,
+    ):
+        Job =
+        admitRelationship(
+            approach =
+                approach,
+            relationshipId =
+                relationshipId,
+            source =
+                source,
+            operation =
+                operation,
+            beforeOperation =
+                beforeOperation,
+            onResult =
+                onResult,
+            onFailure =
+                onFailure,
+        )
+            .also { job ->
+                job.start()
+            }
 
     private suspend fun <Value> collectWithRecovery(
         restartOnSourceFailure:
@@ -1378,13 +1433,18 @@ abstract class VexExecution protected constructor(
                 )
 
         /**
-         * Consume an already-authored overlap Approach for one fully-bound zero-argument Method.
+         * Admit one fully-bound zero-argument operation to execution custody without starting it.
          *
-         * The callable is still only the work to invoke and narrow local source bookkeeping.
-         * RelationshipId remains the maintained semantic address.
+         * This is a foundation handoff primitive for an owner that must commit its own accepted
+         * relationship state after Job custody exists but before Method code or completion callbacks
+         * can run. The returned Job is already registered under the supplied owner / Approach /
+         * RelationshipId and remains lazy until its caller invokes Job.start().
+         *
+         * Ordinary product code should use [begin]; admission/start separation does not grant another
+         * semantic decision point.
          */
         @RelationshipFoundationApi
-        fun <Result> begin(
+        fun <Result> admit(
             executionRoot:
                 VexExecutionRoot,
             owner:
@@ -1416,7 +1476,7 @@ abstract class VexExecution protected constructor(
                 approach
             ) {
                 Approach.Independent ->
-                    execution.begin(
+                    execution.admit(
                         operation =
                             operation,
                         beforeOperation =
@@ -1431,7 +1491,7 @@ abstract class VexExecution protected constructor(
                 Approach.Latest,
                 Approach.Queued,
                 ->
-                    execution.beginRelationship(
+                    execution.admitRelationship(
                         approach =
                             approach,
                         relationshipId =
@@ -1455,6 +1515,57 @@ abstract class VexExecution protected constructor(
                     )
             }
         }
+
+        /**
+         * Consume an already-authored overlap Approach for one fully-bound zero-argument Method.
+         *
+         * The callable is still only the work to invoke and narrow local source bookkeeping.
+         * RelationshipId remains the maintained semantic address.
+         */
+        @RelationshipFoundationApi
+        fun <Result> begin(
+            executionRoot:
+                VexExecutionRoot,
+            owner:
+                Any,
+            approach:
+                Approach,
+            relationshipId:
+                RelationshipId?,
+            operation:
+                KSuspendFunction0<Result>,
+            beforeOperation:
+                () -> Unit =
+                {},
+            onResult:
+                (Result) -> Unit =
+                {},
+            onFailure:
+                (Throwable) -> Unit =
+                {},
+        ):
+            Job =
+            admit(
+                executionRoot =
+                    executionRoot,
+                owner =
+                    owner,
+                approach =
+                    approach,
+                relationshipId =
+                    relationshipId,
+                operation =
+                    operation,
+                beforeOperation =
+                    beforeOperation,
+                onResult =
+                    onResult,
+                onFailure =
+                    onFailure,
+            )
+                .also { job ->
+                    job.start()
+                }
 
         /**
          * Consume an already-authored overlap Approach without making the feature translate that
