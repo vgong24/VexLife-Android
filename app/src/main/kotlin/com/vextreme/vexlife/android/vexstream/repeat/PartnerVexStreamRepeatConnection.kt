@@ -18,7 +18,7 @@ internal class PartnerVexStreamRepeatConnection(
         get() =
             (
                 store.current as?
-                    VexStreamPlayerPartner.Current.Available
+                    VexStreamPlayerStore.Snapshot.Available
             )
                 ?.repeat
                 .toVexStreamRepeatProjection()
@@ -30,7 +30,7 @@ internal class PartnerVexStreamRepeatConnection(
         val signal =
             (
                 store.current as?
-                    VexStreamPlayerPartner.Current.Available
+                    VexStreamPlayerStore.Snapshot.Available
             )
                 ?.repeat
         val current =

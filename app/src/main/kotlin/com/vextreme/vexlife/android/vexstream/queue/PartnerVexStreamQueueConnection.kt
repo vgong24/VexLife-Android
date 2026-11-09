@@ -1,6 +1,5 @@
 package com.vextreme.vexlife.android.vexstream.queue
 
-import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
 
 /**
@@ -57,7 +56,7 @@ internal class PartnerVexStreamQueueConnection(
     }
 }
 
-internal fun VexStreamPlayerPartner.QueueCurrent?.toVexStreamQueueState():
+internal fun VexStreamPlayerStore.QueueSnapshot?.toVexStreamQueueState():
     VexStreamQueueState =
     this
         ?.let { queue ->
@@ -83,7 +82,7 @@ internal fun VexStreamPlayerPartner.QueueCurrent?.toVexStreamQueueState():
         ?: VexStreamQueueState
             .Empty
 
-internal fun VexStreamPlayerPartner.QueueCurrent?.toVexStreamQueueProjection():
+internal fun VexStreamPlayerStore.QueueSnapshot?.toVexStreamQueueProjection():
     VexStreamQueueProjection {
     val behavior =
         vexStreamQueueBehavior()

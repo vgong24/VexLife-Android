@@ -52,7 +52,7 @@ class VexStreamPlayerStoreTest {
 
             val current =
                 store.current as
-                    VexStreamPlayerPartner.Current.Available
+                    VexStreamPlayerStore.Snapshot.Available
             assertTrue(
                 current.playback.playRequested,
             )
@@ -72,7 +72,7 @@ class VexStreamPlayerStoreTest {
                 )
             val emissions =
                 mutableListOf<
-                    VexStreamPlayerPartner.Current
+                    VexStreamPlayerStore.Snapshot
                 >()
             val collector =
                 launch(
@@ -135,7 +135,7 @@ class VexStreamPlayerStoreTest {
             val second =
                 emissions
                     .last() as
-                    VexStreamPlayerPartner.Current.Available
+                    VexStreamPlayerStore.Snapshot.Available
             assertTrue(
                 second.playback.playRequested,
             )
@@ -202,7 +202,7 @@ class VexStreamPlayerStoreTest {
 
         val current =
             store.current as
-                VexStreamPlayerPartner.Current.Available
+                VexStreamPlayerStore.Snapshot.Available
 
         assertSame(
             queueItems,
@@ -253,7 +253,7 @@ class VexStreamPlayerStoreTest {
                 ),
         )
 
-        val admission =
+        val accepted =
             store.receive(
                 observations(
                     id =
@@ -269,13 +269,13 @@ class VexStreamPlayerStoreTest {
             )
 
         assertFalse(
-            admission.accepted,
+            accepted,
         )
         assertEquals(
             initialPlayback,
             (
                 store.current as
-                    VexStreamPlayerPartner.Current.Available
+                    VexStreamPlayerStore.Snapshot.Available
             ).playback,
         )
     }
@@ -314,7 +314,7 @@ class VexStreamPlayerStoreTest {
             newer,
         )
 
-        val staleOpen =
+        val staleOpenAccepted =
             store.connectionOpened(
                 connectionId =
                     older,
@@ -334,10 +334,10 @@ class VexStreamPlayerStoreTest {
             )
 
         assertFalse(
-            staleOpen.accepted,
+            staleOpenAccepted,
         )
         assertEquals(
-            VexStreamPlayerPartner.Current.Unavailable,
+            VexStreamPlayerStore.Snapshot.Unavailable,
             store.current,
         )
     }
@@ -393,32 +393,32 @@ class VexStreamPlayerStoreTest {
                 ),
         )
 
-        val oldClose =
+        val oldCloseAccepted =
             store.connectionClosed(
                 first,
             )
 
         assertFalse(
-            oldClose.accepted,
+            oldCloseAccepted,
         )
         assertEquals(
             newerPlayback,
             (
                 store.current as
-                    VexStreamPlayerPartner.Current.Available
+                    VexStreamPlayerStore.Snapshot.Available
             ).playback,
         )
 
-        val currentClose =
+        val currentCloseAccepted =
             store.connectionClosed(
                 second,
             )
 
         assertTrue(
-            currentClose.accepted,
+            currentCloseAccepted,
         )
         assertEquals(
-            VexStreamPlayerPartner.Current.Unavailable,
+            VexStreamPlayerStore.Snapshot.Unavailable,
             store.current,
         )
     }

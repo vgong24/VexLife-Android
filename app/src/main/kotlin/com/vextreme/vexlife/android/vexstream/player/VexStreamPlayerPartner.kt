@@ -23,6 +23,18 @@ internal object VexStreamPlayerPartner :
     VexPartner<
         VexStreamPlayerPartner
     > {
+
+    /**
+     * One external VexStream music/playback origin.
+     *
+     * Media3 Player, MediaSession and MediaController are realization/access mechanisms around this
+     * same Source; recreating a live Connection does not manufacture another music origin.
+     */
+    data object Source :
+        VexPartner.Source<
+            VexStreamPlayerPartner
+        >
+
     enum class PlaybackPhase {
         Idle,
         Buffering,
@@ -82,6 +94,11 @@ internal object VexStreamPlayerPartner :
         VexPartner.Signal<
             VexStreamPlayerPartner
         > {
+        val source:
+            Source
+            get() =
+                Source
+
         data class Playback(
             val hasMedia:
                 Boolean,
@@ -152,47 +169,16 @@ internal object VexStreamPlayerPartner :
             Signal
     }
 
-    data class QueueCurrent(
-        val items:
-            Signal.QueueItems,
-        val navigation:
-            Signal.QueueNavigation,
-    )
-
-    sealed interface Current {
-        data object Unavailable :
-            Current
-
-        data class Available(
-            val playback:
-                Signal.Playback,
-            val queueItems:
-                Signal.QueueItems,
-            val queueNavigation:
-                Signal.QueueNavigation,
-            val repeat:
-                Signal.Repeat,
-            val currentMedia:
-                Signal.CurrentMedia,
-        ) :
-            Current {
-            val queue:
-                QueueCurrent
-                get() =
-                    QueueCurrent(
-                        items =
-                            queueItems,
-                        navigation =
-                            queueNavigation,
-                    )
-        }
-    }
-
     interface Connection :
         VexPartner.Connection<
             VexStreamPlayerPartner,
             Signal
         > {
+        val source:
+            Source
+            get() =
+                Source
+
         override val id:
             Id
 

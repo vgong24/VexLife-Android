@@ -6,7 +6,7 @@ import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerConnectionViewModel
-import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
 
 /** Compose-facing membrane over retained Player Partner Repeat truth and Repeat Controls. */
 internal interface VexStreamRepeatExperience {
@@ -50,7 +50,7 @@ internal fun rememberVexStreamRepeatExperience():
                 initialValue =
                     (
                         owner.playerStore.current as?
-                            VexStreamPlayerPartner.Current.Available
+                            VexStreamPlayerStore.Snapshot.Available
                     )
                         ?.repeat,
             )

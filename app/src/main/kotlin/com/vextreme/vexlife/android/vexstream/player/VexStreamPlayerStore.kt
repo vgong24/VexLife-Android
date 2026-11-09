@@ -8,89 +8,117 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
-internal sealed interface VexStreamPlayerStoreUpdate {
-    data class ConnectionOpened(
-        val connectionId:
-            VexStreamPlayerPartner.Connection.Id,
-        val observations:
-            List<
-                VexStreamPlayerPartner.Connection.Observation
-            >,
-    ) :
-        VexStreamPlayerStoreUpdate
-
-    data class Observed(
-        val observations:
-            List<
-                VexStreamPlayerPartner.Connection.Observation
-            >,
-    ) :
-        VexStreamPlayerStoreUpdate
-
-    data class ConnectionClosed(
-        val connectionId:
-            VexStreamPlayerPartner.Connection.Id,
-    ) :
-        VexStreamPlayerStoreUpdate
-}
-
-internal data class VexStreamPlayerRetainedCurrent(
-    val latestConnectionOccurrence:
-        Long =
-        0L,
-    val connectionId:
-        VexStreamPlayerPartner.Connection.Id?,
-    val current:
-        VexStreamPlayerPartner.Current,
-)
-
-/**
- * Process-current outside-truth boundary for the VexStream Player Partner.
- *
- * One provider occurrence is admitted as one observation batch, so several facet Signals from that
- * occurrence converge into one coherent Player CURRENT emission.
- */
 internal class VexStreamPlayerStore {
+    /**
+     * Retained outside truth assembled from exact Player Partner Signals.
+     *
+     * Partner owns Source / Signal / Connection vocabulary. Store owns the complete retained
+     * snapshot consumers can observe after those Signals have been admitted.
+     */
+    sealed interface Snapshot {
+        data object Unavailable :
+            Snapshot
+
+        data class Available(
+            val playback:
+                VexStreamPlayerPartner.Signal.Playback,
+            val queueItems:
+                VexStreamPlayerPartner.Signal.QueueItems,
+            val queueNavigation:
+                VexStreamPlayerPartner.Signal.QueueNavigation,
+            val repeat:
+                VexStreamPlayerPartner.Signal.Repeat,
+            val currentMedia:
+                VexStreamPlayerPartner.Signal.CurrentMedia,
+        ) :
+            Snapshot {
+            val queue:
+                QueueSnapshot
+                get() =
+                    QueueSnapshot(
+                        items =
+                            queueItems,
+                        navigation =
+                            queueNavigation,
+                    )
+        }
+    }
+
+    data class QueueSnapshot(
+        val items:
+            VexStreamPlayerPartner.Signal.QueueItems,
+        val navigation:
+            VexStreamPlayerPartner.Signal.QueueNavigation,
+    )
+
+    private sealed interface Update {
+        data class ConnectionOpened(
+            val connectionId:
+                VexStreamPlayerPartner.Connection.Id,
+            val observations:
+                List<
+                    VexStreamPlayerPartner.Connection.Observation
+                >,
+        ) :
+            Update
+
+        data class Observed(
+            val observations:
+                List<
+                    VexStreamPlayerPartner.Connection.Observation
+                >,
+        ) :
+            Update
+
+        data class ConnectionClosed(
+            val connectionId:
+                VexStreamPlayerPartner.Connection.Id,
+        ) :
+            Update
+    }
+
+    private data class Retained(
+        val latestConnectionOccurrence:
+            Long =
+            0L,
+        val connectionId:
+            VexStreamPlayerPartner.Connection.Id?,
+        val snapshot:
+            Snapshot,
+    )
+
     private val lock =
         Any()
 
     private val mutableRetainedStates =
         MutableStateFlow(
-            VexStreamPlayerRetainedCurrent(
+            Retained(
                 connectionId =
                     null,
-                current =
-                    VexStreamPlayerPartner.Current
-                        .Unavailable,
+                snapshot =
+                    Snapshot.Unavailable,
             ),
         )
 
     private val retainedStates:
         StateFlow<
-            VexStreamPlayerRetainedCurrent
+            Retained
         > =
         mutableRetainedStates
             .asStateFlow()
 
     private val retainedCurrent:
-        VexStreamPlayerRetainedCurrent
+        Retained
         get() =
             retainedStates.value
 
-    data class Admission(
-        val accepted:
-            Boolean,
-        val current:
-            VexStreamPlayerPartner.Current,
-    )
-
     val states:
         Flow<
-            VexStreamPlayerPartner.Current
+            Snapshot
         > =
         retainedStates
             .map { retained ->
-                retained.current
+                retained.snapshot
             }
             .distinctUntilChanged()
 
@@ -102,7 +130,7 @@ internal class VexStreamPlayerStore {
             .map { current ->
                 (
                     current as?
-                        VexStreamPlayerPartner.Current.Available
+                        Snapshot.Available
                 )
                     ?.playback
             }
@@ -110,13 +138,13 @@ internal class VexStreamPlayerStore {
 
     val queueCurrents:
         Flow<
-            VexStreamPlayerPartner.QueueCurrent?
+            QueueSnapshot?
         > =
         states
             .map { current ->
                 (
                     current as?
-                        VexStreamPlayerPartner.Current.Available
+                        Snapshot.Available
                 )
                     ?.queue
             }
@@ -130,7 +158,7 @@ internal class VexStreamPlayerStore {
             .map { current ->
                 (
                     current as?
-                        VexStreamPlayerPartner.Current.Available
+                        Snapshot.Available
                 )
                     ?.repeat
             }
@@ -144,24 +172,24 @@ internal class VexStreamPlayerStore {
             .map { current ->
                 (
                     current as?
-                        VexStreamPlayerPartner.Current.Available
+                        Snapshot.Available
                 )
                     ?.currentMedia
             }
             .distinctUntilChanged()
 
     val current:
-        VexStreamPlayerPartner.Current
+        Snapshot
         get() =
             retainedCurrent
-                .current
+                .snapshot
 
     val currentQueue:
-        VexStreamPlayerPartner.QueueCurrent?
+        QueueSnapshot?
         get() =
             (
                 current as?
-                    VexStreamPlayerPartner.Current.Available
+                    Snapshot.Available
             )
                 ?.queue
 
@@ -173,19 +201,20 @@ internal class VexStreamPlayerStore {
                 VexStreamPlayerPartner.Connection.Observation
             >,
     ):
-        Admission =
-        admitAndReport(
-            update =
-                VexStreamPlayerStoreUpdate
-                    .ConnectionOpened(
-                        connectionId =
-                            connectionId,
-                        observations =
-                            observations,
-                    ),
-            expectedConnectionId =
-                connectionId,
-        )
+        Boolean {
+        val after =
+            admit(
+                Update.ConnectionOpened(
+                    connectionId =
+                        connectionId,
+                    observations =
+                        observations,
+                ),
+            )
+
+        return after.connectionId ==
+            connectionId
+    }
 
     internal fun receive(
         observations:
@@ -193,71 +222,59 @@ internal class VexStreamPlayerStore {
                 VexStreamPlayerPartner.Connection.Observation
             >,
     ):
-        Admission {
+        Boolean {
         if (
             observations.isEmpty()
         ) {
-            return Admission(
-                accepted =
-                    false,
-                current =
-                    current,
-            )
+            return false
         }
 
         val connectionId =
             observations
                 .first()
                 .connectionId
+        val after =
+            admit(
+                Update.Observed(
+                    observations,
+                ),
+            )
 
-        return admitAndReport(
-            update =
-                VexStreamPlayerStoreUpdate
-                    .Observed(
-                        observations,
-                    ),
-            expectedConnectionId =
-                connectionId,
-        )
+        return after.connectionId ==
+            connectionId
     }
 
     internal fun connectionClosed(
         connectionId:
             VexStreamPlayerPartner.Connection.Id,
     ):
-        Admission {
+        Boolean {
         val before =
             retainedCurrent
         val after =
             admit(
-                VexStreamPlayerStoreUpdate
-                    .ConnectionClosed(
-                        connectionId,
-                    ),
+                Update.ConnectionClosed(
+                    connectionId,
+                ),
             )
 
-        return Admission(
-            accepted =
-                before.connectionId ==
-                    connectionId &&
-                    after.connectionId ==
-                    null,
-            current =
-                after.current,
-        )
+        return before.connectionId ==
+            connectionId &&
+            after.connectionId ==
+                null
     }
 
     private fun converge(
         update:
-            VexStreamPlayerStoreUpdate,
+            Update,
         current:
-            VexStreamPlayerRetainedCurrent,
+            Retained,
     ):
-        VexStreamPlayerRetainedCurrent =
+        Retained =
         when (
             update
         ) {
-            is VexStreamPlayerStoreUpdate
+            is Update
                 .ConnectionOpened -> {
                 update.observations
                     .requireConnection(
@@ -271,20 +288,20 @@ internal class VexStreamPlayerStore {
                     return current
                 }
 
-                VexStreamPlayerRetainedCurrent(
+                Retained(
                     latestConnectionOccurrence =
                         update.connectionId
                             .occurrence,
                     connectionId =
                         update.connectionId,
-                    current =
-                        completeCurrent(
+                    snapshot =
+                        completeSnapshot(
                             update.observations,
                         ),
                 )
             }
 
-            is VexStreamPlayerStoreUpdate
+            is Update
                 .Observed -> {
                 if (
                     update.observations
@@ -311,12 +328,12 @@ internal class VexStreamPlayerStore {
                 }
 
                 val available =
-                    current.current as?
-                        VexStreamPlayerPartner.Current.Available
+                    current.snapshot as?
+                        Snapshot.Available
                         ?: return current
 
                 current.copy(
-                    current =
+                    snapshot =
                         update.observations
                             .fold(
                                 available,
@@ -329,7 +346,7 @@ internal class VexStreamPlayerStore {
                 )
             }
 
-            is VexStreamPlayerStoreUpdate
+            is Update
                 .ConnectionClosed ->
                 if (
                     current.connectionId ==
@@ -338,9 +355,8 @@ internal class VexStreamPlayerStore {
                     current.copy(
                         connectionId =
                             null,
-                        current =
-                            VexStreamPlayerPartner.Current
-                                .Unavailable,
+                        snapshot =
+                            Snapshot.Unavailable,
                     )
                 } else {
                     current
@@ -349,9 +365,9 @@ internal class VexStreamPlayerStore {
 
     private fun admit(
         update:
-            VexStreamPlayerStoreUpdate,
+            Update,
     ):
-        VexStreamPlayerRetainedCurrent =
+        Retained =
         synchronized(
             lock,
         ) {
@@ -376,35 +392,14 @@ internal class VexStreamPlayerStore {
             mutableRetainedStates.value
         }
 
-    private fun admitAndReport(
-        update:
-            VexStreamPlayerStoreUpdate,
-        expectedConnectionId:
-            VexStreamPlayerPartner.Connection.Id,
-    ):
-        Admission {
-        val after =
-            admit(
-                update,
-            )
-
-        return Admission(
-            accepted =
-                after.connectionId ==
-                    expectedConnectionId,
-            current =
-                after.current,
-        )
-    }
-
-    private fun completeCurrent(
+    private fun completeSnapshot(
         observations:
             List<
                 VexStreamPlayerPartner.Connection.Observation
             >,
     ):
-        VexStreamPlayerPartner.Current.Available =
-        VexStreamPlayerPartner.Current.Available(
+        Snapshot.Available =
+        Snapshot.Available(
             playback =
                 observations
                     .lastSignal<
@@ -477,11 +472,11 @@ private fun List<
     }
 }
 
-private fun VexStreamPlayerPartner.Current.Available.withSignal(
+private fun VexStreamPlayerStore.Snapshot.Available.withSignal(
     signal:
         VexStreamPlayerPartner.Signal,
 ):
-    VexStreamPlayerPartner.Current.Available =
+    VexStreamPlayerStore.Snapshot.Available =
     when (
         signal
     ) {

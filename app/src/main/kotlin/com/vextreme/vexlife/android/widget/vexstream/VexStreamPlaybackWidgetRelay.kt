@@ -11,7 +11,6 @@ import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackProjection
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackProjectionFor
-import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
 import com.vextreme.vexlife.android.widget.VexWidget
 
@@ -270,16 +269,16 @@ internal fun vexStreamPlaybackWidgetRelayOutput(
     )
 }
 
-private fun VexStreamPlayerPartner.Current.toVexStreamPlaybackWidgetPlayerInput():
+private fun VexStreamPlayerStore.Snapshot.toVexStreamPlaybackWidgetPlayerInput():
     VexStreamPlaybackWidgetPlayerInput =
     when (
         this
     ) {
-        VexStreamPlayerPartner.Current.Unavailable ->
+        VexStreamPlayerStore.Snapshot.Unavailable ->
             VexStreamPlaybackWidgetPlayerInput
                 .Unavailable
 
-        is VexStreamPlayerPartner.Current.Available ->
+        is VexStreamPlayerStore.Snapshot.Available ->
             VexStreamPlaybackWidgetPlayerInput(
                 mediaId =
                     currentMedia.mediaId,

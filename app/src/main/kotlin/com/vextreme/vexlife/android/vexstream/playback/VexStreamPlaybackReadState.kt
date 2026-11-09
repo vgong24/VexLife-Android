@@ -9,7 +9,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
@@ -283,7 +283,7 @@ internal object VexStreamPlaybackTrace {
             )
 }
 
-private fun VexStreamPlayerPartner.Current.toVexStreamPlaybackReadState(
+private fun VexStreamPlayerStore.Snapshot.toVexStreamPlaybackReadState(
     progress:
         VexStreamPlaybackProgress =
         VexStreamPlaybackProgress.Empty,
@@ -292,10 +292,10 @@ private fun VexStreamPlayerPartner.Current.toVexStreamPlaybackReadState(
     when (
         this
     ) {
-        VexStreamPlayerPartner.Current.Unavailable ->
+        VexStreamPlayerStore.Snapshot.Unavailable ->
             VexStreamPlaybackReadState.Empty
 
-        is VexStreamPlayerPartner.Current.Available ->
+        is VexStreamPlayerStore.Snapshot.Available ->
             VexStreamPlaybackReadState(
                 currentMediaId =
                     currentMedia.mediaId,
