@@ -32,6 +32,9 @@ internal class InsulinPartnerLab(
     private object InboundAdmission :
         VexExecution.RelationshipId
 
+    private val pumpRequestRealizationLock =
+        Any()
+
     sealed interface PumpRequestStatus {
         data object Idle :
             PumpRequestStatus
@@ -206,87 +209,90 @@ internal class InsulinPartnerLab(
             Int =
             100,
     ):
-        Job {
-        val parameter =
-            InsulinFamily.Parameter.InsulinAmount(
-                unitsHundredths =
-                    unitsHundredths,
-            )
-        val act =
-            checkNotNull(
-                family.activate(
-                    InsulinFamily.Control.RequestPumpDelivery(
-                        amount =
-                            parameter,
+        Job =
+        synchronized(
+            pumpRequestRealizationLock,
+        ) {
+            val parameter =
+                InsulinFamily.Parameter.InsulinAmount(
+                    unitsHundredths =
+                        unitsHundredths,
+                )
+            val act =
+                checkNotNull(
+                    family.activate(
+                        InsulinFamily.Control.RequestPumpDelivery(
+                            amount =
+                                parameter,
+                        ),
                     ),
-                ),
-            )
-        val begin =
-            checkNotNull(
-                act.begin,
-            ) {
-                "Pump request Act must carry Begin"
-            }
-        val effect =
-            checkNotNull(
-                begin.effect as?
-                    InsulinFamily.Effect.RequestPumpDelivery,
-            ) {
-                "Pump request Begin must carry Effect.RequestPumpDelivery"
-            }
-        val method =
-            InsulinFamily.Act.Method.RequestPumpDelivery(
-                connection =
-                    pumpConnection,
-                effect =
-                    effect,
-            )
+                )
+            val begin =
+                checkNotNull(
+                    act.realizationBegin,
+                ) {
+                    "Pump request accepted Act must carry realization Begin"
+                }
+            val effect =
+                checkNotNull(
+                    begin.effect as?
+                        InsulinFamily.Effect.RequestPumpDelivery,
+                ) {
+                    "Pump request Begin must carry Effect.RequestPumpDelivery"
+                }
+            val method =
+                InsulinFamily.Act.Method.RequestPumpDelivery(
+                    connection =
+                        pumpConnection,
+                    effect =
+                        effect,
+                )
 
-        return act.launch(
-            executionRoot =
-                executionRoot,
-            method =
-                method,
-            onResult = { result ->
-                    mutablePumpRequestStatus.value =
-                        when (
-                            result
-                        ) {
-                            is VexMethod.Result.Success ->
-                                PumpRequestStatus.Acknowledged(
-                                    requestRef =
-                                        result
-                                            .output
-                                            .requestRef,
-                                    unitsHundredths =
-                                        result
-                                            .output
-                                            .unitsHundredths,
-                                )
+            act.launch(
+                executionRoot =
+                    executionRoot,
+                method =
+                    method,
+                onResult = { result ->
+                        mutablePumpRequestStatus.value =
+                            when (
+                                result
+                            ) {
+                                is VexMethod.Result.Success ->
+                                    PumpRequestStatus.Acknowledged(
+                                        requestRef =
+                                            result
+                                                .output
+                                                .requestRef,
+                                        unitsHundredths =
+                                            result
+                                                .output
+                                                .unitsHundredths,
+                                    )
 
-                            is VexMethod.Result.Failure ->
-                                PumpRequestStatus.Rejected(
-                                    reason =
-                                        result
-                                            .output
-                                            .reason,
-                                )
+                                is VexMethod.Result.Failure ->
+                                    PumpRequestStatus.Rejected(
+                                        reason =
+                                            result
+                                                .output
+                                                .reason,
+                                    )
 
-                            is VexMethod.Result.Error ->
-                                PumpRequestStatus.Errored(
-                                    message =
-                                        result
-                                            .cause
-                                            .message
-                                            ?: result
+                                is VexMethod.Result.Error ->
+                                    PumpRequestStatus.Errored(
+                                        message =
+                                            result
                                                 .cause
-                                                .javaClass
-                                                .simpleName,
-                                )
-                        }
-            },
-        )
-    }
+                                                .message
+                                                ?: result
+                                                    .cause
+                                                    .javaClass
+                                                    .simpleName,
+                                    )
+                            }
+                },
+            )
+        }
 
     /**
      * Simulate later physical/provider evidence after an acknowledged request.

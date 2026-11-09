@@ -82,7 +82,7 @@ internal class ThemeModeFamily(
         control:
             Control.Select,
     ):
-        VexFamily.Act<
+        VexFamily.Act.Accepted<
             ThemeModeFamily,
             ThemeMode,
             Effect
@@ -458,7 +458,7 @@ internal fun activateThemeMode(
     }
 
     val begin =
-        act.begin
+        act.realizationBegin
             ?: return true
 
     when (
