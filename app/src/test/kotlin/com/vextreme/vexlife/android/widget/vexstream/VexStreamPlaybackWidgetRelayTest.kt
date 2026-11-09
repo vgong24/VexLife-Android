@@ -2,7 +2,6 @@ package com.vextreme.vexlife.android.widget.vexstream
 
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackPhase
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
-import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
@@ -24,10 +23,7 @@ class VexStreamPlaybackWidgetRelayTest {
         val output =
             vexStreamPlaybackWidgetRelayOutput(
                 player =
-                    playerInput(
-                        playRequested =
-                            false,
-                    ),
+                    playerInput(),
                 familyState =
                     familyState,
             )
@@ -49,10 +45,7 @@ class VexStreamPlaybackWidgetRelayTest {
         val output =
             vexStreamPlaybackWidgetRelayOutput(
                 player =
-                    playerInput(
-                        playRequested =
-                            false,
-                    ),
+                    playerInput(),
                 familyState =
                     VexStreamPlaybackState.Media(
                         playRequested = false,
@@ -83,10 +76,7 @@ class VexStreamPlaybackWidgetRelayTest {
         val output =
             vexStreamPlaybackWidgetRelayOutput(
                 player =
-                    playerInput(
-                        playRequested =
-                            true,
-                    ),
+                    playerInput(),
                 familyState =
                     VexStreamPlaybackState.NoMedia,
             )
@@ -100,23 +90,9 @@ class VexStreamPlaybackWidgetRelayTest {
         )
     }
 
-    private fun playerInput(
-        playRequested:
-            Boolean,
-    ):
+    private fun playerInput():
         VexStreamPlaybackWidgetPlayerInput =
         VexStreamPlaybackWidgetPlayerInput(
-            playback =
-                VexStreamPlayerPartner.Signal.Playback(
-                    hasMedia = true,
-                    playRequested =
-                        playRequested,
-                    phase =
-                        VexStreamPlayerPartner.PlaybackPhase
-                            .Ready,
-                    playPauseAvailable = true,
-                    restartAvailable = true,
-                ),
             mediaId = "track-1",
             title = "Track 1",
             artist = "Artist",

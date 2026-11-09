@@ -18,8 +18,6 @@ import com.vextreme.vexlife.android.widget.VexWidget
  * Full QueueItems remain Player Store-owned; this projection deliberately carries no queue list.
  */
 internal data class VexStreamPlaybackWidgetPlayerInput(
-    val playback:
-        VexStreamPlayerPartner.Signal.Playback?,
     val mediaId:
         String?,
     val title:
@@ -35,16 +33,11 @@ internal data class VexStreamPlaybackWidgetPlayerInput(
 ) {
     fun deepCopy():
         VexStreamPlaybackWidgetPlayerInput =
-        copy(
-            playback =
-                playback
-                    ?.copy(),
-        )
+        copy()
 
     companion object {
         val Unavailable =
             VexStreamPlaybackWidgetPlayerInput(
-                playback = null,
                 mediaId = null,
                 title = "",
                 artist = "",
@@ -279,8 +272,6 @@ private fun VexStreamPlayerPartner.Current.toVexStreamPlaybackWidgetPlayerInput(
 
         is VexStreamPlayerPartner.Current.Available ->
             VexStreamPlaybackWidgetPlayerInput(
-                playback =
-                    playback.copy(),
                 mediaId =
                     currentMedia.mediaId,
                 title =
