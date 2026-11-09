@@ -66,14 +66,11 @@ internal class ThemeModeFamily(
      *
      * This is the SAME Family Parameter.Mode instance already carried through Control -> Effect ->
      * Method. No generation/trace/operation ID is minted. The marker exists only so an older Store
-     * observation cannot overwrite a newer accepted semantic selection while that selection's
-     * realization remains unsettled.
+     * observation cannot overwrite a newer accepted semantic selection while that exact Method is
+     * still unresolved.
      *
-     * activateSelection(...) installs the fence provisionally under this same lock before
-     * activate(...), so no Store observation can race between immediate semantic admission and the
-     * currentness fence becoming visible. Null or thrown activation rolls that provisional value back.
-     * The realization boundary leaves the accepted fence when execution custody terminates (including
-     * cancellation) or when custody could not be established and launch fails synchronously.
+     * act(...) remains pure. The realization boundary enters/leaves this fence through
+     * activateSelection(...) / selectionRealizationFinished(...).
      */
     private val selectionObservationLock =
         Any()
@@ -81,13 +78,6 @@ internal class ThemeModeFamily(
         Parameter.Mode? =
         null
 
-    /**
-     * Accept one Select while establishing its currentness fence.
-     *
-     * This is not a standalone realization API. A successful return leaves the accepted selection
-     * unsettled until the ThemeMode realization boundary either establishes execution custody and
-     * observes its termination, or explicitly settles the fence when that handoff fails.
-     */
     internal fun activateSelection(
         control:
             Control.Select,
@@ -105,25 +95,16 @@ internal class ThemeModeFamily(
             unsettledSelection =
                 control.mode
 
-            try {
-                activate(
-                    control,
-                ).also { accepted ->
-                    if (
-                        accepted ==
-                        null
-                    ) {
-                        unsettledSelection =
-                            previous
-                    }
+            activate(
+                control,
+            ).also { accepted ->
+                if (
+                    accepted ==
+                    null
+                ) {
+                    unsettledSelection =
+                        previous
                 }
-            } catch (
-                failure:
-                    Throwable,
-            ) {
-                unsettledSelection =
-                    previous
-                throw failure
             }
         }
 
@@ -419,9 +400,6 @@ internal class ThemeModeFamily(
  * reconciliation. The maintained Store Flow is a separate observation route. They may converge on
  * the same semantic ThemeMode truth only after each route has independently earned that fact;
  * Result and Observation are not interchangeable evidence.
- *
- * The Boolean return reports whether the Control was lawfully accepted into this realization path.
- * It does not report Method success, Store commit success, or durable ThemeMode outcome.
  */
 internal fun activateThemeMode(
     family:
@@ -486,19 +464,7 @@ internal fun activateThemeMode(
 
     val begin =
         act.begin
-            ?: run {
-                when (
-                    control
-                ) {
-                    is ThemeModeFamily.Control.Select ->
-                        family.selectionRealizationFinished(
-                            control.mode,
-                        )
-                }
-                error(
-                    "ThemeMode Select Act must carry Begin",
-                )
-            }
+            ?: return true
 
     when (
         val effect =
@@ -513,117 +479,109 @@ internal fun activateThemeMode(
                         effect,
                 )
 
-            val job =
-                try {
-                    act.launch(
-                        executionRoot =
-                            executionRoot,
-                        method =
-                            method,
-                        beforeOperation = {
-                            recordThemeModeFact(
-                                logger =
-                                    logger,
-                                event =
-                                    VexLogger.Event.Runtime(
-                                        subjectRef =
-                                            THEME_MODE_FAMILY_SUBJECT,
-                                        action =
-                                            "EffectRequested",
-                                        detailsJson =
-                                            themeModeSaveDetails(
-                                                effect,
-                                            ),
-                                    ),
-                            )
-                        },
-                        onResult = { result ->
-                            when (
-                                result
-                            ) {
-                                is VexMethod.Result.Success -> {
-                                    recordThemeModeFact(
-                                        logger =
-                                            logger,
-                                        event =
-                                            VexLogger.Event.Runtime(
-                                                subjectRef =
-                                                    THEME_MODE_FAMILY_SUBJECT,
-                                                action =
-                                                    "EffectSucceeded",
-                                                detailsJson =
-                                                    themeModeSaveDetails(
-                                                        effect,
-                                                    ),
-                                            ),
-                                    )
-                                    observeThemeModeState(
-                                        family =
-                                            family,
-                                        observed =
-                                            result.output,
-                                        logger =
-                                            logger,
-                                    )
-                                }
-
-                                is VexMethod.Result.Failure -> {
-                                    recordThemeModeFact(
-                                        logger =
-                                            logger,
-                                        event =
-                                            VexLogger.Event.Runtime(
-                                                subjectRef =
-                                                    THEME_MODE_FAMILY_SUBJECT,
-                                                action =
-                                                    "EffectFailed",
-                                                detailsJson =
-                                                    themeModeSaveDetails(
-                                                        effect =
-                                                            effect,
-                                                    ),
-                                            ),
-                                    )
-                                }
-
-                                is VexMethod.Result.Error -> {
-                                    recordThemeModeFact(
-                                        logger =
-                                            logger,
-                                        event =
-                                            VexLogger.Event.Runtime(
-                                                subjectRef =
-                                                    THEME_MODE_FAMILY_SUBJECT,
-                                                action =
-                                                    "EffectErrored",
-                                                detailsJson =
-                                                    themeModeSaveDetails(
-                                                        effect =
-                                                            effect,
-                                                        failure =
-                                                            result.cause,
-                                                    ),
-                                            ),
-                                    )
-                                }
+            act.launch(
+                executionRoot =
+                    executionRoot,
+                method =
+                    method,
+                beforeOperation = {
+                        recordThemeModeFact(
+                            logger =
+                                logger,
+                            event =
+                                VexLogger.Event.Runtime(
+                                    subjectRef =
+                                        THEME_MODE_FAMILY_SUBJECT,
+                                    action =
+                                        "EffectRequested",
+                                    detailsJson =
+                                        themeModeSaveDetails(
+                                            effect,
+                                        ),
+                                ),
+                        )
+                    },
+                    onResult = { result ->
+                        when (
+                            result
+                        ) {
+                            is VexMethod.Result.Success -> {
+                                family.selectionRealizationFinished(
+                                    effect.mode,
+                                )
+                                recordThemeModeFact(
+                                    logger =
+                                        logger,
+                                    event =
+                                        VexLogger.Event.Runtime(
+                                            subjectRef =
+                                                THEME_MODE_FAMILY_SUBJECT,
+                                            action =
+                                                "EffectSucceeded",
+                                            detailsJson =
+                                                themeModeSaveDetails(
+                                                    effect,
+                                                ),
+                                        ),
+                                )
+                                observeThemeModeState(
+                                    family =
+                                        family,
+                                    observed =
+                                        result.output,
+                                    logger =
+                                        logger,
+                                )
                             }
-                        },
-                    )
-                } catch (
-                    failure:
-                        Throwable,
-                ) {
-                    family.selectionRealizationFinished(
-                        effect.mode,
-                    )
-                    throw failure
-                }
 
-            job.invokeOnCompletion {
-                family.selectionRealizationFinished(
-                    effect.mode,
-                )
-            }
+                            is VexMethod.Result.Failure -> {
+                                family.selectionRealizationFinished(
+                                    effect.mode,
+                                )
+                                recordThemeModeFact(
+                                    logger =
+                                        logger,
+                                    event =
+                                        VexLogger.Event.Runtime(
+                                            subjectRef =
+                                                THEME_MODE_FAMILY_SUBJECT,
+                                            action =
+                                                "EffectFailed",
+                                            detailsJson =
+                                                themeModeSaveDetails(
+                                                    effect =
+                                                        effect,
+                                                ),
+                                        ),
+                                )
+                            }
+
+                            is VexMethod.Result.Error -> {
+                                family.selectionRealizationFinished(
+                                    effect.mode,
+                                )
+                                recordThemeModeFact(
+                                    logger =
+                                        logger,
+                                    event =
+                                        VexLogger.Event.Runtime(
+                                            subjectRef =
+                                                THEME_MODE_FAMILY_SUBJECT,
+                                            action =
+                                                "EffectErrored",
+                                            detailsJson =
+                                                themeModeSaveDetails(
+                                                    effect =
+                                                        effect,
+                                                    failure =
+                                                        result.cause,
+                                                ),
+                                        ),
+                                )
+                            }
+                        }
+                },
+            )
         }
     }
 
