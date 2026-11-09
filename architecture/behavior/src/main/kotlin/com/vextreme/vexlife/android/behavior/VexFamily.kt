@@ -405,8 +405,14 @@ abstract class VexFamily<
                     ) -> Unit =
                     {},
             ):
-                Job? =
-                realizationAdmission(
+                Job? {
+                checkNotNull(
+                    authored.begin,
+                ) {
+                    "Only an accepted Act whose authored Act has Begin may launch a Method"
+                }
+
+                return realizationAdmission(
                     executionRoot,
                 ) { currentBegin ->
                     check(
@@ -444,7 +450,7 @@ abstract class VexFamily<
                         },
                     )
                 }
-        }
+            }
 
         internal fun acceptedBy(
             owner:
