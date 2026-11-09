@@ -1,6 +1,6 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
-import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerConnectionViewModel
+import com.vextreme.vexlife.android.vexstream.VexStreamMusicViewModel
 
 import android.util.Log
 import androidx.compose.runtime.Composable
@@ -301,7 +301,7 @@ internal fun rememberVexStreamPlaybackReadState():
         VexStreamPlaybackReadState
     > {
     val owner:
-        VexStreamPlayerConnectionViewModel =
+        VexStreamMusicViewModel =
         viewModel()
     val playerCurrent by
         owner

@@ -6,7 +6,7 @@ import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
-import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerConnectionViewModel
+import com.vextreme.vexlife.android.vexstream.VexStreamMusicViewModel
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 
 /** Compose-facing membrane over the process-shared Repeat Family. */
@@ -56,7 +56,7 @@ private class CurrentVexStreamRepeatExperience(
 internal fun rememberVexStreamRepeatExperience():
     VexStreamRepeatExperience {
     val owner:
-        VexStreamPlayerConnectionViewModel =
+        VexStreamMusicViewModel =
         viewModel()
     val family =
         owner.repeatFamily

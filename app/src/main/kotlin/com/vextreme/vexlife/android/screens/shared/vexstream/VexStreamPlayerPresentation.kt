@@ -47,11 +47,11 @@ import com.vextreme.vexlife.android.elements.VexRow
 import com.vextreme.vexlife.android.elements.VexText
 import com.vextreme.vexlife.android.elements.vex
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.vexstream.rememberVexStreamPlayerRequestConnection
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackExperience
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackReadState
 import com.vextreme.vexlife.android.vexstream.playback.present
-import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackSeekConnection
 import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackSeekPositionMs
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
@@ -79,8 +79,8 @@ internal fun VexStreamMiniPlayer(
         rememberVexStreamQueueExperience()
     val queueProjection =
         queueExperience.projection
-    val seekConnection =
-        rememberVexStreamPlaybackSeekConnection()
+    val playerRequestConnection =
+        rememberVexStreamPlayerRequestConnection()
     val playbackProjection =
         requireNotNull(
             playbackExperience
@@ -205,7 +205,7 @@ internal fun VexStreamMiniPlayer(
             playback = playback,
             seekAvailable =
                 playbackProjection.seekAvailable,
-            seekConnection = seekConnection,
+            playerRequestConnection = playerRequestConnection,
             runtime = runtime,
             semanticRef =
                 VexStreamMusicScreen
@@ -327,8 +327,8 @@ internal fun VexStreamFullPlayerSheet(
         rememberVexStreamRepeatExperience()
     val repeatProjection =
         repeatExperience.projection
-    val seekConnection =
-        rememberVexStreamPlaybackSeekConnection()
+    val playerRequestConnection =
+        rememberVexStreamPlayerRequestConnection()
     val selected =
         runtime.presentation.selected(
             VexStreamMusicScreen.FullPlayerContent,
@@ -641,7 +641,7 @@ internal fun VexStreamFullPlayerSheet(
                     seekAvailable =
                         playbackProjection
                             ?.seekAvailable == true,
-                    seekConnection = seekConnection,
+                    playerRequestConnection = playerRequestConnection,
                     runtime = runtime,
                     semanticRef = fullPlayerSeekRef,
                     activationSubjectRef =
@@ -783,7 +783,7 @@ internal fun VexStreamFullPlayerSheet(
 private fun VexStreamPlaybackTimeline(
     playback: VexStreamPlaybackReadState,
     seekAvailable: Boolean,
-    seekConnection: VexStreamPlayerPartner.Connection.Request?,
+    playerRequestConnection: VexStreamPlayerPartner.Connection.Request?,
     runtime: VexRuntime,
     semanticRef: String,
     activationSubjectRef: String? = null,
@@ -812,8 +812,9 @@ private fun VexStreamPlaybackTimeline(
             }
             ?: playback.currentPositionMs
     val canSeek =
-        seekConnection
-            ?.isAvailable == true &&
+        seekAvailable &&
+            playerRequestConnection !=
+                null &&
             playback.currentMediaId
                 ?.isNotBlank() == true &&
             playback.currentIndex >= 0 &&
@@ -858,7 +859,7 @@ private fun VexStreamPlaybackTimeline(
                     ?: runtime.activate(
                         VexStreamMusicScreen.SeekPlayback,
                     )
-                seekConnection?.seek(
+                playerRequestConnection?.seek(
                     mediaId =
                         targetMediaId,
                     mediaItemIndex =

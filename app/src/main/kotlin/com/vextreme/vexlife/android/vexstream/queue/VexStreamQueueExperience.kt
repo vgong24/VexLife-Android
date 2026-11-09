@@ -6,7 +6,7 @@ import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
-import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerConnectionViewModel
+import com.vextreme.vexlife.android.vexstream.VexStreamMusicViewModel
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
 
@@ -67,7 +67,7 @@ private class CurrentVexStreamQueueExperience(
 internal fun rememberVexStreamQueueExperience():
     VexStreamQueueExperience {
     val owner:
-        VexStreamPlayerConnectionViewModel =
+        VexStreamMusicViewModel =
         viewModel()
     val family =
         owner.queueFamily

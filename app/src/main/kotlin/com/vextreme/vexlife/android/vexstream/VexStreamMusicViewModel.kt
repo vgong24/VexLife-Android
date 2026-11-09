@@ -1,27 +1,39 @@
-package com.vextreme.vexlife.android.vexstream.player
+package com.vextreme.vexlife.android.vexstream
 
 import android.app.Application
 import android.content.ComponentName
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.vextreme.vexlife.android.VexApplication
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackService
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
+import com.vextreme.vexlife.android.vexstream.player.Media3ControllerConnection
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueFamily
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatFamily
 
 /**
- * Android configuration-lifetime owner for one concrete Player Partner request/progress Connection.
+ * Android configuration-lifetime composition owner for the VexStream Music experience.
  *
- * Media3 connection construction/lifetime stays in the Player Partner neighborhood. Playback,
- * Queue and Repeat remain separate semantic owners that receive Vex-owned connection surfaces.
+ * OWNED HERE
+ * One Media3 Controller Connection occurrence and its Android configuration lifetime.
+ *
+ * BORROWED, NOT OWNED
+ * The process-shared Player Store, Playback / Queue / Repeat Families and VexExecutionRoot.
+ *
+ * This is an Android composition boundary, not another semantic architecture root. It exists because
+ * the Music experience needs one configuration-stable Controller connection while its semantic and
+ * outside truths remain owned by their established process-level owners.
  */
-internal class VexStreamPlayerConnectionViewModel(
+internal class VexStreamMusicViewModel(
     application:
         Application,
 ) :
@@ -38,7 +50,7 @@ internal class VexStreamPlayerConnectionViewModel(
                 "VexStream Playback requires VexApplication as the process composition root",
             )
 
-    val family:
+    val playbackFamily:
         VexStreamPlaybackFamily =
         vexApplication
             .dependencies
@@ -148,4 +160,15 @@ internal class VexStreamPlayerConnectionViewModel(
     }
 }
 
-// [VXG RealForever][VEXSTREAM][PLAYBACK][PROCESS-FAMILY]
+
+@Composable
+internal fun rememberVexStreamPlayerRequestConnection():
+    VexStreamPlayerPartner.Connection.Request? {
+    val owner:
+        VexStreamMusicViewModel =
+        viewModel()
+
+    return owner.playerRequestConnection
+}
+
+// [VXG RealForever][VEXSTREAM][MUSIC][CONFIGURATION-COMPOSITION]

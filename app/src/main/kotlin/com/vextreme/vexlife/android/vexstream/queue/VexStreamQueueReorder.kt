@@ -1,8 +1,5 @@
 package com.vextreme.vexlife.android.vexstream.queue
 
-import androidx.compose.runtime.Composable
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerConnectionViewModel
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 import com.vextreme.vexlife.android.vexstream.player.queueMoveTargetIndex
 
@@ -16,11 +13,10 @@ internal data class VexStreamQueueReorderRequest(
         VexStreamQueueReorderDirection,
 )
 
-@Composable
 internal fun rememberVexStreamQueueReorderConnection():
     VexStreamPlayerPartner.Connection.Request? {
     val owner:
-        VexStreamPlayerConnectionViewModel =
+        VexStreamMusicViewModel =
         viewModel()
 
     return owner.playerRequestConnection

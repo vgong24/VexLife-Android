@@ -1,8 +1,5 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
-import androidx.compose.runtime.Composable
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerConnectionViewModel
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 import com.vextreme.vexlife.android.vexstream.player.seekTarget
 
@@ -29,11 +26,10 @@ internal data class VexStreamPlaybackSeekRequest(
     }
 }
 
-@Composable
 internal fun rememberVexStreamPlaybackSeekConnection():
     VexStreamPlayerPartner.Connection.Request? {
     val owner:
-        VexStreamPlayerConnectionViewModel =
+        VexStreamMusicViewModel =
         viewModel()
 
     return owner.playerRequestConnection

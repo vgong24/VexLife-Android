@@ -10,7 +10,7 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackAvailability
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
-import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerConnectionViewModel
+import com.vextreme.vexlife.android.vexstream.VexStreamMusicViewModel
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 import com.vextreme.vexlife.android.vexstream.track.VexStreamTrackPlaybackResolver
 import com.vextreme.vexlife.android.vexstream.track.prepareVexStreamTrackArtworkBestEffort
@@ -184,7 +184,7 @@ internal fun rememberVexStreamCollectionPlayback(
 ):
     VexStreamCollectionPlayback? {
     val owner:
-        VexStreamPlayerConnectionViewModel =
+        VexStreamMusicViewModel =
         viewModel()
     val connection =
         owner.playerRequestConnection

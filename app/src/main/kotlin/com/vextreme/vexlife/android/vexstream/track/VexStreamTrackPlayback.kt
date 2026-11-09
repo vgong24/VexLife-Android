@@ -10,7 +10,7 @@ import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackAvailability
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
-import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerConnectionViewModel
+import com.vextreme.vexlife.android.vexstream.VexStreamMusicViewModel
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 import kotlinx.coroutines.CancellationException
 
@@ -286,7 +286,7 @@ internal fun rememberVexStreamTrackPlayback(
 ):
     VexStreamTrackPlayback? {
     val owner:
-        VexStreamPlayerConnectionViewModel =
+        VexStreamMusicViewModel =
         viewModel()
     val connection =
         owner.playerRequestConnection

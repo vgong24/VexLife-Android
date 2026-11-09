@@ -122,16 +122,21 @@ A concrete Connection must answer:
 4. What concurrency/serialization guarantees must it preserve?
 
 A Connection may implement `VexPort` or `VexPortFlow`, but keeps an ordinary concrete role name.
-Current VexStream pressure now separates semantic and provider-side connections rather than making
-one Media3 class own both directions:
+
+Current VexStream no longer exemplifies this compatibility Port/Connection shape: its currentized
+path uses Direct VexFamily + VexPartner, with `Media3PlayerConnection` and
+`Media3ControllerConnection` as concrete realizations of the Player Partner relationship.
+
+For still-current VexBehavior/VexPort consumers, concrete examples remain ordinary role names such
+as:
 
 ~~~text
-PartnerVexStreamPlaybackConnection
-Media3VexStreamPlayerControlConnection
-VexMapsLocationConnection
+VexMapsDistributionModeConnection
+VexMapsDeliveryRouteConnection
 ~~~
 
-Do not rename every implementation to Port.
+Do not rename every implementation to Port and do not pull Direct Family / Partner consumers back
+into this older shape merely for uniformity.
 
 This corresponds naturally to Ports & Adapters / Hexagonal architecture:
 
@@ -286,15 +291,15 @@ common type equation first.
 
 Use feature-local aliases when foundation generics are correct but too noisy for ordinary feature/Compose code.
 
-Example:
+Compatibility example:
 
 ~~~text
-VexStreamPlaybackConnection
-VexStreamPlaybackConnectionFlow
-VexStreamPlaybackProjection
+VexMapsDistributionModeConnectionFlow
+VexMapsDistributionModeProjection
 ~~~
 
-The alias hides ceremony, not safety.
+The alias hides ceremony, not safety. Current Direct Family / Partner consumers should use their
+own current foundation vocabulary rather than manufacturing Port aliases for symmetry.
 
 # The Family contract
 
@@ -930,7 +935,7 @@ Family Control
 | Queue Family | [VexStreamQueueFamily](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/queue/VexStreamQueueFamily.kt) |
 | Repeat Family | [VexStreamRepeatFamily](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/repeat/VexStreamRepeatFamily.kt) |
 | Playback pending reconciliation | [VexStreamPlaybackPending](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackPending.kt) |
-| Request/progress lifetime host | [VexStreamPlayerConnectionViewModel](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/player/VexStreamPlayerConnectionViewModel.kt) |
+| Music configuration composition / request-progress lifetime host | [VexStreamMusicViewModel](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/VexStreamMusicViewModel.kt) |
 | Playback UI membrane | [VexStreamPlaybackExperience](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackExperience.kt) |
 | Queue UI membrane | [VexStreamQueueExperience](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/queue/VexStreamQueueExperience.kt) |
 | Repeat UI membrane | [VexStreamRepeatExperience](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/repeat/VexStreamRepeatExperience.kt) |

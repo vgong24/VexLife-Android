@@ -46,12 +46,11 @@ import com.vextreme.vexlife.android.elements.VexText
 import com.vextreme.vexlife.android.elements.vex
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackReadState
+import com.vextreme.vexlife.android.vexstream.rememberVexStreamPlayerRequestConnection
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueOccurrence
 import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueExperience
-import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueuePlayConnection
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueReorderDirection
-import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueReorderConnection
 import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueAdjacentMoveTarget
 import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueOccurrences
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatControl
@@ -87,10 +86,8 @@ internal fun VexStreamQueueContent(
             ?.navigation
             ?.currentIndex
             ?: -1
-    val queuePlayConnection =
-        rememberVexStreamQueuePlayConnection()
-    val queueReorderConnection =
-        rememberVexStreamQueueReorderConnection()
+    val playerRequestConnection =
+        rememberVexStreamPlayerRequestConnection()
     val repeatExperience =
         rememberVexStreamRepeatExperience()
     val repeatProjection =
@@ -319,12 +316,12 @@ VexStreamPresentationRefs
                             queueCurrent
                                 ?.navigation
                                 ?.playOccurrenceAvailable == true &&
-                                queuePlayConnection !=
+                                playerRequestConnection !=
                                 null
                         val reorderEnabled =
                             queueCurrent
                                 ?.reorderAvailable == true &&
-                                queueReorderConnection !=
+                                playerRequestConnection !=
                                 null
 
                         Row(
@@ -390,7 +387,7 @@ VexStreamPresentationRefs
                                                                 .QueuePlay,
                                                     ),
                                         )
-                                        queuePlayConnection
+                                        playerRequestConnection
                                             ?.playQueueOccurrence(
                                                 latestOccurrence,
                                             )
@@ -548,7 +545,7 @@ VexStreamPresentationRefs
                                                     VexStreamQueueReorderDirection.Earlier
                                                 }
                                             val moved =
-                                                queueReorderConnection
+                                                playerRequestConnection
                                                     ?.moveQueueOccurrence(
                                                         occurrence =
                                                             currentOccurrence,
