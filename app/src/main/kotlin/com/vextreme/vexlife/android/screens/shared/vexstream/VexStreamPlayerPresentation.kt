@@ -227,7 +227,7 @@ internal fun VexStreamMiniPlayer(
                         ?.get(
                             VexStreamQueueControl.Previous,
                         )
-                        ?.seekAvailable == true,
+                        ?.isAvailable == true,
             )
             VexIconButton(
                 element = VexStreamMusicScreen.TogglePlayback,

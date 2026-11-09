@@ -8,15 +8,6 @@ internal data class VexStreamQueuePlayRequest(
         VexStreamQueueOccurrence,
 )
 
-internal fun rememberVexStreamQueuePlayConnection():
-    VexStreamPlayerPartner.Connection.Request? {
-    val owner:
-        VexStreamMusicViewModel =
-        viewModel()
-
-    return owner.playerRequestConnection
-}
-
 internal fun vexStreamQueuePlayTargetIndex(
     request:
         VexStreamQueuePlayRequest,

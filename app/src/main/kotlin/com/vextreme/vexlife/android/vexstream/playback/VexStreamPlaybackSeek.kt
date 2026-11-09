@@ -26,15 +26,6 @@ internal data class VexStreamPlaybackSeekRequest(
     }
 }
 
-internal fun rememberVexStreamPlaybackSeekConnection():
-    VexStreamPlayerPartner.Connection.Request? {
-    val owner:
-        VexStreamMusicViewModel =
-        viewModel()
-
-    return owner.playerRequestConnection
-}
-
 internal fun vexStreamPlaybackSeekTarget(
     request:
         VexStreamPlaybackSeekRequest,

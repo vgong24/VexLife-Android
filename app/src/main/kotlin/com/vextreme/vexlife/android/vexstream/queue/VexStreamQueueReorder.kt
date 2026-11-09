@@ -13,15 +13,6 @@ internal data class VexStreamQueueReorderRequest(
         VexStreamQueueReorderDirection,
 )
 
-internal fun rememberVexStreamQueueReorderConnection():
-    VexStreamPlayerPartner.Connection.Request? {
-    val owner:
-        VexStreamMusicViewModel =
-        viewModel()
-
-    return owner.playerRequestConnection
-}
-
 internal fun vexStreamQueueReorderTargetIndex(
     request:
         VexStreamQueueReorderRequest,
