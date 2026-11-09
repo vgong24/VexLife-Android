@@ -81,7 +81,9 @@ abstract class VexExecution protected constructor(
      *
      * RESPONSIBILITY FENCE
      * Execution coordinates this identity; it does not invent it from callable names, argument bags,
-     * arbitrary payload, Logger IDs, dependency IDs, or occurrence tokens. Do not wrap it in another
+     * arbitrary payload, Logger IDs, dependency IDs, occurrence tokens, Job identity, or Job.start()
+     * timing. A Job is one runtime occurrence held under this relationship; starting that Job does not
+     * create, replace, rename, or reconstruct the RelationshipId. Do not wrap it in another
      * RelationshipKey/Coordinate, author a parallel registry, or persist it as a generic trace ID.
      * The smallest rightful owner should derive it from semantic structure that already exists.
      */
@@ -1463,8 +1465,10 @@ abstract class VexExecution protected constructor(
          * relationship state after Job custody exists but before Method code or completion callbacks
          * can run. The returned Job is a newly admitted occurrence already registered under the
          * supplied owner / Approach / RelationshipId and remains lazy until its caller invokes
-         * Job.start(). Earliest reuse is intentionally rejected here: whether another realization is
-         * required belongs to the semantic owner before this custody-admission boundary.
+         * Job.start(). Job.start() starts that already-related occurrence; it does not become a
+         * relationship key, logging coordinate, or replacement for RelationshipId. Earliest reuse is
+         * intentionally rejected here: whether another realization is required belongs to the
+         * semantic owner before this custody-admission boundary.
          *
          * Ordinary product code should use [begin]; admission/start separation does not grant another
          * semantic decision point.
