@@ -14,9 +14,10 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Test
 
 /**
- * Focused proof of the refined pure Family semantic surface.
+ * Focused proof of the refined Family semantic and acceptance surface.
  *
- * Runtime execution, persistence and logging are intentionally proved by their rightful owners.
+ * This file proves Family-owned resolution, acceptance, and the acceptance-to-custody boundary.
+ * VexExecution overlap mechanics, persistence, and logging remain proved by their rightful owners.
  */
 class VexFamilyHighConfidenceTest {
     private class ValueFamily(
