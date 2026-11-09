@@ -18,15 +18,6 @@ internal class VexStreamPlaybackAdmission(
     private val lock =
         Any()
 
-    val currentState:
-        VexStreamPlaybackState
-        get() =
-            synchronized(
-                lock,
-            ) {
-                family.currentState
-            }
-
     fun activate(
         control:
             VexStreamPlaybackControl,
