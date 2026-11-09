@@ -1,10 +1,5 @@
 package com.vextreme.vexlife.android.vexstream.queue
 
-internal data class VexStreamQueueControlProjection(
-    val isAvailable:
-        Boolean,
-)
-
 internal data class VexStreamQueueProjection(
     val state:
         VexStreamQueueState,
@@ -21,25 +16,22 @@ internal data class VexStreamQueueProjection(
         control:
             VexStreamQueueControl,
     ):
-        VexStreamQueueControlProjection =
-        VexStreamQueueControlProjection(
-            isAvailable =
-                when (
-                    control
-                ) {
-                    VexStreamQueueControl.Previous ->
-                        previousAvailable
+        Boolean =
+        when (
+            control
+        ) {
+            VexStreamQueueControl.Previous ->
+                previousAvailable
 
-                    VexStreamQueueControl.Next ->
-                        nextAvailable
+            VexStreamQueueControl.Next ->
+                nextAvailable
 
-                    VexStreamQueueControl.Shuffle ->
-                        shuffleAvailable
+            VexStreamQueueControl.Shuffle ->
+                shuffleAvailable
 
-                    VexStreamQueueControl.Clear ->
-                        clearAvailable
-                },
-        )
+            VexStreamQueueControl.Clear ->
+                clearAvailable
+        }
 }
 
 // [VXG RealForever][VEXSTREAM][QUEUE][DIRECT-FAMILY]

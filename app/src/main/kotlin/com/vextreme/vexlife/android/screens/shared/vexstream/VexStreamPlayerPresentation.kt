@@ -226,8 +226,7 @@ internal fun VexStreamMiniPlayer(
                     queueProjection
                         ?.get(
                             VexStreamQueueControl.Previous,
-                        )
-                        ?.isAvailable == true,
+                        ) == true,
             )
             VexIconButton(
                 element = VexStreamMusicScreen.TogglePlayback,
@@ -242,8 +241,7 @@ internal fun VexStreamMiniPlayer(
                     queueProjection
                         ?.get(
                             VexStreamQueueControl.Next,
-                        )
-                        ?.isAvailable == true,
+                        ) == true,
             )
             VexIconButton(
                 element = VexStreamMusicScreen.ShuffleQueue,
@@ -252,8 +250,7 @@ internal fun VexStreamMiniPlayer(
                     queueProjection
                         ?.get(
                             VexStreamQueueControl.Shuffle,
-                        )
-                        ?.isAvailable == true,
+                        ) == true,
             )
             VexIconButton(
                 element = VexStreamMusicScreen.ShowQueue,
@@ -500,8 +497,7 @@ internal fun VexStreamFullPlayerSheet(
                                             queueProjection
                                                 ?.get(
                                                     control,
-                                                )
-                                                ?.isAvailable == true
+                                                ) == true
                                         ) {
                                             runtime
                                                 .recordDynamicInteraction(
@@ -667,8 +663,7 @@ internal fun VexStreamFullPlayerSheet(
                                 ?.get(
                                     VexStreamQueueControl
                                         .Previous,
-                                )
-                                ?.isAvailable == true,
+                                ) == true,
                         semanticRef =
                             VexStreamPresentationRefs
                                 .fullPlayerAction(
@@ -702,8 +697,7 @@ internal fun VexStreamFullPlayerSheet(
                             queueProjection
                                 ?.get(
                                     VexStreamQueueControl.Next,
-                                )
-                                ?.isAvailable == true,
+                                ) == true,
                         semanticRef =
                             VexStreamPresentationRefs
                                 .fullPlayerAction(
@@ -730,8 +724,7 @@ internal fun VexStreamFullPlayerSheet(
                             queueProjection
                                 ?.get(
                                     VexStreamQueueControl.Shuffle,
-                                )
-                                ?.isAvailable == true,
+                                ) == true,
                         semanticRef =
                             VexStreamPresentationRefs
                                 .fullPlayerAction(
@@ -748,8 +741,7 @@ internal fun VexStreamFullPlayerSheet(
                             repeatProjection
                                 ?.get(
                                     VexStreamRepeatControl.Toggle,
-                                )
-                                ?.isAvailable == true,
+                                ) == true,
                         selected =
                             repeatProjection
                                 ?.state is

@@ -411,10 +411,7 @@ internal object VexStreamPlaybackWidget :
     VexGlanceAppWidget<
         VexStreamPlaybackWidgetSurfaceState,
         VexStreamPlaybackWidgetProjection
-    >(),
-    VexWidget<
-        VexStreamPlaybackWidget
-    > {
+    >() {
     override val stateCodec:
         VexWidgetPreferenceCodec<
             VexStreamPlaybackWidgetSurfaceState

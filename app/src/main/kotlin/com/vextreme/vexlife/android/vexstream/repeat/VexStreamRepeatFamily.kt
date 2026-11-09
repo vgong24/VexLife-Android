@@ -59,9 +59,10 @@ internal class VexStreamRepeatFamily(
                 }
                     ?.let { effect ->
                         stay(
-                            beginLatest(
+                            effect =
                                 effect,
-                            ),
+                            approach =
+                                VexExecution.Approach.Latest,
                         )
                     }
         }

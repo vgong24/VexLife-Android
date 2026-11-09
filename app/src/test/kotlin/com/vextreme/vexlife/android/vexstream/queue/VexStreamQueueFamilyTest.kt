@@ -20,22 +20,22 @@ class VexStreamQueueFamilyTest {
         assertFalse(
             projection[
                 VexStreamQueueControl.Previous
-            ].isAvailable,
+            ],
         )
         assertFalse(
             projection[
                 VexStreamQueueControl.Next
-            ].isAvailable,
+            ],
         )
         assertFalse(
             projection[
                 VexStreamQueueControl.Shuffle
-            ].isAvailable,
+            ],
         )
         assertFalse(
             projection[
                 VexStreamQueueControl.Clear
-            ].isAvailable,
+            ],
         )
     }
 
@@ -56,22 +56,22 @@ class VexStreamQueueFamilyTest {
         assertFalse(
             projection[
                 VexStreamQueueControl.Previous
-            ].isAvailable,
+            ],
         )
         assertTrue(
             projection[
                 VexStreamQueueControl.Next
-            ].isAvailable,
+            ],
         )
         assertTrue(
             projection[
                 VexStreamQueueControl.Shuffle
-            ].isAvailable,
+            ],
         )
         assertTrue(
             projection[
                 VexStreamQueueControl.Clear
-            ].isAvailable,
+            ],
         )
     }
 

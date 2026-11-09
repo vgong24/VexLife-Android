@@ -201,8 +201,7 @@ private fun VexStreamContextDockContent(
                     queueProjection
                         ?.get(
                             VexStreamQueueControl.Previous,
-                        )
-                        ?.isAvailable == true,
+                        ) == true,
             ) {
                 runtime.recordDynamicInteraction(
                     subjectRef =
@@ -243,8 +242,7 @@ private fun VexStreamContextDockContent(
                     queueProjection
                         ?.get(
                             VexStreamQueueControl.Next,
-                        )
-                        ?.isAvailable == true,
+                        ) == true,
             ) {
                 runtime.recordDynamicInteraction(
                     subjectRef =

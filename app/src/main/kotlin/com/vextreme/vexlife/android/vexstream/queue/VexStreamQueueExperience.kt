@@ -15,6 +15,8 @@ import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
  *
  * Family owns Queue Control meaning. Player Store owns full ordered queue truth. This membrane owns
  * neither; it only keeps both rightful sources available to presentation.
+ *
+ * This is local Compose binding, not a reusable VexArchitecture Experience root.
  */
 internal interface VexStreamQueueExperience {
     val projection:

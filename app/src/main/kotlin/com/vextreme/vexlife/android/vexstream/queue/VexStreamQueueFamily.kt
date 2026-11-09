@@ -76,9 +76,10 @@ internal class VexStreamQueueFamily(
                 }
                     ?.let { effect ->
                         stay(
-                            begin(
+                            effect =
                                 effect,
-                            ),
+                            approach =
+                                VexExecution.Approach.Independent,
                         )
                     }
         }

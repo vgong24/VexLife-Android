@@ -9,7 +9,11 @@ import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.vexstream.VexStreamMusicViewModel
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 
-/** Compose-facing membrane over the process-shared Repeat Family. */
+/**
+ * Feature-local Compose binding over the process-shared Repeat Family.
+ *
+ * This is presentation composition, not a reusable VexArchitecture Experience root.
+ */
 internal interface VexStreamRepeatExperience {
     val projection:
         VexStreamRepeatProjection
