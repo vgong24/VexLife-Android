@@ -204,6 +204,27 @@ reconstructs the authored Act.
 
 The rightful semantic/runtime owner supplies RelationshipId.
 
+Current identity / custody relationship:
+
+~~~text
+RelationshipId
+    maintained relationship identity
+
+VexExecution.admit(...)
+    registers one lazy Job occurrence under that RelationshipId
+
+Job
+    one runtime occurrence held in custody for that relationship
+
+Job.start()
+    starts the already-admitted occurrence
+    does NOT create, replace, rename, or reconstruct RelationshipId
+
+callable / Job name / Logger chronology
+    may describe or project runtime facts
+    never become the maintained relationship identity
+~~~
+
 ~~~text
 RelationshipId -> actual Job(s)
 ~~~
