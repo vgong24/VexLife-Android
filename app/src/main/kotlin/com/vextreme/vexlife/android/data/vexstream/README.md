@@ -200,9 +200,10 @@ This repository answers availability:
     LOCAL_ONLY
     UNAVAILABLE
 
-It does not own audio playback. A later Android Media3 owner should prefer a verified local copy when
-appropriate and otherwise stream from the authorized Hub bridge. Playback must continue to work for
-LOCAL_ONLY tracks with the Hub unreachable.
+It does not own audio playback. The current Android VexStream playback/source-resolution path
+consumes this availability, prefers a verified local copy when appropriate, and otherwise streams
+from the authorized Hub bridge. Playback must continue to work for LOCAL_ONLY tracks with the Hub
+unreachable.
 
 ## Current threshold map
 

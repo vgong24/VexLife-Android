@@ -20,11 +20,13 @@ internal sealed interface VexStreamPlaybackState :
         val requestPending: Boolean = false,
         val phase: VexStreamPlaybackPhase,
         val playPauseAvailable: Boolean,
+        val seekAvailable: Boolean = false,
     ) : VexStreamPlaybackState
 
     data class Ended(
         val restartAvailable: Boolean,
         val restartPending: Boolean = false,
+        val seekAvailable: Boolean = false,
     ) : VexStreamPlaybackState
 }
 

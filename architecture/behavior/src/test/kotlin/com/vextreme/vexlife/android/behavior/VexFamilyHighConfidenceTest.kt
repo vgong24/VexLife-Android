@@ -195,6 +195,16 @@ class VexFamilyHighConfidenceTest {
                             1,
                 ),
             )
+
+        fun admitObservedIncrement():
+            State =
+            admitCurrent { current ->
+                current.copy(
+                    count =
+                        current.count +
+                            1,
+                )
+            }
     }
 
     @Test
@@ -413,6 +423,90 @@ class VexFamilyHighConfidenceTest {
             ),
             family.currentProjection.displayState,
         )
+    }
+
+    @Test
+    fun controlActivationAndCurrentAdmissionShareOneSerializedDecisionBoundary() {
+        val family =
+            CounterFamily()
+        val controlCount =
+            24
+        val observationCount =
+            24
+        val total =
+            controlCount +
+                observationCount
+        val ready =
+            CountDownLatch(
+                total,
+            )
+        val go =
+            CountDownLatch(
+                1,
+            )
+        val executor =
+            Executors.newFixedThreadPool(
+                total,
+            )
+
+        try {
+            val controls =
+                (0 until controlCount).map {
+                    executor.submit(
+                        Callable<Boolean> {
+                            ready.countDown()
+                            go.await()
+                            family.activate(
+                                CounterFamily.Control,
+                            ) !=
+                                null
+                        },
+                    )
+                }
+            val observations =
+                (0 until observationCount).map {
+                    executor.submit(
+                        Callable<CounterFamily.State> {
+                            ready.countDown()
+                            go.await()
+                            family.admitObservedIncrement()
+                        },
+                    )
+                }
+
+            assertTrue(
+                ready.await(
+                    5,
+                    TimeUnit.SECONDS,
+                ),
+            )
+            go.countDown()
+
+            controls.forEach { future ->
+                assertTrue(
+                    future.get(
+                        5,
+                        TimeUnit.SECONDS,
+                    ),
+                )
+            }
+            observations.forEach { future ->
+                future.get(
+                    5,
+                    TimeUnit.SECONDS,
+                )
+            }
+
+            assertEquals(
+                CounterFamily.State(
+                    count =
+                        total,
+                ),
+                family.currentState,
+            )
+        } finally {
+            executor.shutdownNow()
+        }
     }
 
     @Test

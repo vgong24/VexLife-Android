@@ -302,7 +302,7 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 | F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **CHECKPOINT EARNED / TEST PROOF PENDING** | Make a clean clone reproducibly Sync/build/install without VexLife monorepo or IDE-local state | standalone unit-test proof + later foundation extraction |
 | F1_UI_BLUEPRINT_HOME | element cells + placement + first Home practicum | **MERGED / LIVED DEVICE RUN OBSERVED / AGGREGATE TEST PROOF PENDING** | Make UI identity, placement, intent, navigation and diagnostics human-perceivable before feature depth | aggregate Gradle proof + clean rerun before any formal foundation checkpoint |
 | VEX_COMPOSE | VexModifier root + inherited custom-Compose identity + sanctioned cells | **ACCEPTED ON MAIN / PR #88 / A013 LOCAL + PHYSICAL DEVICE PASS / ADVISORY MIGRATION ACTIVE** | Make custom Compose inherit the same semantic lattice as ScreenBlueprint so product UI cannot silently fall back to detached primitive code | migrate one real consumer at a time; preserve exact runtime identities; keep raw-Compose findings advisory until replacements are earned |
-| ANDROID_WIDGET_SURFACE | Glance App Widget projection/callback boundary | **DRAFT CANDIDATE / SOURCE PROOF PENDING** | Let home-screen widgets consume feature-owned projections and return stable interaction identity without becoming product State or Effect owners | prove :architecture:widget + aggregate local build, then pressure with the compact VexStream playback patient zero |
+| ANDROID_WIDGET_SURFACE | rooted VexWidget + Glance App Widget projection/callback boundary | **DRAFT CANDIDATE / SOURCE PROOF PENDING** | Let remotely hosted Widget roots own durable surface custody/action doorways while concrete Widget.Relay relationships converge only the bounded upstream CURRENT the surface actually needs | prove :architecture:widget + focused VexStream Widget Relay law + aggregate local build, then pressure a second non-music Widget consumer |
 | EXECUTION_BRIDGE | VexExecution owner + RelationshipId -> actual Job(s) custody | **ACCEPTED BASE ON MAIN / PR #87; PR #209 REFINEMENT DRAFT / PROOF PENDING** | Keep asynchronous work under explicit runtime owners while making the actual Job the occurrence and removing parallel InstanceId/SourceRef/Handle/history architecture | exact #209 `vexVerifyLocal` + review owner isolation / overlap / recovery behavior |
 | READABLE_DEPENDENCY_TOPOLOGY | lazy prerequisite construction + lifetime memoization | **PR #209 DRAFT / PROOF PENDING** | Make production construction order, reuse and lifetime relationships inspectable without reflection/service-locator lookup or another identity namespace | exact #209 `vexVerifyLocal` + source review of application/session graph |
 | LOGGER_TRACEABILITY | one chronology + Blueprint-derived readable interpretation | **PR #209 REFINEMENT DRAFT / PROOF PENDING** | Let UI/semantic/runtime facts share one chronology and resolve stable UI coordinates through the existing Blueprint registry while exposing missing mappings | exact #209 `vexVerifyLocal` + Debug Log lived review |
@@ -580,50 +580,62 @@ activate(Control)
 
 and `VexPortFlow` adds a current `StateFlow` projection when observation over time is required.
 
-The first production-shaped consumer is VexStream Play/Pause:
+The current VexStream successor applies the newer Direct Family + Partner foundations rather than
+using the older VexPort shape as migration authority:
 
 ~~~text
-MediaSession / Player
-    -> Media3VexStreamPlaybackConnection
-    -> VexStreamPlaybackProjection
-    -> Mini Player + Context Dock
+one external music/playback Source
+        |
+        +-> Media3PlayerConnection
+        |      -> Signal / Observation
+        |      -> Receiver
+        |      -> VexStreamPlayerStore.Snapshot
+        |
+        +-> Media3ControllerConnection
+               -> PlayerPartner.Connection.Request / Progress
 
-Control activation
-    -> current semantic State
-    -> Act
-    -> Effect
-    -> MediaController
+Player Store Snapshot
+        |
+        +-> Playback Family
+        +-> Queue Family
+        +-> Repeat Family
+
+Family Control
+    -> accepted Act
+    -> Family.Act.Method
+    -> VexExecution
+    -> PlayerPartner.Connection.Request
+    -> external Source
+
+provider outcome
+    -> Player Signal / Observation
+    -> Store
+    -> Family observation
 ~~~
 
-The Connection preserves synchronous admitted intent without pretending provider convergence. Its
-ViewModel is an Android lifetime host only.
+The Player Partner owns Source / Signal / Connection vocabulary. Store owns retained outside
+Snapshot truth. Playback / Queue / Repeat own their separate semantic State / Control / Effect
+questions. Media3 Player / MediaSession / MediaController are realization/access mechanisms around
+the same external Source, not separate semantic owners.
 
-Control meaning is semantic-first as `Available(Act)` / `Unavailable`; Boolean availability is
-derived convenience. Every authored `on(...)` must explicitly terminate in `.stay()` or
-`.admit<State>()`, so incomplete relationships cannot silently disappear during construction.
+Playback's stale-provider/pending-Control reconciliation remains feature-specific inside its Family,
+while protected `VexFamily.admitCurrent` supplies the shared exact-CURRENT serialization boundary.
+Queue and Repeat now use Direct VexFamily rather than VexPort/SCAE wrappers. Track and Collection
+playback remain payload/source-resolution workflows because they have not earned independent semantic
+State/Control questions; their former channel/sequence schedulers are replaced by canonical
+VexExecution overlap.
 
-Behavior is the provider/UI/lifecycle-independent semantic rulebook. A concrete Connection is the
-reality boundary/adapter; it must identify its provider/runtime, rightful lifetime owner,
-currentness gates, and concurrency guarantees without requiring a generic Host abstraction.
+Exact queue-row Play/Reorder and Seek remain current-only Player Partner requests where presentation
+requires an immediate provider-currentness result. They do not gain fake feature Connection roots
+merely because their payload is richer than a finite Family Control.
 
-Cross-family reactions remain convergence-based: convergence may request another family through
-that family's Control/Port, but must not bypass directly to a foreign Effect.
+The Playback Widget may form one bounded Compound Relay from Player Store + Playback Family current,
+then publish durable Widget SurfaceState. Widget remains downstream presentation custody rather than
+another semantic Family/Partner root.
 
-VexMaps pressure establishes four compatibility boundaries without adding new semantic nouns:
-
-- same State-kind + same Act may use mutually-exclusive conditional relationships;
-- relationship admission is immediate semantic topology, not guaranteed final provider outcome;
-- VexPort re-resolution protects stale meaning at activation but does not replace async
-  generation/revision/result-admission gates;
-- concrete Connections retain their provider-specific concurrency/serialization guarantees.
-
-The package construction law is fractal: a sibling Behavior family is earned when the **behavioral
-question itself splits**, not merely when files become large. The canonical split criteria and the
-VexStream Playback mapping live in the family/package blueprint above.
-
-Runtime request payloads, generic UIElement binding, heterogeneous convergence envelopes, generic
-concurrency, generic async failure grammar, and full VexStream queue/seek/shuffle/repeat migration
-remain deliberately held until real consumers earn them.
+Older VexBehaviorFamily / VexPort consumers such as current Maps code remain valid historical/current
+consumers until their own migration is earned. Their existence does not pull new VexStream work back
+into the older pattern.
 
 ## F1 — UI Blueprint / Home Practicum
 

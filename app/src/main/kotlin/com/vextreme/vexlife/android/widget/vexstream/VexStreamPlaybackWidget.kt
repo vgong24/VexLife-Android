@@ -1,11 +1,9 @@
 package com.vextreme.vexlife.android.widget.vexstream
 
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.os.Handler
 import androidx.compose.runtime.Composable
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
@@ -41,24 +39,19 @@ import androidx.glance.layout.width
 import androidx.glance.semantics.contentDescription
 import androidx.glance.semantics.semantics
 import androidx.glance.text.TextStyle
-import androidx.media3.session.MediaController
-import androidx.media3.session.SessionToken
 import com.vextreme.vexlife.android.MainActivity
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.VexApplication
 import com.vextreme.vexlife.android.data.vexstream.VexStreamArtworkStore
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
-import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackService
-import com.vextreme.vexlife.android.vexstream.playback.Media3VexStreamPlaybackConnection
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamCurrentPlaybackObservation
+import com.vextreme.vexlife.android.vexstream.playback.activateVexStreamPlayback
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackTrace
-import com.vextreme.vexlife.android.vexstream.playback.toVexStreamCurrentPlaybackObservation
-import com.vextreme.vexlife.android.vexstream.queue.Media3VexStreamQueueConnection
+import com.vextreme.vexlife.android.vexstream.player.withVexStreamPlayerRequestConnection
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
+import com.vextreme.vexlife.android.vexstream.queue.activateVexStreamQueue
 import com.vextreme.vexlife.android.widget.VexGlanceAppWidget
 import com.vextreme.vexlife.android.widget.VexWidgetActionCallback
 import com.vextreme.vexlife.android.widget.VexWidgetActionRef
@@ -67,11 +60,8 @@ import com.vextreme.vexlife.android.widget.VexWidgetProjection
 import com.vextreme.vexlife.android.widget.VexWidgetSurfaceState
 import com.vextreme.vexlife.android.widget.vexWidgetActionParameters
 import java.io.File
-import java.util.concurrent.TimeUnit
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.android.asCoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
@@ -84,7 +74,8 @@ internal data class VexStreamPlaybackWidgetSurfaceState(
     val playPauseEnabled: Boolean,
     val showPause: Boolean,
     val nextEnabled: Boolean,
-) : VexWidgetSurfaceState
+) :
+    VexWidgetSurfaceState
 
 private object VexStreamPlaybackWidgetStateKeys {
     val Title =
@@ -234,7 +225,8 @@ internal data class VexStreamPlaybackWidgetProjection(
     val playPauseEnabled: Boolean,
     val showPause: Boolean,
     val nextEnabled: Boolean,
-) : VexWidgetProjection
+) :
+    VexWidgetProjection
 
 internal object VexStreamPlaybackWidgetActions {
     val Previous =
@@ -289,17 +281,14 @@ internal fun vexStreamPlaybackWidgetCommand(
 internal suspend fun vexStreamPlaybackWidgetSurfaceState(
     context: Context,
     fallbackTitle: String,
-    observation:
-        VexStreamCurrentPlaybackObservation,
+    relayState:
+        VexStreamPlaybackWidgetRelayOutputState,
 ): VexStreamPlaybackWidgetSurfaceState {
-    val readState =
-        observation.readState
     val playbackProjection =
-        observation
-            .playbackProjection
+        relayState.playback
     val artworkUri =
-        readState
-            .currentArtworkUri
+        relayState
+            .artworkUri
             ?.takeIf {
                 it.isNotBlank()
             }
@@ -313,23 +302,20 @@ internal suspend fun vexStreamPlaybackWidgetSurfaceState(
 
     return VexStreamPlaybackWidgetSurfaceState(
         title =
-            readState
-                .currentTitle
+            relayState
+                .title
                 .takeIf {
                     it.isNotBlank()
                 }
                 ?: fallbackTitle,
         artist =
-            readState.currentArtist,
+            relayState.artist,
         artworkUri =
             artworkUri,
         artworkAvailable =
             artworkAvailable,
         previousEnabled =
-            observation
-                .queueProjection[
-                    VexStreamQueueControl.Previous
-                ].isAvailable,
+            relayState.previousEnabled,
         playPauseEnabled =
             playbackProjection
                 .playPauseAvailable,
@@ -344,10 +330,7 @@ internal suspend fun vexStreamPlaybackWidgetSurfaceState(
                     ?.playRequested ==
                 true,
         nextEnabled =
-            observation
-                .queueProjection[
-                    VexStreamQueueControl.Next
-                ].isAvailable,
+            relayState.nextEnabled,
     )
 }
 
@@ -428,7 +411,10 @@ internal object VexStreamPlaybackWidget :
     VexGlanceAppWidget<
         VexStreamPlaybackWidgetSurfaceState,
         VexStreamPlaybackWidgetProjection
-    >() {
+    >(),
+    VexWidget<
+        VexStreamPlaybackWidget
+    > {
     override val stateCodec:
         VexWidgetPreferenceCodec<
             VexStreamPlaybackWidgetSurfaceState
@@ -445,50 +431,31 @@ internal object VexStreamPlaybackWidget :
             appContext.getString(
                 R.string.vexstream_music_title,
             )
-        val playbackFamily =
+        val relayState =
             appContext
-                .vexStreamPlaybackFamily()
-        val observation =
-            withVexStreamWidgetController(
+                .vexStreamPlaybackWidgetRelay()
+                .currentOutput
+
+        VexStreamPlaybackTrace.record(
+            stage =
+                "widget.surface-state.bootstrap",
+            mediaId =
+                relayState.mediaId,
+            title =
+                relayState.title,
+            artist =
+                relayState.artist,
+            glanceId =
+                glanceId.toString(),
+        )
+
+        return vexStreamPlaybackWidgetSurfaceState(
+            context =
                 appContext,
-            ) { controller ->
-                controller
-                    .toVexStreamCurrentPlaybackObservation(
-                        playbackFamily,
-                    )
-            }
-
-        if (
-            observation != null
-        ) {
-            VexStreamPlaybackTrace.record(
-                stage =
-                    "widget.surface-state.bootstrap",
-                mediaId =
-                    observation.readState
-                        .currentMediaId,
-                title =
-                    observation.readState
-                        .currentTitle,
-                artist =
-                    observation.readState
-                        .currentArtist,
-                glanceId =
-                    glanceId.toString(),
-            )
-
-            return vexStreamPlaybackWidgetSurfaceState(
-                context =
-                    appContext,
-                fallbackTitle =
-                    fallbackTitle,
-                observation =
-                    observation,
-            )
-        }
-
-        return fallbackVexStreamPlaybackWidgetSurfaceState(
-            appContext,
+            fallbackTitle =
+                fallbackTitle,
+            relayState =
+                relayState,
         )
     }
 
@@ -885,38 +852,95 @@ class VexStreamPlaybackWidgetActionCallback :
                 "command=$command",
         )
 
-        withVexStreamWidgetController(
+        withVexStreamPlayerRequestConnection(
             context,
-        ) { controller ->
+        ) { playerConnection ->
             VexStreamPlaybackTrace.record(
                 stage =
-                    "widget.action.controller-ready",
+                    "widget.action.player-connection-ready",
                 glanceId =
                     glanceId.toString(),
                 detail =
                     "command=$command",
             )
+            val appContext =
+                context.applicationContext
             when (
                 command
             ) {
-                is VexStreamPlaybackWidgetCommand.Playback ->
-                    Media3VexStreamPlaybackConnection(
-                        controller =
-                            controller,
-                        family =
-                            context
-                                .applicationContext
-                                .vexStreamPlaybackFamily(),
-                    ).activate(
-                        command.control,
-                    )
+                is VexStreamPlaybackWidgetCommand.Playback -> {
+                    val application =
+                        appContext as?
+                            VexApplication
+                            ?: error(
+                                "VexStream Widget requires VexApplication as the process composition root",
+                            )
+                    val family =
+                        application
+                            .dependencies
+                            .resolve(
+                                application
+                                    .dependencyModule
+                                    .playbackFamily,
+                            )
+                    val executionRoot =
+                        application
+                            .dependencies
+                            .resolve(
+                                application
+                                    .dependencyModule
+                                    .processExecutionRoot,
+                            )
 
-                is VexStreamPlaybackWidgetCommand.Queue ->
-                    Media3VexStreamQueueConnection(
-                        controller,
-                    ).activate(
-                        command.control,
+                    activateVexStreamPlayback(
+                        family =
+                            family,
+                        control =
+                            command.control,
+                        connection =
+                            playerConnection,
+                        executionRoot =
+                            executionRoot,
                     )
+                        ?.join()
+                }
+
+                is VexStreamPlaybackWidgetCommand.Queue -> {
+                    val application =
+                        appContext as?
+                            VexApplication
+                            ?: error(
+                                "VexStream Widget requires VexApplication as the process composition root",
+                            )
+                    val family =
+                        application
+                            .dependencies
+                            .resolve(
+                                application
+                                    .dependencyModule
+                                    .queueFamily,
+                            )
+                    val executionRoot =
+                        application
+                            .dependencies
+                            .resolve(
+                                application
+                                    .dependencyModule
+                                    .processExecutionRoot,
+                            )
+
+                    activateVexStreamQueue(
+                        family =
+                            family,
+                        control =
+                            command.control,
+                        connection =
+                            playerConnection,
+                        executionRoot =
+                            executionRoot,
+                    )
+                        ?.join()
+                }
             }
             VexStreamPlaybackTrace.record(
                 stage =
@@ -931,17 +955,17 @@ class VexStreamPlaybackWidgetActionCallback :
 }
 
 /**
- * MediaSessionService-owned widget publication sink.
+ * Process-lived widget publication sink over the coherent Playback Widget Relay output.
  *
- * Exactly one ordered provider observation stream feeds this execution. Widget callbacks only issue
- * Controls; they never become a second playback read/publication producer.
+ * MediaSessionService teardown changes Player/Family truth upstream; the Widget Relay converges that
+ * truth before publication. Widget callbacks still return Controls through rightful semantic owners.
  */
 internal class VexStreamPlaybackWidgetUpdateExecution(
     root: VexExecutionRoot,
     private val context: Context,
-    private val observations:
+    private val relayStates:
         Flow<
-            VexStreamCurrentPlaybackObservation
+            VexStreamPlaybackWidgetRelayOutputState
         >,
 ) : VexExecution(
         root,
@@ -949,20 +973,17 @@ internal class VexStreamPlaybackWidgetUpdateExecution(
     init {
         launchForCollect(
             source =
-                ::observationsForExecution,
-        ) { observation ->
+                ::relayStatesForExecution,
+        ) { relayState ->
             VexStreamPlaybackTrace.record(
                 stage =
                     "widget.observation.received",
                 mediaId =
-                    observation.readState
-                        .currentMediaId,
+                    relayState.mediaId,
                 title =
-                    observation.readState
-                        .currentTitle,
+                    relayState.title,
                 artist =
-                    observation.readState
-                        .currentArtist,
+                    relayState.artist,
             )
             val surfaceState =
                 vexStreamPlaybackWidgetSurfaceState(
@@ -972,15 +993,14 @@ internal class VexStreamPlaybackWidgetUpdateExecution(
                         context.getString(
                             R.string.vexstream_music_title,
                         ),
-                    observation =
-                        observation,
+                    relayState =
+                        relayState,
                 )
             VexStreamPlaybackTrace.record(
                 stage =
                     "widget.surface-state.mapped",
                 mediaId =
-                    observation.readState
-                        .currentMediaId,
+                    relayState.mediaId,
                 title =
                     surfaceState.title,
                 artist =
@@ -1000,15 +1020,15 @@ internal class VexStreamPlaybackWidgetUpdateExecution(
         }
     }
 
-    private fun observationsForExecution():
+    private fun relayStatesForExecution():
         Flow<
-            VexStreamCurrentPlaybackObservation
+            VexStreamPlaybackWidgetRelayOutputState
         > =
-        observations
+        relayStates
 }
 
-private fun Context.vexStreamPlaybackFamily():
-    VexStreamPlaybackFamily {
+private fun Context.vexStreamPlaybackWidgetRelay():
+    VexStreamPlaybackWidgetRelay {
     val vexApplication =
         applicationContext as?
             VexApplication
@@ -1021,87 +1041,8 @@ private fun Context.vexStreamPlaybackFamily():
         .resolve(
             vexApplication
                 .dependencyModule
-                .playbackFamily,
+                .playbackWidgetRelay,
         )
-}
-
-private suspend fun <
-    Result,
-> withVexStreamWidgetController(
-    context: Context,
-    block:
-        suspend (
-            MediaController,
-        ) -> Result,
-): Result? {
-    val appContext =
-        context.applicationContext
-    VexStreamPlaybackTrace.record(
-        stage =
-            "widget.controller.connect.begin",
-    )
-    val controllerFuture =
-        MediaController.Builder(
-            appContext,
-            SessionToken(
-                appContext,
-                ComponentName(
-                    appContext,
-                    VexStreamPlaybackService::class.java,
-                ),
-            ),
-        ).buildAsync()
-
-    return try {
-        val controller =
-            withContext(
-                Dispatchers.IO,
-            ) {
-                controllerFuture
-                    .get(
-                        CONTROLLER_CONNECT_TIMEOUT_MS,
-                        TimeUnit.MILLISECONDS,
-                    )
-            }
-        VexStreamPlaybackTrace.record(
-            stage =
-                "widget.controller.connect.success",
-            detail =
-                "looper=${controller.applicationLooper.thread.name}",
-        )
-        val providerDispatcher =
-            Handler(
-                controller.applicationLooper,
-            ).asCoroutineDispatcher(
-                "VexStream widget Media3",
-            )
-
-        withContext(
-            providerDispatcher,
-        ) {
-            block(
-                controller,
-            )
-        }
-    } catch (cancelled: CancellationException) {
-        throw cancelled
-    } catch (failure: Exception) {
-        VexStreamPlaybackTrace.record(
-            stage =
-                "widget.controller.connect.failure",
-            detail =
-                "${failure::class.simpleName}:${failure.message.orEmpty()}",
-        )
-        null
-    } finally {
-        VexStreamPlaybackTrace.record(
-            stage =
-                "widget.controller.release",
-        )
-        MediaController.releaseFuture(
-            controllerFuture,
-        )
-    }
 }
 
 internal suspend fun retryVexStreamPlaybackWidgetPublication(
@@ -1246,8 +1187,6 @@ internal const val VEXSTREAM_WIDGET_ARTWORK_SIZE_DP =
 internal const val VEXSTREAM_WIDGET_PUBLICATION_RETRY_MILLIS =
     250L
 
-private const val CONTROLLER_CONNECT_TIMEOUT_MS =
-    2_000L
 private const val WIDGET_ARTWORK_MAX_PX =
     128
 

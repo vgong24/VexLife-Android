@@ -1,18 +1,18 @@
 package com.vextreme.vexlife.android.vexstream.repeat
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.media3.common.Player
-import androidx.media3.session.MediaController
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import com.vextreme.vexlife.android.vexstream.VexStreamMusicViewModel
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 
-/** Compose-facing membrane for the VexStream Repeat Behavior family. */
+/** Compose-facing membrane over the process-shared Repeat Family. */
 internal interface VexStreamRepeatExperience {
     val projection:
-        VexStreamRepeatProjection?
+        VexStreamRepeatProjection
 
     fun activate(
         control:
@@ -22,98 +22,79 @@ internal interface VexStreamRepeatExperience {
 
 private class CurrentVexStreamRepeatExperience(
     override val projection:
-        VexStreamRepeatProjection?,
+        VexStreamRepeatProjection,
+    private val family:
+        VexStreamRepeatFamily,
     private val connection:
-        VexStreamRepeatConnection?,
+        VexStreamPlayerPartner.Connection.Request?,
+    private val executionRoot:
+        VexExecutionRoot,
 ) :
     VexStreamRepeatExperience {
     override fun activate(
         control:
             VexStreamRepeatControl,
     ) {
-        connection?.activate(
-            control,
+        val requestConnection =
+            connection
+                ?: return
+
+        activateVexStreamRepeat(
+            family =
+                family,
+            control =
+                control,
+            connection =
+                requestConnection,
+            executionRoot =
+                executionRoot,
         )
     }
 }
 
 @Composable
-internal fun rememberVexStreamRepeatExperience(
-    controller:
-        MediaController?,
-): VexStreamRepeatExperience {
+internal fun rememberVexStreamRepeatExperience():
+    VexStreamRepeatExperience {
+    val owner:
+        VexStreamMusicViewModel =
+        viewModel()
+    val family =
+        owner.repeatFamily
+    val state by
+        family
+            .states
+            .collectAsStateWithLifecycle(
+                initialValue =
+                    family.currentState,
+            )
+    val projection =
+        remember(
+            state,
+        ) {
+            family.projectionFor(
+                state,
+            )
+        }
     val connection =
-        remember(
-            controller,
-        ) {
-            controller?.let {
-                Media3VexStreamRepeatConnection(
-                    it,
-                )
-            }
-        }
-
-    var projection by
-        remember(
-            connection,
-        ) {
-            mutableStateOf(
-                connection
-                    ?.currentProjection,
-            )
-        }
-
-    DisposableEffect(
-        controller,
-        connection,
-    ) {
-        if (
-            controller == null ||
-            connection == null
-        ) {
-            projection = null
-            return@DisposableEffect onDispose {}
-        }
-
-        val listener =
-            object :
-                Player.Listener {
-                override fun onEvents(
-                    player: Player,
-                    events:
-                        Player.Events,
-                ) {
-                    projection =
-                        connection
-                            .currentProjection
-                }
-            }
-
-        controller.addListener(
-            listener,
-        )
-        projection =
-            connection
-                .currentProjection
-
-        onDispose {
-            controller.removeListener(
-                listener,
-            )
-        }
-    }
+        owner.playerRequestConnection
 
     return remember(
-        connection,
         projection,
+        family,
+        connection,
+        owner.executionRoot,
     ) {
         CurrentVexStreamRepeatExperience(
             projection =
                 projection,
+            family =
+                family,
             connection =
                 connection,
+            executionRoot =
+                owner.executionRoot,
         )
     }
 }
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][REPEAT][DIRECT-FAMILY]

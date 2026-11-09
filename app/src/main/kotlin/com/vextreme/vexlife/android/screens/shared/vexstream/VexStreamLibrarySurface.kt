@@ -25,7 +25,6 @@ import com.vextreme.vexlife.android.elements.navigation.NavigationTrail
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCopyConnection
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackDisplayState
-import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamMediaController
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackExperience
 
 /**
@@ -44,12 +43,6 @@ internal fun VexStreamLibrarySurface(
     val context = LocalContext.current
     val inspectionMode = LocalInspectionMode.current
 
-    val controller =
-        if (inspectionMode) {
-            null
-        } else {
-            rememberVexStreamMediaController()
-        }
     val playbackExperience =
         if (inspectionMode) {
             null
@@ -153,7 +146,6 @@ internal fun VexStreamLibrarySurface(
 
                 is VexStreamPlaybackDisplayState.Transitioning -> {
                     VexStreamMiniPlayer(
-                        controller = controller,
                         playbackExperience =
                             requireNotNull(
                                 playbackExperience,
@@ -164,7 +156,6 @@ internal fun VexStreamLibrarySurface(
 
                 is VexStreamPlaybackDisplayState.Active -> {
                     VexStreamMiniPlayer(
-                        controller = controller,
                         playbackExperience =
                             requireNotNull(
                                 playbackExperience,
@@ -176,13 +167,11 @@ internal fun VexStreamLibrarySurface(
         },
         floatingActionButton = {
             if (
-                libraryTracks.isNotEmpty() &&
-                controller != null
+                libraryTracks.isNotEmpty()
             ) {
                 VexStreamLibraryFabActions(
                     runtime = runtime,
                     tracks = libraryTracks,
-                    controller = controller,
                     resolver = resolver,
                 )
             }
@@ -249,8 +238,7 @@ internal fun VexStreamLibrarySurface(
                             tracks = libraryTracks,
                             offlineCopyConnection =
                                 offlineCopyConnection,
-                            controller = controller,
-                            resolver = resolver,
+                                    resolver = resolver,
                             onVisitArtist = ::visitArtist,
                         )
 
@@ -261,8 +249,7 @@ internal fun VexStreamLibrarySurface(
                             tracks = libraryTracks,
                             offlineCopyConnection =
                                 offlineCopyConnection,
-                            controller = controller,
-                            resolver = resolver,
+                                    resolver = resolver,
                             requestedArtist = artistVisitRequest,
                             onRequestedArtistConsumed = {
                                 artistVisitRequest = null
@@ -287,8 +274,7 @@ internal fun VexStreamLibrarySurface(
                                 },
                             offlineCopyConnection =
                                 offlineCopyConnection,
-                            controller = controller,
-                            resolver = resolver,
+                                    resolver = resolver,
                             onVisitArtist = ::visitArtist,
                         )
 
@@ -302,8 +288,7 @@ internal fun VexStreamLibrarySurface(
                                     .canShowTerminalEmptyState,
                             offlineCopyConnection =
                                 offlineCopyConnection,
-                            controller = controller,
-                            resolver = resolver,
+                                    resolver = resolver,
                             onVisitArtist = ::visitArtist,
                         )
 
@@ -316,8 +301,7 @@ internal fun VexStreamLibrarySurface(
                                     .canShowTerminalEmptyState,
                             offlineCopyConnection =
                                 offlineCopyConnection,
-                            controller = controller,
-                            resolver = resolver,
+                                    resolver = resolver,
                             onVisitArtist = ::visitArtist,
                         )
                 }
@@ -333,7 +317,6 @@ internal fun VexStreamLibrarySurface(
     ) {
         VexStreamFullPlayerSheet(
             state = state,
-            controller = controller,
             playbackExperience = playbackExperience,
             runtime = runtime,
         )
@@ -350,7 +333,6 @@ internal fun VexStreamLibrarySurface(
                 },
             offlineCopyConnection =
                 offlineCopyConnection,
-            controller = controller,
             resolver = resolver,
             query = searchQuery,
             onQueryChange = {

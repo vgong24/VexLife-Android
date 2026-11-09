@@ -33,9 +33,9 @@ import com.vextreme.vexlife.android.elements.VexText
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.collection.VexStreamCollectionPlaybackOrder
 import com.vextreme.vexlife.android.vexstream.collection.VexStreamCollectionPlaybackRequest
-import com.vextreme.vexlife.android.vexstream.collection.rememberVexStreamCollectionPlaybackConnection
+import com.vextreme.vexlife.android.vexstream.collection.rememberVexStreamCollectionPlayback
 import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCopyConnection
-import com.vextreme.vexlife.android.vexstream.track.rememberVexStreamTrackPlaybackConnection
+import com.vextreme.vexlife.android.vexstream.track.rememberVexStreamTrackPlayback
 
 /**
  * Library-level VexStream Android presentation.
@@ -193,13 +193,12 @@ internal fun vexStreamLibraryPlaybackRequest(
 internal fun VexStreamLibraryFabActions(
     runtime: VexRuntime,
     tracks: List<VexStreamTrackState>,
-    controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver?,
 ) {
     val connection =
-        rememberVexStreamCollectionPlaybackConnection(
-            controller = controller,
-            resolver = resolver,
+        rememberVexStreamCollectionPlayback(
+            resolver =
+                resolver,
         )
     val playRequest =
         remember(
@@ -280,14 +279,13 @@ internal fun VexStreamSongsPane(
     tracks: List<VexStreamTrackState>,
     canShowTerminalEmptyState: Boolean = true,
     offlineCopyConnection: VexStreamOfflineCopyConnection?,
-    controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver?,
     onVisitArtist: (String) -> Unit,
 ) {
     val trackPlaybackConnection =
-        rememberVexStreamTrackPlaybackConnection(
-            controller = controller,
-            resolver = resolver,
+        rememberVexStreamTrackPlayback(
+            resolver =
+                resolver,
         )
     VexStableLazyColumn(
         listRef =
@@ -344,14 +342,13 @@ internal fun VexStreamDownloadsPane(
     tracks: List<VexStreamTrackState>,
     canShowTerminalEmptyState: Boolean = true,
     offlineCopyConnection: VexStreamOfflineCopyConnection?,
-    controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver?,
     onVisitArtist: (String) -> Unit,
 ) {
     val trackPlaybackConnection =
-        rememberVexStreamTrackPlaybackConnection(
-            controller = controller,
-            resolver = resolver,
+        rememberVexStreamTrackPlayback(
+            resolver =
+                resolver,
         )
     val downloaded =
         remember(tracks) {

@@ -3,58 +3,75 @@ package com.vextreme.vexlife.android.vexstream.playback
 /**
  * # VexStream Playback
  *
- * Human question:
+ * VexStream music relates Vex semantic owners to one external Player Partner Source.
  *
- *     "What is Playback's current semantic truth, what may the person request, and how does Media3
- *      realization stay connected when UI, Service, Widget, or Relay are the current consumer?"
+ *     VexStreamPlayerPartner
+ *       Source       one external music/playback origin
+ *       Signal       outside statements
+ *       Connection   live access paths to that Source
  *
- * ## One semantic owner
+ * Current Media3 realization:
  *
- * [VexStreamPlaybackFamily] is the one live Playback semantic owner:
+ *     Media3PlayerConnection
+ *         observation path from ExoPlayer
  *
- *     CURRENT State + Control
- *         -> accepted Act
- *         -> admitted pending State when truthful
- *         -> Effect
+ *     Media3ControllerConnection
+ *         request/progress path through MediaController
  *
- *     Media3/provider observation
- *         -> reconciled Playback State
- *         -> Family.observe(State)
+ * Player / MediaSession / MediaController are realization/access mechanisms around the same Source;
+ * their Android class boundaries do not manufacture separate product owners.
  *
- * Its StateFlow is process-shareable. Foreground UI, background Service, Widget projection, and
- * process-lived convergence therefore do not construct separate Playback semantic State.
+ * ## Inbound
  *
- * ## Android realization
+ *     external Source
+ *       -> Media3PlayerConnection
+ *       -> Conversion
+ *       -> Signal / Observation
+ *       -> Receiver
+ *       -> VexStreamPlayerStore.Snapshot
+ *       -> VexExecution observation
+ *       -> Playback / Queue / Repeat Family
  *
- * [Media3VexStreamPlaybackConnection] receives the same Family and one MediaController. It re-reads
- * provider truth, activates the Family Control, realizes the accepted Effect, and reconciles provider
- * truth back into that same Family.
+ * Receiver ends at Store. Store owns retained outside truth. Family owns semantic meaning.
  *
- * [VexStreamPlaybackConnectionViewModel] owns only the UI MediaController connection across Android
- * configuration recreation. It resolves the Family from the process composition root rather than
- * creating another Family.
+ * ## Playback semantic loop
  *
- * VexStreamPlaybackService owns the sustained Media3 Player/MediaSession realization while UI may be
- * absent. Its provider observer reconciles Player events into the same process Family.
+ *     Playback Control
+ *       -> VexStreamPlaybackFamily.activate(...)
+ *       -> accepted Act
+ *       -> optional pending State
+ *       -> Effect
+ *       -> bound VexStreamPlaybackFamily.Act.Method
+ *       -> VexExecution
+ *       -> VexStreamPlayerPartner.Connection.Request
+ *       -> external Source
  *
- * ## UI
+ * Provider acknowledgement/outcome returns only through Player observation.
  *
- * [VexStreamPlaybackExperience] observes Family State and combines it with provider read metadata
- * from [VexStreamPlaybackReadState] for display. [VexStreamPlaybackDisplayState] and [present] are
- * projections only; neither owns Playback truth.
+ * Playback owns the feature-specific reconciliation meaning because a stale provider statement
+ * must not erase a newer pending Play/Pause intent. [VexStreamPlaybackFamily.observePlayer] enters
+ * that decision through VexFamily's protected admitCurrent boundary, so provider reconciliation and
+ * ordinary Control activation serialize against the same exact Family CURRENT without a second lock
+ * or State owner.
  *
- * ## Provider latency
+ * ## Provider read facts
  *
- * Pending Play/Pause/Restart intent is represented in the shared Family State. A stale Media3
- * callback cannot erase a newer admitted Control; [reconcileVexStreamPlaybackObservation] compares
- * provider reality with the exact current Family State before [VexStreamPlaybackFamily.observe].
+ * [VexStreamPlaybackReadState] is a bounded presentation read model composed from Player Store
+ * Snapshot plus live [VexStreamPlayerPartner.Connection.Progress]. Full QueueItems remain Queue/Store
+ * owned.
  *
- * ## Sibling boundaries
+ * ## Widget
  *
- * Queue, Repeat, Seek, media source/loading, and higher convergence remain separate questions.
- * Playback does not absorb them merely because they share Media3 or the player surface.
+ * The Playback Widget's [com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetRelay]
+ * is an ordinary Compound Relay over bounded Player Store + Playback Family + Queue Family currents. Widget durable
+ * SurfaceState / Projection / ActionRef remain presentation mechanics; no peer VexWidget semantic
+ * root is required.
+ *
+ * ## Sustained realization
+ *
+ * VexStreamPlaybackService owns Android MediaSession/ExoPlayer lifetime. It borrows semantic
+ * Playback CURRENT and hosts the observation Connection; Service lifetime is not Playback truth.
  */
-// Documentation/navigation only.
 @Suppress("unused")
 internal class VexStreamPlaybackDocs private constructor()
 

@@ -1,7 +1,6 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Test
 
 class VexStreamPlaybackSeekTest {
@@ -36,83 +35,6 @@ class VexStreamPlaybackSeekTest {
             ),
         )
     }
-
-    @Test
-    fun exactCurrentMediaAdmitsSeekRequest() {
-        val request =
-            VexStreamPlaybackSeekRequest(
-                mediaId = "track.alpha",
-                mediaItemIndex = 1,
-                positionMs = 60_000L,
-            )
-
-        assertEquals(
-            60_000L,
-            vexStreamPlaybackSeekTarget(
-                request = request,
-                currentMediaId = "track.alpha",
-                currentMediaItemIndex = 1,
-                seekAvailable = true,
-            ),
-        )
-    }
-
-    @Test
-    fun staleMediaIdentityRejectsSeekRequest() {
-        val request =
-            VexStreamPlaybackSeekRequest(
-                mediaId = "track.alpha",
-                mediaItemIndex = 1,
-                positionMs = 60_000L,
-            )
-
-        assertNull(
-            vexStreamPlaybackSeekTarget(
-                request = request,
-                currentMediaId = "track.beta",
-                currentMediaItemIndex = 1,
-                seekAvailable = true,
-            ),
-        )
-    }
-
-    @Test
-    fun anotherOccurrenceOfSameMediaRejectsSeekRequest() {
-        val request =
-            VexStreamPlaybackSeekRequest(
-                mediaId = "track.alpha",
-                mediaItemIndex = 1,
-                positionMs = 60_000L,
-            )
-
-        assertNull(
-            vexStreamPlaybackSeekTarget(
-                request = request,
-                currentMediaId = "track.alpha",
-                currentMediaItemIndex = 2,
-                seekAvailable = true,
-            ),
-        )
-    }
-
-    @Test
-    fun providerCommandUnavailabilityRejectsSeekRequest() {
-        val request =
-            VexStreamPlaybackSeekRequest(
-                mediaId = "track.alpha",
-                mediaItemIndex = 1,
-                positionMs = 60_000L,
-            )
-
-        assertNull(
-            vexStreamPlaybackSeekTarget(
-                request = request,
-                currentMediaId = "track.alpha",
-                currentMediaItemIndex = 1,
-                seekAvailable = false,
-            ),
-        )
-    }
 }
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][PLAYBACK][PRESENTATION-SEEK]

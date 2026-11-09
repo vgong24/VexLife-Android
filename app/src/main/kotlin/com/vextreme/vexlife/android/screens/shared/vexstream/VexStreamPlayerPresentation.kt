@@ -47,14 +47,13 @@ import com.vextreme.vexlife.android.elements.VexRow
 import com.vextreme.vexlife.android.elements.VexText
 import com.vextreme.vexlife.android.elements.vex
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.vexstream.rememberVexStreamPlayerRequestConnection
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackExperience
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackReadState
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackSeekConnection
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackSeekRequest
 import com.vextreme.vexlife.android.vexstream.playback.present
-import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackSeekConnection
 import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackSeekPositionMs
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
 import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueExperience
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatControl
@@ -69,7 +68,6 @@ import com.vextreme.vexlife.android.vexstream.repeat.rememberVexStreamRepeatExpe
  */
 @Composable
 internal fun VexStreamMiniPlayer(
-    controller: androidx.media3.session.MediaController?,
     playbackExperience: VexStreamPlaybackExperience,
     runtime: VexRuntime,
 ) {
@@ -78,15 +76,11 @@ internal fun VexStreamMiniPlayer(
             .displayState
             .playback
     val queueExperience =
-        rememberVexStreamQueueExperience(
-            controller,
-        )
+        rememberVexStreamQueueExperience()
     val queueProjection =
         queueExperience.projection
-    val seekConnection =
-        rememberVexStreamPlaybackSeekConnection(
-            controller,
-        )
+    val playerRequestConnection =
+        rememberVexStreamPlayerRequestConnection()
     val playbackProjection =
         requireNotNull(
             playbackExperience
@@ -103,7 +97,7 @@ internal fun VexStreamMiniPlayer(
             ?.let { index ->
                 (index + 1).toString() +
                     "/" +
-                    playback.queueMediaIds.size
+                    playback.queueSize
             }
 
     val handler =
@@ -209,7 +203,9 @@ internal fun VexStreamMiniPlayer(
 
         VexStreamPlaybackTimeline(
             playback = playback,
-            seekConnection = seekConnection,
+            seekAvailable =
+                playbackProjection.seekAvailable,
+            playerRequestConnection = playerRequestConnection,
             runtime = runtime,
             semanticRef =
                 VexStreamMusicScreen
@@ -277,7 +273,6 @@ internal fun VexStreamMiniPlayer(
 @Composable
 internal fun VexStreamFullPlayerSheet(
     state: com.vextreme.vexlife.android.data.vexstream.VexStreamMusicState,
-    controller: androidx.media3.session.MediaController?,
     playbackExperience: VexStreamPlaybackExperience,
     runtime: VexRuntime,
 ) {
@@ -325,21 +320,15 @@ internal fun VexStreamFullPlayerSheet(
             VexStreamPlaybackControl.PlayPause,
         )
     val queueExperience =
-        rememberVexStreamQueueExperience(
-            controller,
-        )
+        rememberVexStreamQueueExperience()
     val queueProjection =
         queueExperience.projection
     val repeatExperience =
-        rememberVexStreamRepeatExperience(
-            controller,
-        )
+        rememberVexStreamRepeatExperience()
     val repeatProjection =
         repeatExperience.projection
-    val seekConnection =
-        rememberVexStreamPlaybackSeekConnection(
-            controller,
-        )
+    val playerRequestConnection =
+        rememberVexStreamPlayerRequestConnection()
     val selected =
         runtime.presentation.selected(
             VexStreamMusicScreen.FullPlayerContent,
@@ -414,7 +403,6 @@ internal fun VexStreamFullPlayerSheet(
             VexStreamQueueContent(
                 state = state,
                 playback = playback,
-                controller = controller,
                 runtime = runtime,
             )
         } else {
@@ -650,7 +638,10 @@ internal fun VexStreamFullPlayerSheet(
                         )
                 VexStreamPlaybackTimeline(
                     playback = playback,
-                    seekConnection = seekConnection,
+                    seekAvailable =
+                        playbackProjection
+                            ?.seekAvailable == true,
+                    playerRequestConnection = playerRequestConnection,
                     runtime = runtime,
                     semanticRef = fullPlayerSeekRef,
                     activationSubjectRef =
@@ -791,7 +782,8 @@ internal fun VexStreamFullPlayerSheet(
 @Composable
 private fun VexStreamPlaybackTimeline(
     playback: VexStreamPlaybackReadState,
-    seekConnection: VexStreamPlaybackSeekConnection?,
+    seekAvailable: Boolean,
+    playerRequestConnection: VexStreamPlayerPartner.Connection.Request?,
     runtime: VexRuntime,
     semanticRef: String,
     activationSubjectRef: String? = null,
@@ -820,8 +812,9 @@ private fun VexStreamPlaybackTimeline(
             }
             ?: playback.currentPositionMs
     val canSeek =
-        seekConnection
-            ?.isAvailable == true &&
+        seekAvailable &&
+            playerRequestConnection !=
+                null &&
             playback.currentMediaId
                 ?.isNotBlank() == true &&
             playback.currentIndex >= 0 &&
@@ -866,15 +859,13 @@ private fun VexStreamPlaybackTimeline(
                     ?: runtime.activate(
                         VexStreamMusicScreen.SeekPlayback,
                     )
-                seekConnection?.seek(
-                    VexStreamPlaybackSeekRequest(
-                        mediaId =
-                            targetMediaId,
-                        mediaItemIndex =
-                            targetMediaItemIndex,
-                        positionMs =
-                            targetPositionMs,
-                    ),
+                playerRequestConnection?.seek(
+                    mediaId =
+                        targetMediaId,
+                    mediaItemIndex =
+                        targetMediaItemIndex,
+                    positionMs =
+                        targetPositionMs,
                 )
             } else {
                 scrubFraction = null

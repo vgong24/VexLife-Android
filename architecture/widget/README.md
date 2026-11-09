@@ -97,24 +97,24 @@ There is deliberately no revision counter, Boolean invalidation toggle or hash s
 `A -> B -> A`, both transitions are real because each new value is compared to the exact current
 surface value. Exact duplicate `A -> A` is suppressed.
 
-## SCAE relationship
+## Product relationship
 
-The widget foundation sits downstream of SCAE rather than becoming another family:
+The widget foundation sits downstream of rightful product/provider owners rather than becoming
+another semantic root:
 
 ```text
-CURRENT product State + Controls
--> existing Behavior Projection
-
-provider/read truth + existing Projection(s)
--> feature-owned widget SurfaceState
+Partner / Store CURRENT ----\
+                             -> feature relationship mapping -> Widget SurfaceState
+Family CURRENT -------------/
 
 SurfaceState
 -> widget Projection
 -> RemoteViews
 ```
 
-Controls still return through the rightful product family. SurfaceState is remote presentation
-custody only.
+A concrete feature may use an existing Relay when several independently-owned currents genuinely
+form one widget-facing relationship current. Controls still return through the rightful Family or
+request boundary. SurfaceState is remote presentation custody only.
 
 ## Source roles
 
@@ -155,9 +155,12 @@ The first consumer remains deliberately compact:
 artwork | title/artist | previous | play/pause | next
 ```
 
-VexStream maps Media3/provider truth + existing Playback/Queue projections into one typed widget
-SurfaceState. Artwork availability is presentation truth, so artwork backfill uses `transformAll`
-to change that exact field rather than forcing a synthetic revision.
+VexStream's Playback Widget uses an ordinary Compound Relay over bounded Player Store + Playback
+Family + Queue Family current, then maps that relationship output into one typed Widget SurfaceState.
+Player Store contributes metadata/artwork, Playback Family contributes Play/Pause meaning, and Queue
+Family contributes Previous/Next meaning. Artwork
+availability is presentation truth, so artwork backfill uses `transformAll` to change that exact
+field rather than forcing a synthetic revision.
 
 VexStream-specific meaning remains with:
 
@@ -184,4 +187,4 @@ vexVerifyLocal
 
 A launcher-hosted appearance/update claim still needs Android/device or lived proof.
 
-<!-- [VXG RealForever][ANDROID][APP-WIDGET][GLANCE][SCAE] -->
+<!-- [VXG RealForever][ANDROID][APP-WIDGET][GLANCE] -->

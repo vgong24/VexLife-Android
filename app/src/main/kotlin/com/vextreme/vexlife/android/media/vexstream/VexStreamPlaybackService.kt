@@ -7,20 +7,18 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.vextreme.vexlife.android.VexApplication
 import com.vextreme.vexlife.android.behavior.VexService
-import com.vextreme.vexlife.android.execution.VexExecutionRoot
-import com.vextreme.vexlife.android.vexstream.playback.Media3VexStreamCurrentPlaybackObserver
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamCurrentPlaybackObserver
+import com.vextreme.vexlife.android.vexstream.player.Media3PlayerConnection
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerObservationReceiver
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackTrace
-import com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetUpdateExecution
-import kotlinx.coroutines.Dispatchers
 
 /**
  * Android-native owner for VexStream audio playback realization lifetime.
  *
  * Playback semantic State remains in the process-shared VexStreamPlaybackFamily. This Service keeps
- * Media3/Player realization alive while UI is absent and reconciles provider truth into that Family.
+ * Media3/Player realization alive while UI is absent. Its Player Partner Connection admits provider
+ * observations to Player Store; the process Store observation path reconciles that truth into Family.
  *
  * Local file MediaItems are resolved by DefaultDataSource. Opaque vexstream:// media requests flow
  * through [VexStreamNetworkDataSource], which loads the remembered endpoint/token and pins the
@@ -33,11 +31,6 @@ class VexStreamPlaybackService :
         VexStreamPlaybackState
     > {
     private var mediaSession: MediaSession? = null
-    private val widgetExecutionRoot =
-        VexExecutionRoot(
-            dispatcher =
-                Dispatchers.Default,
-        )
     private var playbackFamily:
         VexStreamPlaybackFamily? =
         null
@@ -52,13 +45,9 @@ class VexStreamPlaybackService :
             }
                 .currentState
 
-    private var currentPlaybackObserver:
-        VexStreamCurrentPlaybackObserver? =
+    private var currentPlayerConnection:
+        Media3PlayerConnection? =
         null
-    private var widgetUpdateExecution:
-        VexStreamPlaybackWidgetUpdateExecution? =
-        null
-
     override fun onCreate() {
         super.onCreate()
 
@@ -78,6 +67,15 @@ class VexStreamPlaybackService :
                 )
         this.playbackFamily =
             playbackFamily
+
+        val processExecutionRoot =
+            vexApplication
+                .dependencies
+                .resolve(
+                    vexApplication
+                        .dependencyModule
+                        .processExecutionRoot,
+                )
 
         val dataSourceFactory =
             DefaultDataSource.Factory(
@@ -112,28 +110,28 @@ class VexStreamPlaybackService :
                 "looper=${player.applicationLooper.thread.name}",
         )
 
-        val playbackObserver =
-            Media3VexStreamCurrentPlaybackObserver(
+        val playerReceiver =
+            vexApplication
+                .dependencies
+                .resolve(
+                    vexApplication
+                        .dependencyModule
+                        .playerObservationReceiver,
+                )
+        val playerConnection =
+            Media3PlayerConnection(
                 player =
                     player,
-                playbackFamily =
-                    playbackFamily,
+                receiver =
+                    playerReceiver,
+                executionRoot =
+                    processExecutionRoot,
             )
-        currentPlaybackObserver =
-            playbackObserver
-        widgetUpdateExecution =
-            VexStreamPlaybackWidgetUpdateExecution(
-                root =
-                    widgetExecutionRoot,
-                context =
-                    applicationContext,
-                observations =
-                    playbackObserver
-                        .observations,
-            )
+        currentPlayerConnection =
+            playerConnection
         VexStreamPlaybackTrace.record(
             stage =
-                "service.widget-observer.attached",
+                "service.player-partner.attached",
         )
     }
 
@@ -147,13 +145,10 @@ class VexStreamPlaybackService :
             stage =
                 "service.destroy",
         )
-        currentPlaybackObserver
+        currentPlayerConnection
             ?.close()
-        currentPlaybackObserver =
+        currentPlayerConnection =
             null
-        widgetUpdateExecution =
-            null
-
         mediaSession?.let { session ->
             session.player.release()
             session.release()
@@ -161,20 +156,12 @@ class VexStreamPlaybackService :
         mediaSession = null
 
         /*
-         * The concrete Media3 realization is gone. Clear process semantic Playback truth so the
-         * shared Family no longer reports provider reality that this Service can no longer realize.
+         * Closing the Player Partner Connection admits Unavailable through the same outside-truth
+         * circuit used during normal operation; Service teardown does not manufacture a second
+         * semantic Playback path.
          */
-        playbackFamily
-            ?.observe(
-                VexStreamPlaybackState.NoMedia,
-            )
         playbackFamily =
             null
-
-        widgetExecutionRoot
-            .forceStopAll(
-                "VexStream PlaybackService destroyed",
-            )
 
         super.onDestroy()
     }

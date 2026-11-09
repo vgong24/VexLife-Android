@@ -41,28 +41,29 @@ WHERE CAN MEDIA COME FROM?
 
 WHAT IS PLAYBACK DOING?
     vexstream/playback
-    -> Play / Pause through Playback State / Control / Act / Effect
-    -> Seek through typed mediaId + position request
-    -> Media3 playback / seek Connections
-    -> provider read projection carries current optional artwork URI beside title/artist/progress
+    -> Direct Playback Family owns Play / Pause semantic State / Control / Effect meaning
+    -> accepted Family Act -> bound Method -> VexExecution -> PlayerPartner.Connection.Request
+    -> Seek is a current-only Player request using observed Playback capability plus a final provider re-check
+    -> Player Store Snapshot + Player Connection Progress form the bounded view read model
 
 HOW SHOULD THIS RENDERED COLLECTION START?
     vexstream/collection
-    -> Play All / Shuffle All through typed rendered-collection request
-    -> activation-time source resolution + Media3 provider-capability Connection
+    -> Play All / Shuffle All remain rendered payload/source-resolution workflows
+    -> canonical VexExecution Latest owns supersession during preparation
+    -> resolved Vex-owned media -> PlayerPartner.Connection.Request.playMedia(...)
     -> Shuffle All is a one-shot resolved-order permutation, not persistent shuffle mode
 
 WHAT CAN I DO WITH THE CURRENT QUEUE?
     vexstream/queue
-    -> Previous / Next / Shuffle / Clear through Queue State / Control / Act / Effect
-    -> Play one current occurrence through typed occurrence request
-    -> Reorder one current occurrence by adjacent typed request
-    -> Media3 Queue / Queue Play / Queue Reorder Connections
+    -> Direct Queue Family owns Previous / Next / Shuffle / Clear semantic meaning
+    -> Player Store QueueSnapshot supplies retained outside queue truth
+    -> row Play / Reorder carry exact PlayerPartner.QueueOccurrence currentness coordinates
+    -> actual PlayerPartner.Connection.Request performs the final provider-currentness re-check
 
 IS REPEAT ACTIVE FOR THIS PLAYBACK CONTEXT?
     vexstream/repeat
-    -> Repeat State / Control / Act / Effect
-    -> Media3VexStreamRepeatConnection
+    -> Direct Repeat Family owns State / Toggle Control / Effect meaning
+    -> accepted Act -> Method -> VexExecution Latest -> PlayerPartner.Connection.Request
 
 HOW MUCH OF THIS COLLECTION OR SONGS LIBRARY IS ON THIS PHONE?
     vexstream/offline
@@ -92,25 +93,50 @@ data/vexstream/
     verified private staging -> durable Android MediaStore publication
     README.md preserves producer/consumer, storage and security boundaries
 
+vexstream/
+    VexStreamMusicViewModel
+        Android configuration-lifetime composition owner
+        owns one Media3 Controller Connection occurrence
+        borrows process-shared Player Store / Families / ExecutionRoot
+
+vexstream/player/
+    VexStreamPlayerPartner
+        Source / Signal / Connection
+    VexStreamPlayerStore
+        retained outside Snapshot truth
+    Media3PlayerConnection
+        observation access to the external music Source
+    Media3ControllerConnection
+        request / progress access to the same Source
+
 vexstream/playback/
-    human questions: Play / Pause + where should current media continue from?
-    Behavior family for finite Play/Pause meaning
-    typed Seek request + current-media/provider-capability Connection
+    human question: what is current media being asked to do?
+    Direct VexStreamPlaybackFamily
+    pending-intent reconciliation through Family admitCurrent
+    bounded Store + Progress read projection
+    current-only Seek goes directly to the actual Player Partner request Connection
 
 vexstream/queue/
-    human questions: finite Queue Controls + play/reorder one current occurrence
-    Behavior family for finite Queue Controls
-    typed current-occurrence Queue Play + adjacent Reorder requests
+    human question: what can the listener truthfully do with the current ordered media context?
+    Direct VexStreamQueueFamily for Previous / Next / Shuffle / Clear
+    full ordered payload remains Player Store QueueSnapshot truth
+    row Play / Reorder use exact Player Partner QueueOccurrence requests
+
+vexstream/repeat/
+    human question: is Repeat active for this playback context?
+    Direct VexStreamRepeatFamily + Player Partner request realization
 
 vexstream/track/
-    human questions: play this rendered track context / place this rendered track next or at queue end
-    typed Track requests + source-resolution / Media3 provider-capability Connection
-    composition boundary only; not another finite Behavior family
+    play / queue one rendered Track context
+    source resolution + canonical VexExecution Latest/Queued
+    actual PlayerPartner.Connection.Request
+    not another Family without an independent semantic State/Control question
 
 vexstream/collection/
-    human question: play this rendered collection naturally or as one shuffled start order
-    typed Collection playback request + source-resolution / Media3 provider-capability Connection
-    composition boundary only; collection membership remains upstream catalog/playlist truth
+    play one rendered collection naturally or as one shuffled start order
+    source/order resolution + canonical VexExecution Latest
+    actual PlayerPartner.Connection.Request
+    collection membership remains upstream catalog/playlist truth
 
 vexstream/offline/
     human questions:
@@ -122,12 +148,8 @@ vexstream/offline/
     in-process VexLife session-lifetime Connection
     suspend repository remains byte/state authority; no process-death/background-resume claim
 
-vexstream/repeat/
-    human question: Is Repeat active for the current playback context?
-    Behavior family + concrete Media3 Connection + UI Experience membrane
-
 media/vexstream/
-    Android MediaSession/player/network realization
+    Android MediaSession / ExoPlayer / network realization
 
 screens/shared/vexstream/
     Android presentation
@@ -406,64 +428,61 @@ FULL_PLAYER_SHEET != REPEAT_OWNER
 GESTURE != EFFECT
 ~~~
 
-## Playback and Queue are siblings, not one giant player State
+## Playback, Queue and Repeat are siblings, not one giant player State
 
 Playback asks:
 
 > What is the current media being asked to do?
 
-Queue currently asks:
+Queue asks:
 
 > What can the listener truthfully do with the current ordered media context?
 
-Current admitted answers are Previous, Next, Shuffle, and Clear. Clear requests the provider mutation
-but does not claim Empty until Media3 observation reports that truth.
+Repeat asks:
 
-They are near each other in the UI but remain independent Behavior families. Do not cross-multiply
-their States simply because Mini Player displays both.
+> Is Repeat active for the current playback context?
+
+They are near each other in the UI but remain independent Direct Families. Do not cross-multiply
+their States merely because Mini Player / Full Player display several of them together.
 
 ## Current Queue boundary
 
-Previous / Next are shared semantic Controls consumed by Mini Player and Context Dock.
-Shuffle is the same Queue family question and is consumed as a one-shot action by Mini Player and
-Queue presentation; it has no persistent selected state.
-Clear is consumed by Queue presentation through the same current-truth Connection.
+Previous / Next / Shuffle / Clear are Queue Family Controls. Their accepted Effects do not claim
+provider outcome; Player observation returns through Partner -> Store -> Family.
 
-Queue-row Play remains outside the finite-Control Behavior family but now has a feature-local typed
-request boundary:
+Queue-row Play is a current-only request on the actual Player Partner Connection:
 
 ~~~text
-current queue snapshot
--> VexStreamQueueOccurrence(mediaId, occurrence, index)
--> VexStreamQueuePlayRequest
--> provider queue + command re-check
+Player Store QueueSnapshot
+-> PlayerPartner.QueueOccurrence(mediaId, occurrence, index)
+-> PlayerPartner.Connection.Request.playQueueOccurrence(...)
+-> exact provider queue + command re-check
 -> seek selected occurrence when needed
 -> play
 ~~~
 
 The occurrence coordinate is current provider identity, not a durable queue-item ID.
 
-Reorder reuses that currentness coordinate one adjacent move at a time:
+Reorder reuses that same currentness coordinate one adjacent move at a time:
 
 ~~~text
-latest observed VexStreamQueueOccurrence
-+ Earlier / Later
--> VexStreamQueueReorderRequest
--> provider queue + CHANGE_MEDIA_ITEMS re-check
+latest observed PlayerPartner.QueueOccurrence
++ QueueMove Earlier / Later
+-> PlayerPartner.Connection.Request.moveQueueOccurrence(...)
+-> exact provider queue + CHANGE_MEDIA_ITEMS re-check
 -> reject stale coordinate
 -> reject adjacent identical-media crossing
 -> move one adjacent item
 ~~~
 
-After one move is admitted, the drag carries that same occurrence forward at the expected adjacent
-index. The Reorder Connection re-checks provider truth before every later step, so a second move is
-rejected until the provider actually observes that occurrence at the expected index. Crossing
-adjacent identical media IDs still fails closed because the provider projection cannot distinguish
-which duplicate moved without a stronger durable item identity.
+After one move is admitted, presentation carries that same occurrence forward at the expected adjacent
+index. The actual Player Connection re-checks provider truth before every later step, so another move
+is rejected until provider truth observes that occurrence at the expected index. Crossing adjacent
+identical media IDs still fails closed because the provider projection cannot distinguish which
+duplicate moved without stronger durable item identity.
 
-Repeat remains its independent sibling Behavior family. The accepted Behavior foundation does not
-carry arbitrary runtime request payloads through finite Controls, so Queue Play/Reorder remain
-feature-local request boundaries rather than a generic payload framework.
+These payload requests do not earn peer Queue Play/Reorder Connection abstractions merely because
+their payload is richer than a finite Family Control.
 
 ## Dynamic Android presentation identity
 
@@ -523,7 +542,7 @@ deciding fact.
 
 ## Current proof shape
 
-Use focused JVM tests for Behavior meaning, repository-owned aggregate verification for source
+Use focused JVM tests for Direct Family / Partner meaning, repository-owned aggregate verification for source
 integration, connected-device/Journey proof for Media3/Android interaction, and lived review for
 product feel.
 

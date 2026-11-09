@@ -3,89 +3,44 @@ package com.vextreme.vexlife.android.vexstream.queue
 /**
  * # VexStream Queue
  *
- * Search this symbol when asking:
+ * Queue is a process-shared Direct [VexStreamQueueFamily]. It owns the semantic question:
  *
- * "What can I do with the current ordered VexStream queue?"
+ *     "What do Previous / Next / Shuffle / Clear mean for the currently observed queue?"
  *
- * Current admitted questions are:
- * - can I move to the previous item?
- * - can I move to the next item?
- * - can I reshuffle the still-future queue?
- * - can I clear the current queue?
+ * Player Partner owns the external music Source/Connection vocabulary. Player Store owns retained
+ * queue payload/current. Queue Family observes the Store's bounded QueueSnapshot and owns only Queue
+ * State / Control / Effect meaning.
  *
- * This class is documentation/navigation only. It owns no Media3 queue, player lifetime, rendered
- * queue-item identity, or Compose state.
+ *     Player Partner Signal
+ *         -> Player Store QueueSnapshot
+ *         -> Queue Family State
  *
- * ## What is true?
+ *     Queue Control
+ *         -> accepted Family Act
+ *         -> bound Method
+ *         -> VexExecution
+ *         -> PlayerPartner.Connection.Request
+ *         -> external Source
  *
- * [VexStreamQueueState] distinguishes Empty from NonEmpty and carries only provider-derived
- * availability required by the admitted Queue controls.
+ * Queue Effects use stay(): an attempted provider mutation does not claim the resulting provider
+ * queue before Player observation returns through Store.
  *
- * ## What can the listener request?
+ * [VexStreamQueueExperience] exposes the Family projection plus the exact Store-owned queue payload
+ * required by presentation. It owns neither truth.
  *
- * [VexStreamQueueControl.Previous], [VexStreamQueueControl.Next],
- * [VexStreamQueueControl.Shuffle], and [VexStreamQueueControl.Clear].
+ * Queue-row Play / Reorder are deliberately different. They carry one exact current provider
+ * occurrence and require an immediate provider-currentness result while a listener selects or drags
+ * a row. They therefore address the actual Player Partner request Connection directly rather than
+ * inventing feature-local Connection interfaces or forcing payload requests into finite Family
+ * Controls.
  *
- * ## What does Shuffle mean?
+ * [VexStreamQueueOccurrence] is an alias for the Player Partner's current queue occurrence
+ * coordinate. The concrete Player Connection rechecks media ID / occurrence / index and provider
+ * command authority before mutation.
  *
- * Shuffle is a one-shot Queue action, not a selected/persistent mode.
- *
- * [VexStreamQueueEffect.ShuffleFuture] preserves already-played items and the current item, then
- * randomizes only the future queue. The Control is available only when at least two future items
- * exist and Media3 currently permits playlist mutation.
- *
- * The relationship uses stay(): queue order changes, but the admitted State kind remains NonEmpty
- * until provider observation supplies the next current projection.
- *
- * ## What does Clear mean before provider observation?
- *
- * Clear selects [VexStreamQueueEffect.ClearQueue] but the relationship deliberately uses stay().
- * Effect attempts the mutation; State does not claim Empty until Media3 actually reports no items.
- *
- * ## Who talks to Media3?
- *
- * [Media3VexStreamQueueConnection]. It re-reads current Media3 truth at activation time before
- * resolving a Control, so stale UI availability never becomes command authority.
- *
- * ## What should Compose depend on?
- *
- * [VexStreamQueueExperience]. Mini Player, Context Dock, and Queue presentation consume the same
- * Queue Projection / Controls where those controls apply.
- *
- * ## What about Queue Play?
- *
- * Queue-row Play carries runtime occurrence identity, so it is not forced through finite Controls.
- * [VexStreamQueueOccurrence] names one exact current provider occurrence as media ID + occurrence
- * ordinal + current index. [VexStreamQueuePlayRequest] carries that coordinate, and
- * [Media3VexStreamQueuePlayConnection] re-reads the provider queue plus Seek/Play command authority
- * before dispatch. The coordinate is deliberately current-only, not durable queue-item identity.
- *
- * Queue Sheet and Context Dock consume the same Queue Play boundary.
- *
- * ## What about Reorder?
- *
- * Reorder also carries runtime occurrence identity, but every drag sample asks for only one adjacent
- * move. [VexStreamQueueReorderRequest] combines the latest observed [VexStreamQueueOccurrence] with
- * Earlier/Later direction. [Media3VexStreamQueueReorderConnection] re-reads provider queue truth and
- * playlist-mutation authority before every move.
- *
- * The request rejects crossing adjacent identical media IDs. Media3 exposes no stronger durable item
- * identity here, so an [A, A] projection cannot prove which duplicate moved. Failing closed preserves
- * truth instead of promoting presentation occurrence order into durable identity.
- *
- * After an admitted step, Queue presentation carries that same occurrence at the expected adjacent
- * index. The next request still goes through the Connection's provider re-check, so a later drag step
- * is rejected until provider truth actually observes that occurrence there. A stale projection cannot
- * silently substitute whichever item currently occupies the optimistic index.
- *
- * Queue Play and Reorder remain typed Queue-local request boundaries, not a generic payload framework.
- *
- * Repeat is now the sibling
- * [com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatDocs] family. Playback remains the
- * sibling [com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackDocs] family. Queue does
- * not copy either repeat or play/pause truth.
+ * Repeat and Playback remain sibling semantic Families; Queue does not copy their truth.
  */
 @Suppress("unused")
 internal class VexStreamQueueDocs private constructor()
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][QUEUE][DIRECT-FAMILY]

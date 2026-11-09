@@ -16,6 +16,15 @@ import com.vextreme.vexlife.android.screens.shared.maps.VexNavigationSession
 import com.vextreme.vexlife.android.ui.SharedPreferencesThemeModeStore
 import com.vextreme.vexlife.android.ui.ThemeModeStore
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
+import com.vextreme.vexlife.android.vexstream.playback.observeVexStreamPlaybackPlayerStore
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerObservationReceiver
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueFamily
+import com.vextreme.vexlife.android.vexstream.queue.observeVexStreamQueuePlayerStore
+import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatFamily
+import com.vextreme.vexlife.android.vexstream.repeat.observeVexStreamRepeatPlayerStore
+import com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetRelay
+import com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetUpdateExecution
 
 /**
  * Android process-lifetime composition root.
@@ -73,6 +82,9 @@ class VexApplication :
         dependencies.resolve(
             dependencyModule.backgroundServiceRelay,
         )
+        dependencies.resolve(
+            dependencyModule.playbackWidgetUpdateExecution,
+        )
     }
 }
 
@@ -118,8 +130,32 @@ internal class VexApplicationDependencyModule(
     val processExecutionRoot =
         ProcessExecutionRootProvider()
 
+    val playerStore =
+        PlayerStoreProvider()
+
     val playbackFamily =
-        PlaybackFamilyProvider()
+        PlaybackFamilyProvider(
+            executionRoot =
+                processExecutionRoot,
+            playerStore =
+                playerStore,
+        )
+
+    val queueFamily =
+        QueueFamilyProvider(
+            executionRoot =
+                processExecutionRoot,
+            playerStore =
+                playerStore,
+        )
+
+    val repeatFamily =
+        RepeatFamilyProvider(
+            executionRoot =
+                processExecutionRoot,
+            playerStore =
+                playerStore,
+        )
 
     val navigationSession =
         NavigationSessionProvider()
@@ -134,6 +170,34 @@ internal class VexApplicationDependencyModule(
                 navigationSession,
         )
 
+    val playbackWidgetRelay =
+        PlaybackWidgetRelayProvider(
+            executionRoot =
+                processExecutionRoot,
+            playerStore =
+                playerStore,
+            playbackFamily =
+                playbackFamily,
+            queueFamily =
+                queueFamily,
+        )
+
+    val playerObservationReceiver =
+        PlayerObservationReceiverProvider(
+            playerStore =
+                playerStore,
+        )
+
+    val playbackWidgetUpdateExecution =
+        PlaybackWidgetUpdateExecutionProvider(
+            application =
+                androidApplication,
+            executionRoot =
+                processExecutionRoot,
+            playbackWidgetRelay =
+                playbackWidgetRelay,
+        )
+
     val module:
         VexDependencyModule =
         VexDependencyModule.of(
@@ -142,9 +206,15 @@ internal class VexApplicationDependencyModule(
             repositories,
             themeModeStore,
             processExecutionRoot,
+            playerStore,
             playbackFamily,
+            queueFamily,
+            repeatFamily,
             navigationSession,
             backgroundServiceRelay,
+            playbackWidgetRelay,
+            playerObservationReceiver,
+            playbackWidgetUpdateExecution,
         )
 
     internal class AndroidApplicationProvider(
@@ -233,17 +303,152 @@ internal class VexApplicationDependencyModule(
             VexExecutionRoot()
     }
 
-    /** One semantic Playback Family shared by UI, Service, and Widget projections. */
-    internal class PlaybackFamilyProvider :
+    /** Process-current outside truth for the independently-owned VexStream Player Partner. */
+    internal class PlayerStoreProvider :
         VexDependencyProvider<
-            VexStreamPlaybackFamily
+            VexStreamPlayerStore
         >() {
         override fun create(
             dependencies:
                 VexDependencyBuildScope,
         ):
-            VexStreamPlaybackFamily =
-            VexStreamPlaybackFamily()
+            VexStreamPlayerStore =
+            VexStreamPlayerStore()
+    }
+
+    /** One semantic Playback Family, with Player Store observation bound at process lifetime. */
+    internal class PlaybackFamilyProvider(
+        private val executionRoot:
+            VexDependencyProvider<
+                VexExecutionRoot
+            >,
+        private val playerStore:
+            VexDependencyProvider<
+                VexStreamPlayerStore
+            >,
+    ) :
+        VexDependencyProvider<
+            VexStreamPlaybackFamily
+        >(
+            dependencies =
+                listOf(
+                    executionRoot,
+                    playerStore,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexStreamPlaybackFamily {
+            val family =
+                VexStreamPlaybackFamily()
+
+            observeVexStreamPlaybackPlayerStore(
+                family =
+                    family,
+                store =
+                    dependencies.require(
+                        playerStore,
+                    ),
+                executionRoot =
+                    dependencies.require(
+                        executionRoot,
+                    ),
+            )
+
+            return family
+        }
+    }
+
+    /** Queue semantic owner maintained from Player Store outside truth. */
+    internal class QueueFamilyProvider(
+        private val executionRoot:
+            VexDependencyProvider<
+                VexExecutionRoot
+            >,
+        private val playerStore:
+            VexDependencyProvider<
+                VexStreamPlayerStore
+            >,
+    ) :
+        VexDependencyProvider<
+            VexStreamQueueFamily
+        >(
+            dependencies =
+                listOf(
+                    executionRoot,
+                    playerStore,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexStreamQueueFamily {
+            val family =
+                VexStreamQueueFamily()
+
+            observeVexStreamQueuePlayerStore(
+                family =
+                    family,
+                store =
+                    dependencies.require(
+                        playerStore,
+                    ),
+                executionRoot =
+                    dependencies.require(
+                        executionRoot,
+                    ),
+            )
+
+            return family
+        }
+    }
+
+    /** Repeat semantic owner maintained from Player Store outside truth. */
+    internal class RepeatFamilyProvider(
+        private val executionRoot:
+            VexDependencyProvider<
+                VexExecutionRoot
+            >,
+        private val playerStore:
+            VexDependencyProvider<
+                VexStreamPlayerStore
+            >,
+    ) :
+        VexDependencyProvider<
+            VexStreamRepeatFamily
+        >(
+            dependencies =
+                listOf(
+                    executionRoot,
+                    playerStore,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexStreamRepeatFamily {
+            val family =
+                VexStreamRepeatFamily()
+
+            observeVexStreamRepeatPlayerStore(
+                family =
+                    family,
+                store =
+                    dependencies.require(
+                        playerStore,
+                    ),
+                executionRoot =
+                    dependencies.require(
+                        executionRoot,
+                    ),
+            )
+
+            return family
+        }
     }
 
     /**
@@ -320,6 +525,148 @@ internal class VexApplicationDependencyModule(
             )
         }
     }
+
+    /**
+     * Process-lived Widget relationship convergence over bounded Player + Playback + Queue truth.
+     *
+     * The Relay owns only the Widget-facing relationship current. Player Store, Playback Family and
+     * Queue Family remain the rightful owners of their source truths.
+     */
+    internal class PlaybackWidgetRelayProvider(
+        private val executionRoot:
+            VexDependencyProvider<
+                VexExecutionRoot
+            >,
+        private val playerStore:
+            VexDependencyProvider<
+                VexStreamPlayerStore
+            >,
+        private val playbackFamily:
+            VexDependencyProvider<
+                VexStreamPlaybackFamily
+            >,
+        private val queueFamily:
+            VexDependencyProvider<
+                VexStreamQueueFamily
+            >,
+    ) :
+        VexDependencyProvider<
+            VexStreamPlaybackWidgetRelay
+        >(
+            dependencies =
+                listOf(
+                    executionRoot,
+                    playerStore,
+                    playbackFamily,
+                    queueFamily,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexStreamPlaybackWidgetRelay =
+            VexStreamPlaybackWidgetRelay(
+                executionRoot =
+                    dependencies.require(
+                        executionRoot,
+                    ),
+                playerStore =
+                    dependencies.require(
+                        playerStore,
+                    ),
+                playbackFamily =
+                    dependencies.require(
+                        playbackFamily,
+                    ),
+                queueFamily =
+                    dependencies.require(
+                        queueFamily,
+                    ),
+            )
+    }
+
+    /** Player Partner Observation handoff into the Player Store. */
+    internal class PlayerObservationReceiverProvider(
+        private val playerStore:
+            VexDependencyProvider<
+                VexStreamPlayerStore
+            >,
+    ) :
+        VexDependencyProvider<
+            VexStreamPlayerObservationReceiver
+        >(
+            dependencies =
+                listOf(
+                    playerStore,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexStreamPlayerObservationReceiver =
+            VexStreamPlayerObservationReceiver(
+                store =
+                    dependencies.require(
+                        playerStore,
+                    ),
+            )
+    }
+
+    /**
+     * Process-lived publication of already-converged Widget Relay output.
+     *
+     * This execution does not belong to MediaSessionService lifetime. Service teardown changes the
+     * upstream truths; the Widget Relay owns the bounded relationship current consumed here.
+     */
+    internal class PlaybackWidgetUpdateExecutionProvider(
+        private val application:
+            VexDependencyProvider<
+                Application
+            >,
+        private val executionRoot:
+            VexDependencyProvider<
+                VexExecutionRoot
+            >,
+        private val playbackWidgetRelay:
+            VexDependencyProvider<
+                VexStreamPlaybackWidgetRelay
+            >,
+    ) :
+        VexDependencyProvider<
+            VexStreamPlaybackWidgetUpdateExecution
+        >(
+            dependencies =
+                listOf(
+                    application,
+                    executionRoot,
+                    playbackWidgetRelay,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexStreamPlaybackWidgetUpdateExecution =
+            VexStreamPlaybackWidgetUpdateExecution(
+                root =
+                    dependencies.require(
+                        executionRoot,
+                    ),
+                context =
+                    dependencies.require(
+                        application,
+                    )
+                        .applicationContext,
+                relayStates =
+                    dependencies.require(
+                        playbackWidgetRelay,
+                    )
+                        .outputStates,
+            )
+    }
+
 }
 
 // [VXG RealForever]

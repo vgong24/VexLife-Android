@@ -2,15 +2,13 @@ package com.vextreme.vexlife.android.screens.shared.vexstream
 
 import android.content.Context
 import android.net.Uri
-import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
-import androidx.media3.common.MimeTypes
 import com.vextreme.vexlife.android.data.vexstream.VexStreamArtworkStore
 import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaStore
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicRepository
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
-import com.vextreme.vexlife.android.vexstream.track.VexStreamTrackMediaItemResolver
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
+import com.vextreme.vexlife.android.vexstream.track.VexStreamTrackPlaybackResolver
 
 /**
  * Resolves product-level track availability into one Media3 item.
@@ -22,7 +20,7 @@ internal class VexStreamPlaybackSourceResolver(
     context: Context,
     private val repository: VexStreamMusicRepository,
 ) :
-    VexStreamTrackMediaItemResolver {
+    VexStreamTrackPlaybackResolver {
     private val mediaStore =
         VexStreamMediaStore.production(
             context = context,
@@ -43,9 +41,11 @@ internal class VexStreamPlaybackSourceResolver(
         )
     }
 
-    override fun mediaItem(
-        state: VexStreamTrackState,
-    ): MediaItem? {
+    override fun media(
+        state:
+            VexStreamTrackState,
+    ):
+        VexStreamPlayerPartner.Media? {
         val localCopy =
             state.localCopy as? VexStreamLocalCopyState.Downloaded
 
@@ -90,22 +90,24 @@ internal class VexStreamPlaybackSourceResolver(
                     return null
                 }
 
-        val clipping =
-            MediaItem.ClippingConfiguration.Builder()
-                .setStartPositionMs(
-                    (state.track.playbackStartSeconds * 1000.0)
-                        .toLong(),
-                )
-                .apply {
-                    state.track.playbackEndSeconds?.let { end ->
-                        setEndPositionMs(
-                            (end * 1000.0).toLong(),
-                        )
-                    }
+        val playbackStartMs =
+            (
+                state.track.playbackStartSeconds *
+                    1000.0
+            )
+                .toLong()
+        val playbackEndMs =
+            state.track
+                .playbackEndSeconds
+                ?.let { end ->
+                    (
+                        end *
+                            1000.0
+                    )
+                        .toLong()
                 }
-                .build()
 
-        val artworkUri =
+        val artworkRef =
             artworkStore
                 .fileFor(
                     state.track,
@@ -113,30 +115,30 @@ internal class VexStreamPlaybackSourceResolver(
                 ?.let(
                     Uri::fromFile,
                 )
+                ?.toString()
                 ?: state.track
                     .artworkUrl
-                    ?.let(
-                        Uri::parse,
-                    )
 
-        return MediaItem.Builder()
-            .setMediaId(state.track.trackRef.value)
-            .setUri(uri)
-            .setMimeType(MimeTypes.AUDIO_MPEG)
-            .setMediaMetadata(
-                MediaMetadata.Builder()
-                    .setTitle(state.track.title)
-                    .setArtist(state.track.artist)
-                    .setAlbumTitle(state.track.album)
-                    .apply {
-                        artworkUri?.let(
-                            ::setArtworkUri,
-                        )
-                    }
-                    .build(),
-            )
-            .setClippingConfiguration(clipping)
-            .build()
+        return VexStreamPlayerPartner.Media(
+            mediaId =
+                state.track.trackRef.value,
+            sourceRef =
+                uri.toString(),
+            mimeType =
+                "audio/mpeg",
+            title =
+                state.track.title,
+            artist =
+                state.track.artist,
+            album =
+                state.track.album,
+            artworkRef =
+                artworkRef,
+            playbackStartMs =
+                playbackStartMs,
+            playbackEndMs =
+                playbackEndMs,
+        )
     }
 }
 

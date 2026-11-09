@@ -1,22 +1,20 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
+import com.vextreme.vexlife.android.vexstream.VexStreamMusicViewModel
+
 import android.util.Log
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.media3.common.C
-import androidx.media3.common.Player
-import androidx.media3.session.MediaController
-import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueProjection
-import com.vextreme.vexlife.android.vexstream.queue.toVexStreamQueueProjection
+import androidx.compose.runtime.rememberUpdatedState
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import java.util.concurrent.atomic.AtomicLong
-import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Provider-derived Playback read data used by view-facing DisplayState.
@@ -29,9 +27,9 @@ internal data class VexStreamPlaybackReadState(
     val currentTitle: String = "",
     val currentArtist: String = "",
     val currentArtworkUri: String? = null,
-    val queueMediaIds:
-        List<String> =
-        emptyList(),
+    val queueSize:
+        Int =
+        0,
     val currentIndex: Int = -1,
     val currentPositionMs: Long = 0L,
     val durationMs: Long = 0L,
@@ -39,7 +37,8 @@ internal data class VexStreamPlaybackReadState(
 ) {
     val hasQueue: Boolean
         get() =
-            queueMediaIds.isNotEmpty()
+            queueSize >
+                0
 
     val progressFraction: Float
         get() =
@@ -82,21 +81,6 @@ internal data class VexStreamPlaybackReadState(
             VexStreamPlaybackReadState()
     }
 }
-
-/**
- * One provider-observed playback snapshot.
- *
- * Media3 Player / MediaSession remains canonical truth. This value only composes the read facts and
- * existing Playback / Queue projections that remote or in-app surfaces need to render one moment.
- */
-internal data class VexStreamCurrentPlaybackObservation(
-    val readState:
-        VexStreamPlaybackReadState,
-    val playbackProjection:
-        VexStreamPlaybackProjection,
-    val queueProjection:
-        VexStreamQueueProjection,
-)
 
 /**
  * Feature-local live diagnostic trace for the current-playback projection chain.
@@ -275,257 +259,101 @@ internal object VexStreamPlaybackTrace {
             )
 }
 
-/**
- * Playback-lifetime observation interface.
- *
- * Consumers depend on the immutable observation stream rather than independently timing provider
- * reads. The observer owns only Media3 listener registration; it does not own playback State.
- */
-internal interface VexStreamCurrentPlaybackObserver :
-    AutoCloseable {
-    val observations:
-        StateFlow<
-            VexStreamCurrentPlaybackObservation
-        >
-}
-
-/**
- * Media3 realization of the current-playback observer.
- *
- * Player.Listener callbacks run on the Player application looper. Each callback reconciles provider
- * reality into the one process-shared Playback Family before projecting the complete observation.
- * UI, Widget, Service, and Relay consumers therefore see the same semantic State.
- */
-internal class Media3VexStreamCurrentPlaybackObserver(
-    private val player:
-        Player,
-    private val playbackFamily:
-        VexStreamPlaybackFamily,
-) :
-    VexStreamCurrentPlaybackObserver {
-    private val mutableObservations =
-        MutableStateFlow(
-            player
-                .toVexStreamCurrentPlaybackObservation(
-                    playbackFamily,
-                ),
-        )
-
-    override val observations:
-        StateFlow<
-            VexStreamCurrentPlaybackObservation
-        > =
-        mutableObservations
-            .asStateFlow()
-
-    private val listener =
-        object :
-            Player.Listener {
-            override fun onEvents(
-                player: Player,
-                events: Player.Events,
-            ) {
-                val observed =
-                    player
-                        .toVexStreamCurrentPlaybackObservation(
-                            playbackFamily,
-                        )
-                val changed =
-                    mutableObservations.value !=
-                        observed
-
-                VexStreamPlaybackTrace.record(
-                    stage =
-                        "observer.event",
-                    mediaId =
-                        observed.readState
-                            .currentMediaId,
-                    title =
-                        observed.readState
-                            .currentTitle,
-                    artist =
-                        observed.readState
-                            .currentArtist,
-                    detail =
-                        "changed=$changed " +
-                            "index=${observed.readState.currentIndex} " +
-                            "playerState=${player.playbackState} " +
-                            "playWhenReady=${player.playWhenReady}",
-                )
-
-                if (
-                    changed
-                ) {
-                    mutableObservations.value =
-                        observed
-                    VexStreamPlaybackTrace.record(
-                        stage =
-                            "observer.emit",
-                        mediaId =
-                            observed.readState
-                                .currentMediaId,
-                        title =
-                            observed.readState
-                                .currentTitle,
-                        artist =
-                            observed.readState
-                                .currentArtist,
-                    )
-                }
-            }
-        }
-
-    init {
-        val initial =
-            mutableObservations.value
-        VexStreamPlaybackTrace.record(
-            stage =
-                "observer.start",
-            mediaId =
-                initial.readState
-                    .currentMediaId,
-            title =
-                initial.readState
-                    .currentTitle,
-            artist =
-                initial.readState
-                    .currentArtist,
-        )
-        player.addListener(
-            listener,
-        )
-    }
-
-    override fun close() {
-        VexStreamPlaybackTrace.record(
-            stage =
-                "observer.close",
-        )
-        player.removeListener(
-            listener,
-        )
-    }
-}
-
-internal fun Player.toVexStreamCurrentPlaybackObservation(
-    playbackFamily:
-        VexStreamPlaybackFamily,
+private fun VexStreamPlayerStore.Snapshot.toVexStreamPlaybackReadState(
+    progress:
+        VexStreamPlayerPartner.Connection.Progress.Snapshot =
+        VexStreamPlayerPartner.Connection.Progress.Snapshot.Empty,
 ):
-    VexStreamCurrentPlaybackObservation {
-    val reconciled =
-        reconcileVexStreamPlaybackObservation(
-            observed =
-                toVexStreamPlaybackState(),
-            current =
-                playbackFamily
-                    .currentState,
-        )
+    VexStreamPlaybackReadState =
+    when (
+        this
+    ) {
+        VexStreamPlayerStore.Snapshot.Unavailable ->
+            VexStreamPlaybackReadState.Empty
 
-    playbackFamily.observe(
-        reconciled,
-    )
-
-    return VexStreamCurrentPlaybackObservation(
-        readState =
-            toVexStreamPlaybackReadState(),
-        playbackProjection =
-            playbackFamily
-                .currentPlaybackProjection,
-        queueProjection =
-            toVexStreamQueueProjection(),
-    )
-}
+        is VexStreamPlayerStore.Snapshot.Available ->
+            VexStreamPlaybackReadState(
+                currentMediaId =
+                    currentMedia.mediaId,
+                currentTitle =
+                    currentMedia.title,
+                currentArtist =
+                    currentMedia.artist,
+                currentArtworkUri =
+                    currentMedia.artworkUri,
+                queueSize =
+                    queueItems.mediaIds
+                        .size,
+                currentIndex =
+                    queueNavigation.currentIndex,
+                currentPositionMs =
+                    progress.positionMs,
+                durationMs =
+                    progress.durationMs,
+                bufferedPositionMs =
+                    progress.bufferedPositionMs,
+            )
+    }
 
 @Composable
-internal fun rememberVexStreamPlaybackReadState(
-    controller:
-        MediaController?,
-): State<
-    VexStreamPlaybackReadState
-> {
-    val projected =
+internal fun rememberVexStreamPlaybackReadState():
+    State<
+        VexStreamPlaybackReadState
+    > {
+    val owner:
+        VexStreamMusicViewModel =
+        viewModel()
+    val playerCurrent by
+        owner
+            .playerStore
+            .states
+            .collectAsStateWithLifecycle(
+                initialValue =
+                    owner
+                        .playerStore
+                        .current,
+            )
+    val progressConnection =
+        owner.progressConnection
+    val progress =
         remember(
-            controller,
+            progressConnection,
         ) {
             mutableStateOf(
-                controller
-                    ?.toVexStreamPlaybackReadState()
-                    ?: VexStreamPlaybackReadState
-                        .Empty,
+                progressConnection
+                    ?.readProgress()
+                    ?: VexStreamPlayerPartner.Connection.Progress.Snapshot.Empty,
             )
         }
 
-    DisposableEffect(
-        controller,
+    LaunchedEffect(
+        playerCurrent,
+        progressConnection,
     ) {
-        if (
-            controller == null
-        ) {
-            projected.value =
-                VexStreamPlaybackReadState
-                    .Empty
-            return@DisposableEffect onDispose {}
-        }
-
-        val listener =
-            object :
-                Player.Listener {
-                override fun onEvents(
-                    player: Player,
-                    events:
-                        Player.Events,
-                ) {
-                    val current =
-                        player
-                            .toVexStreamPlaybackReadState()
-                    projected.value =
-                        current
-                    VexStreamPlaybackTrace.record(
-                        stage =
-                            "full-player.event",
-                        mediaId =
-                            current.currentMediaId,
-                        title =
-                            current.currentTitle,
-                        artist =
-                            current.currentArtist,
-                        detail =
-                            "index=${current.currentIndex}",
-                    )
-                }
-            }
-
-        controller.addListener(
-            listener,
-        )
-        projected.value =
-            controller
-                .toVexStreamPlaybackReadState()
-
-        onDispose {
-            controller.removeListener(
-                listener,
-            )
-        }
+        progress.value =
+            progressConnection
+                ?.readProgress()
+                ?: VexStreamPlayerPartner.Connection.Progress.Snapshot.Empty
     }
 
     LaunchedEffect(
-        controller,
+        progressConnection,
     ) {
         if (
-            controller == null
+            progressConnection ==
+            null
         ) {
             return@LaunchedEffect
         }
 
         while (true) {
-            projected.value =
-                controller
-                    .toVexStreamPlaybackReadState()
+            progress.value =
+                progressConnection
+                    .readProgress()
 
             delay(
                 if (
-                    controller.isPlaying
+                    progressConnection.isPlaying
                 ) {
                     250L
                 } else {
@@ -535,96 +363,11 @@ internal fun rememberVexStreamPlaybackReadState(
         }
     }
 
-    return projected
-}
-
-internal fun Player
-    .toVexStreamPlaybackReadState():
-    VexStreamPlaybackReadState {
-    val current =
-        currentMediaItem
-
-    val durationMs =
-        duration.takeIf {
-            it != C.TIME_UNSET &&
-                it > 0L
-        } ?: 0L
-
-    val positionMs =
-        currentPosition
-            .coerceAtLeast(
-                0L,
-            )
-            .let {
-                if (
-                    durationMs > 0L
-                ) {
-                    it.coerceAtMost(
-                        durationMs,
-                    )
-                } else {
-                    it
-                }
-            }
-
-    val bufferedMs =
-        bufferedPosition
-            .coerceAtLeast(
-                0L,
-            )
-            .let {
-                if (
-                    durationMs > 0L
-                ) {
-                    it.coerceAtMost(
-                        durationMs,
-                    )
-                } else {
-                    it
-                }
-            }
-
-    return VexStreamPlaybackReadState(
-        currentMediaId =
-            current?.mediaId,
-        currentTitle =
-            current
-                ?.mediaMetadata
-                ?.title
-                ?.toString()
-                .orEmpty(),
-        currentArtist =
-            current
-                ?.mediaMetadata
-                ?.artist
-                ?.toString()
-                .orEmpty(),
-        currentArtworkUri =
-            current
-                ?.mediaMetadata
-                ?.artworkUri
-                ?.toString(),
-        queueMediaIds =
-            (0 until mediaItemCount)
-                .map { index ->
-                    getMediaItemAt(
-                        index,
-                    ).mediaId
-                },
-        currentIndex =
-            if (
-                mediaItemCount > 0
-            ) {
-                currentMediaItemIndex
-            } else {
-                -1
-            },
-        currentPositionMs =
-            positionMs,
-        durationMs =
-            durationMs,
-        bufferedPositionMs =
-            bufferedMs,
+    return rememberUpdatedState(
+        playerCurrent
+            .toVexStreamPlaybackReadState(
+                progress.value,
+            ),
     )
 }
 

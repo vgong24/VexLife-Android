@@ -881,6 +881,43 @@ abstract class VexFamily<
     }
 
     /**
+     * Reconcile one Family-owned cause against exact CURRENT State and publish the resulting semantic
+     * State through the same serialized decision boundary used by Control activation.
+     *
+     * The Family supplies CURRENT + serialization only. The concrete feature supplies the
+     * non-suspending reconciliation meaning. No generic revision/generation oracle is invented here.
+     */
+    protected fun admitCurrent(
+        reconcile:
+            (
+                currentState:
+                    FamilyState,
+            ) -> FamilyState,
+    ):
+        FamilyState =
+        synchronized(
+            stateLock,
+        ) {
+            val current =
+                stateRelay.value
+            val next =
+                reconcile(
+                    current,
+                )
+
+            if (
+                next !=
+                current
+            ) {
+                setCurrentStateLocked(
+                    next,
+                )
+            }
+
+            stateRelay.value
+        }
+
+    /**
      * Publish already-reconciled semantic reality.
      *
      * This is intentionally not a current-State callback and not a second decision DSL. The caller

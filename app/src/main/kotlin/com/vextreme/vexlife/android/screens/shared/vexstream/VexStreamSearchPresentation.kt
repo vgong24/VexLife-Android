@@ -18,7 +18,7 @@ import com.vextreme.vexlife.android.elements.VexText
 import com.vextreme.vexlife.android.elements.VexTextField
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCopyConnection
-import com.vextreme.vexlife.android.vexstream.track.rememberVexStreamTrackPlaybackConnection
+import com.vextreme.vexlife.android.vexstream.track.rememberVexStreamTrackPlayback
 
 /**
  * Search presentation for the VexStream library.
@@ -32,15 +32,13 @@ internal fun VexStreamSearchSheet(
     runtime: VexRuntime,
     tracks: List<VexStreamTrackState>,
     offlineCopyConnection: VexStreamOfflineCopyConnection?,
-    controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
     query: String,
     onQueryChange: (String) -> Unit,
     onVisitArtist: (String) -> Unit,
 ) {
     val trackPlaybackConnection =
-        rememberVexStreamTrackPlaybackConnection(
-            controller = controller,
+        rememberVexStreamTrackPlayback(
             resolver = resolver,
         )
 

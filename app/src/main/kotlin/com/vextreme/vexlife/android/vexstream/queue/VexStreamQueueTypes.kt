@@ -1,23 +1,45 @@
 package com.vextreme.vexlife.android.vexstream.queue
 
-import com.vextreme.vexlife.android.behavior.VexBehaviorProjection
-import com.vextreme.vexlife.android.behavior.VexPort
+internal data class VexStreamQueueControlProjection(
+    val isAvailable:
+        Boolean,
+)
 
-/** Feature-local names keep foundation generic weight out of ordinary Queue callers. */
-internal typealias VexStreamQueueConnection =
-    VexPort<
-        VexStreamQueueFamily,
+internal data class VexStreamQueueProjection(
+    val state:
         VexStreamQueueState,
-        VexStreamQueueControl,
-        VexStreamQueueAct
-    >
+    val previousAvailable:
+        Boolean,
+    val nextAvailable:
+        Boolean,
+    val shuffleAvailable:
+        Boolean,
+    val clearAvailable:
+        Boolean,
+) {
+    operator fun get(
+        control:
+            VexStreamQueueControl,
+    ):
+        VexStreamQueueControlProjection =
+        VexStreamQueueControlProjection(
+            isAvailable =
+                when (
+                    control
+                ) {
+                    VexStreamQueueControl.Previous ->
+                        previousAvailable
 
-internal typealias VexStreamQueueProjection =
-    VexBehaviorProjection<
-        VexStreamQueueFamily,
-        VexStreamQueueState,
-        VexStreamQueueControl,
-        VexStreamQueueAct
-    >
+                    VexStreamQueueControl.Next ->
+                        nextAvailable
 
-// [VXG RealForever]
+                    VexStreamQueueControl.Shuffle ->
+                        shuffleAvailable
+
+                    VexStreamQueueControl.Clear ->
+                        clearAvailable
+                },
+        )
+}
+
+// [VXG RealForever][VEXSTREAM][QUEUE][DIRECT-FAMILY]
