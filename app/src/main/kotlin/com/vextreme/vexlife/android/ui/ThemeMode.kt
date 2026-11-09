@@ -482,12 +482,13 @@ internal fun activateThemeMode(
                         effect,
                 )
 
-            act.launch(
-                executionRoot =
-                    executionRoot,
-                method =
-                    method,
-                beforeOperation = {
+            val job =
+                act.launch(
+                    executionRoot =
+                        executionRoot,
+                    method =
+                        method,
+                    beforeOperation = {
                         recordThemeModeFact(
                             logger =
                                 logger,
@@ -509,9 +510,6 @@ internal fun activateThemeMode(
                             result
                         ) {
                             is VexMethod.Result.Success -> {
-                                family.selectionRealizationFinished(
-                                    effect.mode,
-                                )
                                 recordThemeModeFact(
                                     logger =
                                         logger,
@@ -538,9 +536,6 @@ internal fun activateThemeMode(
                             }
 
                             is VexMethod.Result.Failure -> {
-                                family.selectionRealizationFinished(
-                                    effect.mode,
-                                )
                                 recordThemeModeFact(
                                     logger =
                                         logger,
@@ -560,9 +555,6 @@ internal fun activateThemeMode(
                             }
 
                             is VexMethod.Result.Error -> {
-                                family.selectionRealizationFinished(
-                                    effect.mode,
-                                )
                                 recordThemeModeFact(
                                     logger =
                                         logger,
@@ -583,8 +575,14 @@ internal fun activateThemeMode(
                                 )
                             }
                         }
-                },
-            )
+                    },
+                )
+
+            job.invokeOnCompletion {
+                family.selectionRealizationFinished(
+                    effect.mode,
+                )
+            }
         }
     }
 
