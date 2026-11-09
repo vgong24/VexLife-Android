@@ -481,6 +481,11 @@ internal class VexStreamPlayerObservationReceiver(
         VexStreamPlayerStore,
     private val playbackFamily:
         VexStreamPlaybackFamily,
+    private val onAcceptedCurrent:
+        (
+            VexStreamPlayerPartner.Current,
+            VexStreamPlaybackState,
+        ) -> Unit = { _, _ -> },
 ) :
     VexPartner.Connection.Receiver<
         VexStreamPlayerPartner,
@@ -506,8 +511,13 @@ internal class VexStreamPlayerObservationReceiver(
         if (
             admission.accepted
         ) {
-            reconcilePlayback(
+            val familyState =
+                reconcilePlayback(
+                    admission.current,
+                )
+            onAcceptedCurrent(
                 admission.current,
+                familyState,
             )
         }
     }
@@ -526,13 +536,21 @@ internal class VexStreamPlayerObservationReceiver(
         if (
             admission.accepted
         ) {
-            observations
-                .lastSignal<
-                    VexStreamPlayerPartner.Signal.Playback
-                >()
-                ?.let(
-                    ::reconcilePlayback,
-                )
+            val familyState =
+                observations
+                    .lastSignal<
+                        VexStreamPlayerPartner.Signal.Playback
+                    >()
+                    ?.let(
+                        ::reconcilePlayback,
+                    )
+                    ?: playbackFamily
+                        .currentState
+
+            onAcceptedCurrent(
+                admission.current,
+                familyState,
+            )
         }
     }
 
@@ -559,18 +577,24 @@ internal class VexStreamPlayerObservationReceiver(
         if (
             admission.accepted
         ) {
-            playbackFamily
-                .observe(
-                    VexStreamPlaybackState
-                        .NoMedia,
-                )
+            val familyState =
+                playbackFamily
+                    .observe(
+                        VexStreamPlaybackState
+                            .NoMedia,
+                    )
+            onAcceptedCurrent(
+                admission.current,
+                familyState,
+            )
         }
     }
 
     private fun reconcilePlayback(
         current:
             VexStreamPlayerPartner.Current,
-    ) {
+    ):
+        VexStreamPlaybackState =
         (
             current as?
                 VexStreamPlayerPartner.Current.Available
@@ -579,18 +603,20 @@ internal class VexStreamPlayerObservationReceiver(
             ?.let(
                 ::reconcilePlayback,
             )
-    }
+            ?: playbackFamily
+                .currentState
 
     private fun reconcilePlayback(
         signal:
             VexStreamPlayerPartner.Signal.Playback,
-    ) {
+    ):
+        VexStreamPlaybackState =
         playbackFamily
             .observe(
                 reconcileVexStreamPlaybackObservation(
                     observed =
                         signal
-                            .toVexStreamObservedPlaybackState(),
+                            .toObservedPlaybackState(),
                     current =
                         playbackFamily
                             .currentState,
@@ -599,7 +625,7 @@ internal class VexStreamPlayerObservationReceiver(
     }
 }
 
-internal fun VexStreamPlayerPartner.Signal.Playback.toVexStreamObservedPlaybackState():
+private fun VexStreamPlayerPartner.Signal.Playback.toObservedPlaybackState():
     VexStreamPlaybackState {
     if (
         !hasMedia

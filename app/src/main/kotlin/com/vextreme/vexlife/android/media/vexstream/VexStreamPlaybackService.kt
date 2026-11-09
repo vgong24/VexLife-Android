@@ -67,14 +67,6 @@ class VexStreamPlaybackService :
         this.playbackFamily =
             playbackFamily
 
-        val playerStore =
-            vexApplication
-                .dependencies
-                .resolve(
-                    vexApplication
-                        .dependencyModule
-                        .playerStore,
-                )
         val processExecutionRoot =
             vexApplication
                 .dependencies
@@ -118,12 +110,13 @@ class VexStreamPlaybackService :
         )
 
         val playerReceiver =
-            VexStreamPlayerObservationReceiver(
-                store =
-                    playerStore,
-                playbackFamily =
-                    playbackFamily,
-            )
+            vexApplication
+                .dependencies
+                .resolve(
+                    vexApplication
+                        .dependencyModule
+                        .playerObservationReceiver,
+                )
         val playerConnection =
             Media3VexStreamPlayerConnection(
                 player =

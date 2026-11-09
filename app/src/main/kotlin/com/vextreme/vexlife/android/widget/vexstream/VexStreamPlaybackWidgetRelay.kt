@@ -9,11 +9,9 @@ import com.vextreme.vexlife.android.relay.vexObserveDependencies
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackProjection
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
-import com.vextreme.vexlife.android.vexstream.playback.reconcileVexStreamPlaybackObservation
 import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackProjectionFor
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
-import com.vextreme.vexlife.android.vexstream.player.toVexStreamObservedPlaybackState
 import com.vextreme.vexlife.android.widget.VexWidget
 
 /**
@@ -126,11 +124,10 @@ internal data class VexStreamPlaybackWidgetRelayOutputState(
 /**
  * Playback Widget relationship current over bounded Player Store + Playback Family truth.
  *
- * The Relay observes each rightful owner independently, but it does not publish a naive latest/latest
- * pair. Every reevaluation folds the retained Player Playback Signal through the exact same
- * reconciliation law used when provider truth returns to the Family. A pending newer Control
- * therefore survives a stale provider statement, while provider acknowledgement can clear pending
- * meaning before the later equivalent Family emission arrives.
+ * Family-only semantic changes arrive through the Family State flow. Provider-origin changes enter
+ * through [admitProviderRoundTrip] only after the Player Store has admitted the occurrence and the
+ * Playback Family has reconciled it. The Relay therefore composes exact rightful currents rather than
+ * predicting another owner's next State or publishing a naive latest/latest pair.
  */
 internal class VexStreamPlaybackWidgetRelay(
     executionRoot:
@@ -174,19 +171,6 @@ internal class VexStreamPlaybackWidgetRelay(
             > {
                 observe(
                     dependencyRef =
-                        "player.current",
-                    flow =
-                        playerStore.states,
-                ) { current ->
-                    VexStreamPlaybackWidgetRelayInputState(
-                        player =
-                            current
-                                .toVexStreamPlaybackWidgetPlayerInput(),
-                    )
-                }
-
-                observe(
-                    dependencyRef =
                         "playback.family.current",
                     flow =
                         playbackFamily.states,
@@ -204,6 +188,24 @@ internal class VexStreamPlaybackWidgetRelay(
     > {
     init {
         startObservedDependencies()
+    }
+
+    internal fun admitProviderRoundTrip(
+        playerCurrent:
+            VexStreamPlayerPartner.Current,
+        familyState:
+            VexStreamPlaybackState,
+    ) {
+        send(
+            VexStreamPlaybackWidgetRelayInputState(
+                player =
+                    playerCurrent
+                        .toVexStreamPlaybackWidgetPlayerInput(),
+                playback =
+                    familyState
+                        .deepCopyForWidgetRelay(),
+            ),
+        )
     }
 
     override fun processStates(
@@ -260,19 +262,6 @@ internal fun vexStreamPlaybackWidgetRelayOutput(
         VexStreamPlaybackState,
 ):
     VexStreamPlaybackWidgetRelayOutputState {
-    val coherentPlayback =
-        player.playback
-            ?.let { observed ->
-                reconcileVexStreamPlaybackObservation(
-                    observed =
-                        observed
-                            .toVexStreamObservedPlaybackState(),
-                    current =
-                        familyState,
-                )
-            }
-            ?: VexStreamPlaybackState.NoMedia
-
     return VexStreamPlaybackWidgetRelayOutputState(
         mediaId =
             player.mediaId,
@@ -286,7 +275,7 @@ internal fun vexStreamPlaybackWidgetRelayOutput(
             player.previousAvailable,
         playback =
             vexStreamPlaybackProjectionFor(
-                coherentPlayback,
+                familyState,
             ),
         nextEnabled =
             player.nextAvailable,

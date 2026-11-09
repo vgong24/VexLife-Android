@@ -16,6 +16,7 @@ import com.vextreme.vexlife.android.screens.shared.maps.VexNavigationSession
 import com.vextreme.vexlife.android.ui.SharedPreferencesThemeModeStore
 import com.vextreme.vexlife.android.ui.ThemeModeStore
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerObservationReceiver
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
 import com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetRelay
 import com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetUpdateExecution
@@ -153,6 +154,16 @@ internal class VexApplicationDependencyModule(
                 playbackFamily,
         )
 
+    val playerObservationReceiver =
+        PlayerObservationReceiverProvider(
+            playerStore =
+                playerStore,
+            playbackFamily =
+                playbackFamily,
+            playbackWidgetRelay =
+                playbackWidgetRelay,
+        )
+
     val playbackWidgetUpdateExecution =
         PlaybackWidgetUpdateExecutionProvider(
             application =
@@ -176,6 +187,7 @@ internal class VexApplicationDependencyModule(
             navigationSession,
             backgroundServiceRelay,
             playbackWidgetRelay,
+            playerObservationReceiver,
             playbackWidgetUpdateExecution,
         )
 
@@ -415,6 +427,70 @@ internal class VexApplicationDependencyModule(
                         playbackFamily,
                     ),
             )
+    }
+
+    /**
+     * Process-lived Player Observation admission plus post-Family-reconciliation projection handoff.
+     *
+     * Composition wires the accepted round trip to the Playback Widget Relay without making Player
+     * or Playback source code depend on Widget.
+     */
+    internal class PlayerObservationReceiverProvider(
+        private val playerStore:
+            VexDependencyProvider<
+                VexStreamPlayerStore
+            >,
+        private val playbackFamily:
+            VexDependencyProvider<
+                VexStreamPlaybackFamily
+            >,
+        private val playbackWidgetRelay:
+            VexDependencyProvider<
+                VexStreamPlaybackWidgetRelay
+            >,
+    ) :
+        VexDependencyProvider<
+            VexStreamPlayerObservationReceiver
+        >(
+            dependencies =
+                listOf(
+                    playerStore,
+                    playbackFamily,
+                    playbackWidgetRelay,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexStreamPlayerObservationReceiver {
+            val relay =
+                dependencies.require(
+                    playbackWidgetRelay,
+                )
+
+            return VexStreamPlayerObservationReceiver(
+                store =
+                    dependencies.require(
+                        playerStore,
+                    ),
+                playbackFamily =
+                    dependencies.require(
+                        playbackFamily,
+                    ),
+                onAcceptedCurrent = {
+                        playerCurrent,
+                        familyState,
+                        ->
+                    relay.admitProviderRoundTrip(
+                        playerCurrent =
+                            playerCurrent,
+                        familyState =
+                            familyState,
+                    )
+                },
+            )
+        }
     }
 
     /**

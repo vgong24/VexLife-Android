@@ -3,6 +3,7 @@ package com.vextreme.vexlife.android.widget.vexstream
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackPhase
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -10,7 +11,41 @@ import org.junit.Test
 
 class VexStreamPlaybackWidgetRelayTest {
     @Test
-    fun pendingFamilyIntentSurvivesAStalePlayerStatement() {
+    fun relayOutputPreservesTheExactFamilyCurrentInsteadOfReinterpretingPlayerSignal() {
+        val familyState =
+            VexStreamPlaybackState.Media(
+                playRequested = true,
+                requestPending = true,
+                phase =
+                    VexStreamPlaybackPhase.Ready,
+                playPauseAvailable = true,
+            )
+
+        val output =
+            vexStreamPlaybackWidgetRelayOutput(
+                player =
+                    playerInput(
+                        playRequested =
+                            false,
+                    ),
+                familyState =
+                    familyState,
+            )
+
+        assertSame(
+            familyState,
+            output.playback.state,
+        )
+        assertTrue(
+            (
+                output.playback.state as
+                    VexStreamPlaybackState.Media
+            ).requestPending,
+        )
+    }
+
+    @Test
+    fun playerOriginContributesOnlyTheBoundedWidgetFacts() {
         val output =
             vexStreamPlaybackWidgetRelayOutput(
                 player =
@@ -20,23 +55,20 @@ class VexStreamPlaybackWidgetRelayTest {
                     ),
                 familyState =
                     VexStreamPlaybackState.Media(
-                        playRequested = true,
-                        requestPending = true,
+                        playRequested = false,
                         phase =
                             VexStreamPlaybackPhase.Ready,
                         playPauseAvailable = true,
                     ),
             )
 
-        val state =
-            output.playback.state as
-                VexStreamPlaybackState.Media
-
-        assertTrue(
-            state.playRequested,
+        assertEquals(
+            "track-1",
+            output.mediaId,
         )
-        assertTrue(
-            state.requestPending,
+        assertEquals(
+            "Track 1",
+            output.title,
         )
         assertTrue(
             output.previousEnabled,
@@ -47,7 +79,7 @@ class VexStreamPlaybackWidgetRelayTest {
     }
 
     @Test
-    fun matchingPlayerAcknowledgementClearsPendingInTheRelayOutput() {
+    fun familyNoMediaRemainsAuthoritativeEvenIfPlayerInputStillHasMedia() {
         val output =
             vexStreamPlaybackWidgetRelayOutput(
                 player =
@@ -56,42 +88,7 @@ class VexStreamPlaybackWidgetRelayTest {
                             true,
                     ),
                 familyState =
-                    VexStreamPlaybackState.Media(
-                        playRequested = true,
-                        requestPending = true,
-                        phase =
-                            VexStreamPlaybackPhase.Buffering,
-                        playPauseAvailable = true,
-                    ),
-            )
-
-        val state =
-            output.playback.state as
-                VexStreamPlaybackState.Media
-
-        assertTrue(
-            state.playRequested,
-        )
-        assertFalse(
-            state.requestPending,
-        )
-    }
-
-    @Test
-    fun unavailablePlayerSealsTheWidgetRelationshipAsNoMedia() {
-        val output =
-            vexStreamPlaybackWidgetRelayOutput(
-                player =
-                    VexStreamPlaybackWidgetPlayerInput
-                        .Unavailable,
-                familyState =
-                    VexStreamPlaybackState.Media(
-                        playRequested = true,
-                        requestPending = true,
-                        phase =
-                            VexStreamPlaybackPhase.Ready,
-                        playPauseAvailable = true,
-                    ),
+                    VexStreamPlaybackState.NoMedia,
             )
 
         assertSame(

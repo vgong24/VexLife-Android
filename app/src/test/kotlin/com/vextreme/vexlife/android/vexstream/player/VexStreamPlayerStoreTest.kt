@@ -1,5 +1,8 @@
 package com.vextreme.vexlife.android.vexstream.player
 
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackPhase
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.take
@@ -14,6 +17,91 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VexStreamPlayerStoreTest {
+    @Test
+    fun receiverHandsOffCurrentOnlyAfterPlaybackFamilyReconciliation() =
+        runBlocking {
+            val store =
+                VexStreamPlayerStore()
+            val family =
+                VexStreamPlaybackFamily(
+                    VexStreamPlaybackState.Media(
+                        playRequested = true,
+                        requestPending = true,
+                        phase =
+                            VexStreamPlaybackPhase.Ready,
+                        playPauseAvailable = true,
+                    ),
+                )
+            var handedOff:
+                Pair<
+                    VexStreamPlayerPartner.Current,
+                    VexStreamPlaybackState
+                >? =
+                null
+            val receiver =
+                VexStreamPlayerObservationReceiver(
+                    store =
+                        store,
+                    playbackFamily =
+                        family,
+                    onAcceptedCurrent = {
+                            current,
+                            familyState,
+                            ->
+                        handedOff =
+                            current to
+                                familyState
+                    },
+                )
+            val connectionId =
+                id(
+                    value =
+                        "connection-a",
+                    occurrence =
+                        1L,
+                )
+
+            receiver.connectionOpened(
+                connectionId =
+                    connectionId,
+                observations =
+                    observations(
+                        id =
+                            connectionId,
+                        signals =
+                            completeSignals(
+                                playback =
+                                    playback(
+                                        playRequested =
+                                            false,
+                                    ),
+                            ),
+                    ),
+            )
+
+            val accepted =
+                requireNotNull(
+                    handedOff,
+                )
+            assertEquals(
+                store.current,
+                accepted.first,
+            )
+            assertEquals(
+                family.currentState,
+                accepted.second,
+            )
+            val state =
+                accepted.second as
+                    VexStreamPlaybackState.Media
+            assertTrue(
+                state.playRequested,
+            )
+            assertTrue(
+                state.requestPending,
+            )
+        }
+
     @Test
     fun oneProviderOccurrenceConvergesSeveralFacetSignalsIntoOneCurrentEmission() =
         runBlocking {
