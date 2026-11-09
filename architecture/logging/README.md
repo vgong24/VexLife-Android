@@ -142,9 +142,10 @@ accepted Act
 ~~~
 
 The concrete realization boundary forms those facts because it knows the exact Control/Effect,
-provider result meaning, and currentness policy. ThemeMode is the current complete example. A feature
-may omit a semantic/runtime Logger event when no consumer or proof requires it; omission is not
-permission to create a feature-local chronology root.
+provider result meaning, and currentness policy. ThemeMode is the current complete example. Record the
+independently meaningful accepted/observed facts required by the product and proof; do not turn every
+internal function step into exhaust. Missing a required fact must be repaired at its rightful boundary,
+not compensated for with a feature-local chronology root.
 
 For process-lived Services/widgets, first resolve which canonical Logger lifetime should receive the
 fact. Do not inject a session Logger into a longer-lived process owner by convenience, and do not mint
