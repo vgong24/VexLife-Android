@@ -339,7 +339,12 @@ abstract class VexFamily<
             private val realizationAdmission:
                 (
                     VexExecutionRoot,
-                    () -> Job
+                    (
+                        Begin<
+                            Family,
+                            Effect
+                        >
+                    ) -> Job
                 ) -> Job?,
         ) where
             Family : VexFamily<
@@ -356,6 +361,13 @@ abstract class VexFamily<
                 get() =
                     authored.admittedState
 
+            /**
+             * Live preparation view of the authored Begin that still requires a new occurrence.
+             *
+             * This view may become null before custody (for example Latest supersession). [launch]
+             * independently re-checks the live admission boundary atomically; callers must not treat
+             * an earlier non-null read as custody authority.
+             */
             val realizationBegin:
                 Begin<
                     Family,
@@ -393,20 +405,17 @@ abstract class VexFamily<
                     ) -> Unit =
                     {},
             ):
-                Job? {
-                val currentBegin =
-                    realizationBegin
-                        ?: return null
-                check(
-                    method.effect ===
-                        currentBegin.effect,
-                ) {
-                    "Act Method must carry the exact accepted realization Effect"
-                }
-
-                return realizationAdmission(
+                Job? =
+                realizationAdmission(
                     executionRoot,
-                ) {
+                ) { currentBegin ->
+                    check(
+                        method.effect ===
+                            currentBegin.effect,
+                    ) {
+                        "Act Method must carry the exact accepted realization Effect"
+                    }
+
                     VexExecution.begin(
                         executionRoot =
                             executionRoot,
@@ -435,7 +444,6 @@ abstract class VexFamily<
                         },
                     )
                 }
-            }
         }
 
         internal fun acceptedBy(
@@ -452,7 +460,12 @@ abstract class VexFamily<
             realizationAdmission:
                 (
                     VexExecutionRoot,
-                    () -> Job
+                    (
+                        Begin<
+                            Family,
+                            Effect
+                        >
+                    ) -> Job
                 ) -> Job?,
         ):
             Accepted<
@@ -1077,24 +1090,41 @@ abstract class VexFamily<
             val realizationAdmission:
                 (
                     VexExecutionRoot,
-                    () -> Job
+                    (
+                        Act.Begin<
+                            Family,
+                            FamilyEffect
+                        >
+                    ) -> Job
                 ) -> Job? =
-                realizationBinding
-                    ?.let { binding ->
-                        { executionRoot, formJob ->
-                            admitRealization(
-                                binding =
-                                    binding,
-                                executionRoot =
-                                    executionRoot,
-                                formJob =
-                                    formJob,
-                            )
-                        }
+                if (
+                    realizationBinding !=
+                        null &&
+                    authoredBegin !=
+                        null
+                ) {
+                    val binding =
+                        realizationBinding
+                    val begin =
+                        authoredBegin
+
+                    { executionRoot, formJob ->
+                        admitRealization(
+                            binding =
+                                binding,
+                            begin =
+                                begin,
+                            executionRoot =
+                                executionRoot,
+                            formJob =
+                                formJob,
+                        )
                     }
-                    ?: { _, _ ->
+                } else {
+                    { _, _ ->
                         null
                     }
+                }
 
             val accepted =
                 resolved.acceptedBy(
@@ -1125,10 +1155,20 @@ abstract class VexFamily<
     private fun admitRealization(
         binding:
             RealizationBinding,
+        begin:
+            Act.Begin<
+                Family,
+                FamilyEffect
+            >,
         executionRoot:
             VexExecutionRoot,
         formJob:
-            () -> Job,
+            (
+                Act.Begin<
+                    Family,
+                    FamilyEffect
+                >
+            ) -> Job,
     ):
         Job? =
         synchronized(
@@ -1235,7 +1275,9 @@ abstract class VexFamily<
 
             val job =
                 try {
-                    formJob()
+                    formJob(
+                        begin,
+                    )
                 } catch (
                     failure:
                         Throwable,
