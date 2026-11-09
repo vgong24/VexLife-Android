@@ -580,46 +580,45 @@ activate(Control)
 
 and `VexPortFlow` adds a current `StateFlow` projection when observation over time is required.
 
-The current VexStream Play/Pause pressure example now closes the Partner / Family / Execution /
-consumer-relay circuit:
+The current VexStream Play/Pause pressure example keeps the accepted boundaries visible:
 
 ~~~text
 Media3 Player
-    -> Media3VexStreamPlayerConnection : VexExecution
-    -> Partner Signal / Observation
+    -> VexStreamPlayerPartner.Connection
+    -> Conversion
+    -> Signal / Observation
+    -> VexStreamPlayerObservationReceiver
     -> VexStreamPlayerStore CURRENT
-    -> VexStreamPlaybackAdmission
-    -> VexStreamPlaybackFamily CURRENT
+
+VexStreamPlayerStore.playbackSignals
+    -> VexExecution.observe(owner = VexStreamPlaybackFamily)
+    -> VexStreamPlaybackFamily.observePlayer(...)
+    -> reconciled VexStreamPlaybackFamily CURRENT
 
 Control
-    -> VexStreamPlaybackConnectionFactory
     -> PartnerVexStreamPlaybackConnection
-    -> VexStreamPlaybackAdmission
-    -> accepted Family Act + admitted State
-    -> exact consumer relationship admission
+    -> VexStreamPlaybackFamily.activatePlayback(Control)
+    -> accepted Family Act
     -> Act.launchWith(process VexExecutionRoot)
-    -> Family-owned Method
+    -> bound Act.Method
     -> Media3VexStreamPlayerControlConnection
     -> Media3 provider looper
 
-exact Player Store + admitted Family current
+Player Store CURRENT + Playback Family CURRENT
     -> VexStreamPlaybackWidgetRelay
-       -> Widget SurfaceState / Glance
+    -> Widget SurfaceState / Glance
 
-exact Player Store + admitted Family current
-    -> VexStreamPlaybackExperienceRelay
-       -> bounded UI read current / Playback Projection
-       -> Compose
-
-live progress
-    -> concrete Player Progress connection
-    -> layered over Experience Relay current
+Compose
+    -> observes Playback Family semantic State
+    -> observes Player Store read truth
+    -> layers live Player Progress separately
 ~~~
 
-VexStreamPlaybackAdmission owns ordering, not State. The Player Store remains outside truth, Family
-remains semantic truth, each consumer Relay owns only its bounded cross-owner current, and
-VexExecution owns actual Job overlap/custody rather than semantic meaning. Full QueueItems remain
-Store/Queue-owned rather than being copied into Playback consumer Relays.
+The Player Receiver ends at Store admission. Playback-specific stale-provider/current-Control
+reconciliation remains inside the Playback Family, following the concrete-Family currentness pattern
+rather than creating a second admission owner. Widget Relay uses ordinary Compound Relay dependency
+observation. Compose does not gain a second relationship-current owner without a demonstrated need.
+
 
 Control meaning is semantic-first as `Available(Act)` / `Unavailable`; Boolean availability is
 derived convenience. Every authored `on(...)` must explicitly terminate in `.stay()` or

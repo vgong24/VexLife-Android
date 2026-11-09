@@ -11,9 +11,9 @@ The first real consumer is VexStream playback, but this module does not contain 
 
 ## Rooted Widget coordinate
 
-Widget has earned its own reusable root because a remotely hosted interactive surface owns a distinct
-responsibility: durable presentation custody, remote-host realization and stable interaction
-doorways over truth owned elsewhere.
+This draft is evaluating whether Widget has earned a reusable rooted coordinate for the distinct
+remote-surface responsibilities already present in the Widget foundation: durable presentation
+custody, remote-host realization and stable interaction doorways over truth owned elsewhere.
 
 ```text
 VexWidget
@@ -24,11 +24,14 @@ VexWidget
    └─ Ref
 ```
 
-The root does not make Widget a product-State owner. A concrete `Widget.Relay` may reuse
-`VexCompoundRelay` when that Widget genuinely needs to converge bounded CURRENT from independent
-owners. Input origins should remain explicit when ordering matters; the VexStream patient zero uses
-separate post-Family `ProviderRoundTrip` and `FamilyCurrent` admissions rather than racing passive
-owner subscriptions. Relay remains the relationship mechanism; Widget remains the remote-surface owner.
+That rooted tree is candidate architecture in the current PR, not accepted merely because the names
+exist in source. The existing SurfaceState / Projection / ActionRef mechanics remain independently
+inspectable.
+
+A concrete `Widget.Relay` may reuse `VexCompoundRelay` only when the Widget genuinely needs a
+relationship current across independent owners. The VexStream candidate uses the established Relay
+dependency mechanism to observe Player Store CURRENT and Playback Family CURRENT directly; it does
+not add origin-specific admission verbs.
 
 ## Current architecture
 
