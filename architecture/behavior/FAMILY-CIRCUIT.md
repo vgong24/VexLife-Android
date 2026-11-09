@@ -21,10 +21,13 @@ caller
       -> Effect
       -> Independent / Earliest / Latest / Queued
 -> immediate State admission
--> Act returned
+-> Act.Accepted returned
+   -> authored Act preserved
+   -> maintained RelationshipId when required
+   -> realizationBegin? while a new occurrence remains owed
 
 later realization boundary
--> Act.Begin + Act.relationshipId
+-> Act.Accepted.realizationBegin + Act.Accepted.relationshipId
 -> bound Act.Method
    -> specializes VexMethod
 -> VexExecution
@@ -213,14 +216,14 @@ Parameter.Mode(Dark)
 -> beginLatest(Effect.Save(the same Parameter.Mode))
 
 realization boundary
--> accepted Act.begin
+-> Act.Accepted.realizationBegin
    -> exact Effect.Save
    -> authored Approach.Latest
 -> Act.Method.Save(
        ThemeModeStore,
        that exact Effect.Save
    )
--> accepted Act.launch(
+-> Act.Accepted.launch(
        VexExecutionRoot,
        Method.Save
    )
@@ -510,11 +513,13 @@ VexLifeViewModel/session lifetime
 Debug Menu action
 -> ThemeModeFamily.Parameter.Mode
 -> ThemeModeFamily.activate(Control.Select(the same Mode))
--> Act
-   -> immediate State?
-   -> beginLatest(Effect.Save(the same Mode))
+-> Act.Accepted
+   -> authored Act
+      -> immediate State?
+      -> beginLatest(Effect.Save(the same Mode))
+   -> realizationBegin?
 -> Act.Method.Save(ThemeModeStore, the exact accepted Effect.Save)
--> Act.launch(VexExecutionRoot, Method.Save)
+-> Act.Accepted.launch(VexExecutionRoot, Method.Save)
    -> verifies the exact accepted Begin Effect
    -> returns one VexMethod Result form: Success / Failure / Error
    -> consumes already-bound live Family owner

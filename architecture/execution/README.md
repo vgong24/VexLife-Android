@@ -73,8 +73,8 @@ ownership while VexExecution supplies custody:
 VexExecution.begin(
     executionRoot = root,
     owner = family,
-    approach = act.begin.approach,
-    relationshipId = act.relationshipId,
+    approach = accepted.realizationBegin.approach,
+    relationshipId = accepted.relationshipId,
     operation = store::save,
     argument = effect.mode,
 )
@@ -195,9 +195,10 @@ Store observation
 Do not persist the runtime RelationshipId and do not substitute the Partner Connection.Id for it.
 Connection.Id belongs to source/observation provenance; RelationshipId coordinates active Jobs.
 
-Likewise, a Family-authored Pump request uses beginQueued(Effect) -> activate() -> accepted Act
-RelationshipId -> exact Effect-bound Method -> Act.launch(...) -> VexExecution. The Method/executor
-does not choose Queued again, and no intermediate follow-up object reconstructs the accepted Act.
+Likewise, a Family-authored Pump request uses beginQueued(Effect) -> activate() -> Act.Accepted
+RelationshipId + realizationBegin -> exact Effect-bound Method -> Act.Accepted.launch(...) ->
+VexExecution. The Method/executor does not choose Queued again, and no intermediate follow-up object
+reconstructs the authored Act.
 
 ## Maintained semantic relationships
 
@@ -362,7 +363,7 @@ meaningful accepted/observed failure facts to VexLogger when that history is req
 
 PR #209 exercises the refined execution law through:
 
-- ThemeMode Save: Family Parameter.Mode is carried through Control/Effect; Act.Method.Save carries the exact accepted Effect; accepted Act.launch(...) verifies that Effect and consumes its live Family owner + Control.Select RelationshipId + authored Approach -> zero-argument direct VexExecution -> Job custody;
+- ThemeMode Save: Family Parameter.Mode is carried through Control/Effect; Act.Method.Save carries the exact accepted Effect; Act.Accepted.launch(...) verifies that Effect and consumes its live Family owner + Control.Select RelationshipId + authored Approach -> zero-argument direct VexExecution -> Job custody;
 - VexMaps Distribution Session directly uses VexExecution for async work whose meaning and lifecycle the Session already owns;
 - VexMaps destination/place search source-addressed replacement;
 - VexStream application/session and service execution roots;

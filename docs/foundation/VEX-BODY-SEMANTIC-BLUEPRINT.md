@@ -1259,7 +1259,7 @@ custody law.
 
 This does not create a new execution root or execution vocabulary.
 
-### Act.launch consumes decisions already authored
+### Act.Accepted.launch consumes decisions already authored
 
 An earlier checkpoint removed manual re-supply of:
 
@@ -1280,12 +1280,13 @@ Act.launchWith(root)
 That intermediate type owned no semantic meaning and dropped the Effect coordinate from the visible
 continuation. Current source removes it rather than promoting it.
 
-Current accepted Act binds the live Family execution owner during `activate(...)` without putting
-that owner into Act equality/copy semantics. A concrete Method carries the exact accepted Begin
-Effect, then:
+`activate(...)` preserves the authored Act inside `Act.Accepted`, binds the live Family execution
+owner and maintained RelationshipId there, and exposes `realizationBegin` only while that authored
+consequence still requires a new occurrence. A concrete Method carries that exact realization Effect,
+then:
 
 ~~~kotlin
-act.launch(
+accepted.launch(
     executionRoot = executionRoot,
     method = boundMethod,
 )
@@ -1294,11 +1295,14 @@ act.launch(
 consumes and verifies:
 
 ~~~text
-accepted Act
+Act.Accepted
+├─ authored Act
+│  └─ Begin
+│     ├─ exact Effect
+│     └─ Approach
+├─ realizationBegin?
+│  └─ exact Effect === Method.effect
 ├─ live Family execution owner
-├─ Begin
-│  ├─ exact Effect === Method.effect
-│  └─ Approach
 └─ RelationshipId
 ~~~
 
@@ -1553,8 +1557,9 @@ the non-semantic follow-up object and keeps the completed relationship visible:
 
 ~~~text
 Act.Begin
+-> Act.Accepted.realizationBegin
 -> exact Effect-bound Method
--> act.launch(executionRoot, boundMethod)
+-> accepted.launch(executionRoot, boundMethod)
 -> VexExecution
 ~~~
 
@@ -1587,10 +1592,12 @@ Family.activate(...)
         +-> bind live Family execution owner
         |
         v
-accepted Act
+Act.Accepted
+        |
+        +-> authored Act -> Begin(Effect.Save + Latest)
         |
         v
-Begin
+realizationBegin
         |
         +-> exact Effect.Save
         +-> Latest
@@ -1602,7 +1609,7 @@ Act.Method.Save(
 )
         |
         v
-Act.launch(
+Act.Accepted.launch(
     VexExecutionRoot,
     Method.Save
 )
