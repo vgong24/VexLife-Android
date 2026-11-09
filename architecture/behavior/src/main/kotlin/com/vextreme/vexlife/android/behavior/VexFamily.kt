@@ -463,6 +463,7 @@ abstract class VexFamily<
 
                 return job
             }
+        }
 
         internal fun acceptedBy(
             owner:
