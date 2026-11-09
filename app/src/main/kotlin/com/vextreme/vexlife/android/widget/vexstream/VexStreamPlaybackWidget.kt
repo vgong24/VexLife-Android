@@ -77,7 +77,11 @@ internal data class VexStreamPlaybackWidgetSurfaceState(
     val playPauseEnabled: Boolean,
     val showPause: Boolean,
     val nextEnabled: Boolean,
-) : VexWidgetSurfaceState
+) :
+    VexWidgetSurfaceState,
+    VexWidget.SurfaceState<
+        VexStreamPlaybackWidget
+    >
 
 private object VexStreamPlaybackWidgetStateKeys {
     val Title =
@@ -227,9 +231,16 @@ internal data class VexStreamPlaybackWidgetProjection(
     val playPauseEnabled: Boolean,
     val showPause: Boolean,
     val nextEnabled: Boolean,
-) : VexWidgetProjection
+) :
+    VexWidgetProjection,
+    VexWidget.Projection<
+        VexStreamPlaybackWidget
+    >
 
-internal object VexStreamPlaybackWidgetActions {
+internal object VexStreamPlaybackWidgetActions :
+    VexWidget.Action<
+        VexStreamPlaybackWidget
+    > {
     val Previous =
         VexWidgetActionRef(
             "vexstream.widget.previous",

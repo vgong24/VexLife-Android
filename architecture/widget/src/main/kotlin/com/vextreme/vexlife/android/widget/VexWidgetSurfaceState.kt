@@ -12,8 +12,7 @@ import androidx.datastore.preferences.core.Preferences
  * Implementations should use structural value equality (normally a data class). The widget
  * foundation uses that equality directly for duplicate suppression and active-session reprojection.
  */
-interface VexWidgetSurfaceState :
-    VexWidget.SurfaceState
+interface VexWidgetSurfaceState
 
 /**
  * Feature-owned mapping between typed widget surface state and Glance Preferences storage.

@@ -142,8 +142,9 @@ custody only.
 ## Source roles
 
 `VexWidget`
-: recursive root coordinate for the remote-surface responsibility. Its children make Relay,
-SurfaceState, Projection and Action/Ref kinship source-readable without absorbing Family, Partner,
+: recursive root coordinate for the remote-surface responsibility. Concrete Relay output,
+SurfaceState, Projection and Action vocabularies carry the exact Widget coordinate so ownership is
+compiler-visible rather than inferred from package or naming, without absorbing Family, Partner,
 Service, Execution or Relay ownership.
 
 `VexWidgetSurfaceState`

@@ -24,8 +24,7 @@ import kotlinx.coroutines.CancellationException
  * Product/domain State remains with its rightful owner. A widget receives only bounded facts needed
  * to render; this marker does not create another State machine or persistence owner.
  */
-interface VexWidgetProjection :
-    VexWidget.Projection
+interface VexWidgetProjection
 
 /**
  * Compose-first App Widget boundary for typed durable surface state.

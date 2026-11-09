@@ -111,7 +111,9 @@ internal data class VexStreamPlaybackWidgetRelayOutputState(
     VexOutputState<
         VexStreamPlaybackWidgetRelayOutputState
     >,
-    VexWidget.Relay.Output {
+    VexWidget.Relay.Output<
+        VexStreamPlaybackWidget
+    > {
     override fun deepCopy():
         VexStreamPlaybackWidgetRelayOutputState =
         copy(

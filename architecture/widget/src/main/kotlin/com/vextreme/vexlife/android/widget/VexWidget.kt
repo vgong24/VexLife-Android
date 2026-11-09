@@ -29,11 +29,17 @@ interface VexWidget<
     Widget,
 > where
     Widget : VexWidget<Widget> {
-    /** Durable remote-surface snapshot, not product/domain State. */
-    interface SurfaceState
+    /** Durable remote-surface snapshot, tied to one exact Widget root. */
+    interface SurfaceState<
+        Widget,
+    > where
+        Widget : VexWidget<Widget>
 
-    /** Already-derived render-facing facts for one remote surface. */
-    interface Projection
+    /** Already-derived render-facing facts tied to one exact Widget root. */
+    interface Projection<
+        Widget,
+    > where
+        Widget : VexWidget<Widget>
 
     /** Relationship child used when this Widget converges independently-owned CURRENT truths. */
     interface Relay<
@@ -41,12 +47,18 @@ interface VexWidget<
     > where
         Widget : VexWidget<Widget> {
         /** Bounded current meaning emitted by one concrete Widget Relay. */
-        interface Output
+        interface Output<
+            Widget,
+        > where
+            Widget : VexWidget<Widget>
     }
 
-    /** Stable interaction doorway owned by one Widget surface. */
-    interface Action {
-        /** Semantic identity of the doorway; not a Family Act or Effect. */
+    /** Stable interaction vocabulary owned by one exact Widget root. */
+    interface Action<
+        Widget,
+    > where
+        Widget : VexWidget<Widget> {
+        /** Semantic identity of one doorway; not a Family Act or Effect. */
         interface Ref {
             val value:
                 String
