@@ -608,10 +608,7 @@ abstract class VexFamily<
      * unresolved accepted realizations for one maintained RelationshipId so Approach meaning cannot
      * be reordered between activate(...) and launch(...).
      */
-    private class RealizationBinding(
-        val relationshipId:
-            VexExecution.RelationshipId?,
-    ) {
+    private class RealizationBinding {
         var admitted:
             Boolean =
             false
@@ -945,8 +942,6 @@ abstract class VexFamily<
                 VexExecution.Approach.Independent ->
                     realizationBinding =
                         RealizationBinding(
-                            relationshipId =
-                                null,
                         )
 
                 VexExecution.Approach.Earliest,
@@ -1004,8 +999,6 @@ abstract class VexFamily<
                                 ) {
                                     realizationBinding =
                                         RealizationBinding(
-                                            relationshipId =
-                                                relationshipId,
                                         )
                                             .also(
                                                 lane.bindings::add,
@@ -1028,8 +1021,6 @@ abstract class VexFamily<
 
                                 realizationBinding =
                                     RealizationBinding(
-                                        relationshipId =
-                                            relationshipId,
                                     )
                                         .also(
                                             lane.bindings::add,
@@ -1039,8 +1030,6 @@ abstract class VexFamily<
                             VexExecution.Approach.Queued ->
                                 realizationBinding =
                                     RealizationBinding(
-                                        relationshipId =
-                                            relationshipId,
                                     )
                                         .also(
                                             lane.bindings::add,
@@ -1117,6 +1106,8 @@ abstract class VexFamily<
                         admitRealization(
                             binding =
                                 binding,
+                            relationshipId =
+                                acceptedRelationshipId,
                             begin =
                                 begin,
                             executionRoot =
@@ -1160,6 +1151,8 @@ abstract class VexFamily<
     private fun admitRealization(
         binding:
             RealizationBinding,
+        relationshipId:
+            VexExecution.RelationshipId?,
         begin:
             Act.Begin<
                 Family,
@@ -1190,7 +1183,7 @@ abstract class VexFamily<
                 return@synchronized null
             }
 
-            binding.relationshipId
+            relationshipId
                 ?.let { relationshipId ->
                     val lane =
                         checkNotNull(
@@ -1290,7 +1283,7 @@ abstract class VexFamily<
                     binding.admitted =
                         false
 
-                    binding.relationshipId
+                    relationshipId
                         ?.let { relationshipId ->
                             acceptanceLanes[
                                 relationshipId
@@ -1315,7 +1308,7 @@ abstract class VexFamily<
                 synchronized(
                     relationshipLock,
                 ) {
-                    binding.relationshipId
+                    relationshipId
                         ?.let { relationshipId ->
                             acceptanceLanes[
                                 relationshipId
