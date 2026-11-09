@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.behavior
 
+import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
@@ -199,6 +200,100 @@ class VexFamilyHighConfidenceTest {
                             1,
                 ),
             )
+    }
+
+    private class MaintainedFamily(
+        private val approach:
+            VexExecution.Approach,
+    ) :
+        VexFamily<
+            MaintainedFamily,
+            MaintainedFamily.State,
+            MaintainedFamily.Control,
+            MaintainedFamily.Effect
+        >(
+            initialState =
+                State,
+        ) {
+        data object State :
+            VexFamily.State<MaintainedFamily>
+
+        data class Control(
+            val value:
+                String,
+        ) :
+            VexFamily.Control<MaintainedFamily>
+
+        data class Effect(
+            val value:
+                String,
+        ) :
+            VexFamily.Effect<MaintainedFamily>
+
+        class SaveMethod(
+            override val effect:
+                Effect,
+        ) :
+            VexFamily.Act.Method<
+                MaintainedFamily,
+                String,
+                Unit
+            > {
+            override suspend fun invoke():
+                VexMethod.Result<
+                    String,
+                    Unit
+                > =
+                VexMethod.Result.Success(
+                    output =
+                        effect.value,
+                )
+        }
+
+        override fun act(
+            currentState:
+                State,
+            control:
+                Control,
+        ):
+            VexFamily.Act<
+                MaintainedFamily,
+                State,
+                Effect
+            > {
+            val effect =
+                Effect(
+                    value =
+                        control.value,
+                )
+
+            return stay(
+                begin =
+                    when (
+                        approach
+                    ) {
+                        VexExecution.Approach.Independent ->
+                            begin(
+                                effect,
+                            )
+
+                        VexExecution.Approach.Earliest ->
+                            beginEarliest(
+                                effect,
+                            )
+
+                        VexExecution.Approach.Latest ->
+                            beginLatest(
+                                effect,
+                            )
+
+                        VexExecution.Approach.Queued ->
+                            beginQueued(
+                                effect,
+                            )
+                    },
+            )
+        }
     }
 
     @Test
@@ -411,6 +506,233 @@ class VexFamilyHighConfidenceTest {
             )
         }
     }
+
+    @Test
+    fun latestAcceptancePreservesAuthoredBeginWhileSupersedingOlderPendingRealization() {
+        val family =
+            MaintainedFamily(
+                approach =
+                    VexExecution.Approach.Latest,
+            )
+        val first =
+            checkNotNull(
+                family.activate(
+                    MaintainedFamily.Control(
+                        value =
+                            "first",
+                    ),
+                ),
+            )
+        val firstAuthoredBegin =
+            checkNotNull(
+                first.authored.begin,
+            )
+
+        assertNotNull(
+            first.realizationBegin,
+        )
+
+        val second =
+            checkNotNull(
+                family.activate(
+                    MaintainedFamily.Control(
+                        value =
+                            "second",
+                    ),
+                ),
+            )
+
+        assertSame(
+            firstAuthoredBegin,
+            first.authored.begin,
+        )
+        assertEquals(
+            null,
+            first.realizationBegin,
+        )
+        assertNotNull(
+            second.realizationBegin,
+        )
+        assertEquals(
+            first.relationshipId,
+            second.relationshipId,
+        )
+    }
+
+    @Test
+    fun earliestAcceptancePreservesAuthoredBeginWhenEarlierRealizationAlreadyCoversIt() {
+        val family =
+            MaintainedFamily(
+                approach =
+                    VexExecution.Approach.Earliest,
+            )
+        val first =
+            checkNotNull(
+                family.activate(
+                    MaintainedFamily.Control(
+                        value =
+                            "first",
+                    ),
+                ),
+            )
+        val second =
+            checkNotNull(
+                family.activate(
+                    MaintainedFamily.Control(
+                        value =
+                            "second",
+                    ),
+                ),
+            )
+
+        assertNotNull(
+            first.realizationBegin,
+        )
+        assertNotNull(
+            second.authored.begin,
+        )
+        assertEquals(
+            null,
+            second.realizationBegin,
+        )
+        assertEquals(
+            first.relationshipId,
+            second.relationshipId,
+        )
+    }
+
+    @Test
+    fun queuedAcceptanceRejectsLaterRealizationBeforeEarlierPendingAcceptance() {
+        val root =
+            VexExecutionRoot()
+        val family =
+            MaintainedFamily(
+                approach =
+                    VexExecution.Approach.Queued,
+            )
+        val first =
+            checkNotNull(
+                family.activate(
+                    MaintainedFamily.Control(
+                        value =
+                            "first",
+                    ),
+                ),
+            )
+        val second =
+            checkNotNull(
+                family.activate(
+                    MaintainedFamily.Control(
+                        value =
+                            "second",
+                    ),
+                ),
+            )
+        val secondBegin =
+            checkNotNull(
+                second.realizationBegin,
+            )
+
+        try {
+            assertNotNull(
+                first.realizationBegin,
+            )
+            assertEquals(
+                first.relationshipId,
+                second.relationshipId,
+            )
+
+            val failure =
+                runCatching {
+                    second.launch(
+                        executionRoot =
+                            root,
+                        method =
+                            MaintainedFamily.SaveMethod(
+                                effect =
+                                    secondBegin.effect,
+                            ),
+                    )
+                }
+                    .exceptionOrNull()
+
+            assertTrue(
+                failure is
+                    IllegalStateException,
+            )
+        } finally {
+            root.forceStopAll(
+                "test complete",
+            )
+        }
+    }
+
+    @Test
+    fun oneAcceptedActCannotEnterExecutionCustodyTwice() =
+        runBlocking {
+            val root =
+                VexExecutionRoot()
+            val family =
+                ValueFamily(
+                    initialState =
+                        ValueFamily.State.Empty,
+                )
+            val accepted =
+                checkNotNull(
+                    family.activate(
+                        ValueFamily.Control.Save(
+                            value =
+                                "one",
+                        ),
+                    ),
+                )
+            val begin =
+                checkNotNull(
+                    accepted.realizationBegin,
+                )
+            val effect =
+                begin.effect as
+                    ValueFamily.Effect.Save
+            val method =
+                ValueFamily.SaveMethod(
+                    effect =
+                        effect,
+                    shouldFail =
+                        false,
+                )
+
+            try {
+                checkNotNull(
+                    accepted.launch(
+                        executionRoot =
+                            root,
+                        method =
+                            method,
+                    ),
+                )
+                    .join()
+
+                val failure =
+                    runCatching {
+                        accepted.launch(
+                            executionRoot =
+                                root,
+                            method =
+                                method,
+                        )
+                    }
+                        .exceptionOrNull()
+
+                assertTrue(
+                    failure is
+                        IllegalStateException,
+                )
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
+            }
+        }
 
     @Test
     fun availabilityInspectsTheSameRelationshipWithoutMutatingStateOrRealizingEffect() {
