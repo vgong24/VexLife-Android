@@ -340,7 +340,7 @@ abstract class VexFamily<
                 (
                     VexExecutionRoot,
                     () -> Job
-                ) -> Job,
+                ) -> Job?,
         ) where
             Family : VexFamily<
                 Family,
@@ -369,7 +369,8 @@ abstract class VexFamily<
              *
              * The accepted boundary preserves authored provenance and verifies that [method] carries
              * the exact Effect still requiring realization. VexExecution forms and owns the actual
-             * Job occurrence.
+             * Job occurrence. null means the accepted Act no longer requires a new occurrence (for
+             * example lawful Latest supersession or Earliest coverage); it is not a fabricated Job.
              */
             fun <SuccessOutput, FailureOutput> launch(
                 executionRoot:
@@ -392,13 +393,10 @@ abstract class VexFamily<
                     ) -> Unit =
                     {},
             ):
-                Job {
+                Job? {
                 val currentBegin =
-                    checkNotNull(
-                        realizationBegin,
-                    ) {
-                        "Accepted Act has no remaining realization Begin"
-                    }
+                    realizationBegin
+                        ?: return null
                 check(
                     method.effect ===
                         currentBegin.effect,
@@ -455,7 +453,7 @@ abstract class VexFamily<
                 (
                     VexExecutionRoot,
                     () -> Job
-                ) -> Job,
+                ) -> Job?,
         ):
             Accepted<
                 Family,
@@ -1080,7 +1078,7 @@ abstract class VexFamily<
                 (
                     VexExecutionRoot,
                     () -> Job
-                ) -> Job =
+                ) -> Job? =
                 realizationBinding
                     ?.let { binding ->
                         { executionRoot, formJob ->
@@ -1095,9 +1093,7 @@ abstract class VexFamily<
                         }
                     }
                     ?: { _, _ ->
-                        error(
-                            "Accepted Act has no remaining realization to admit",
-                        )
+                        null
                     }
 
             val accepted =
@@ -1134,7 +1130,7 @@ abstract class VexFamily<
         formJob:
             () -> Job,
     ):
-        Job =
+        Job? =
         synchronized(
             relationshipLock,
         ) {
@@ -1143,10 +1139,10 @@ abstract class VexFamily<
             ) {
                 "Accepted Act realization has already entered execution custody"
             }
-            check(
-                !binding.superseded,
+            if (
+                binding.superseded
             ) {
-                "Accepted Act realization was superseded before execution custody"
+                return@synchronized null
             }
 
             binding.relationshipId

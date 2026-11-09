@@ -248,50 +248,54 @@ internal class InsulinPartnerLab(
                         effect,
                 )
 
-            act.launch(
-                executionRoot =
-                    executionRoot,
-                method =
-                    method,
-                onResult = { result ->
-                        mutablePumpRequestStatus.value =
-                            when (
-                                result
-                            ) {
-                                is VexMethod.Result.Success ->
-                                    PumpRequestStatus.Acknowledged(
-                                        requestRef =
-                                            result
-                                                .output
-                                                .requestRef,
-                                        unitsHundredths =
-                                            result
-                                                .output
-                                                .unitsHundredths,
-                                    )
+            checkNotNull(
+                act.launch(
+                    executionRoot =
+                        executionRoot,
+                    method =
+                        method,
+                    onResult = { result ->
+                            mutablePumpRequestStatus.value =
+                                when (
+                                    result
+                                ) {
+                                    is VexMethod.Result.Success ->
+                                        PumpRequestStatus.Acknowledged(
+                                            requestRef =
+                                                result
+                                                    .output
+                                                    .requestRef,
+                                            unitsHundredths =
+                                                result
+                                                    .output
+                                                    .unitsHundredths,
+                                        )
 
-                                is VexMethod.Result.Failure ->
-                                    PumpRequestStatus.Rejected(
-                                        reason =
-                                            result
-                                                .output
-                                                .reason,
-                                    )
+                                    is VexMethod.Result.Failure ->
+                                        PumpRequestStatus.Rejected(
+                                            reason =
+                                                result
+                                                    .output
+                                                    .reason,
+                                        )
 
-                                is VexMethod.Result.Error ->
-                                    PumpRequestStatus.Errored(
-                                        message =
-                                            result
-                                                .cause
-                                                .message
-                                                ?: result
+                                    is VexMethod.Result.Error ->
+                                        PumpRequestStatus.Errored(
+                                            message =
+                                                result
                                                     .cause
-                                                    .javaClass
-                                                    .simpleName,
-                                    )
-                            }
-                },
-            )
+                                                    .message
+                                                    ?: result
+                                                        .cause
+                                                        .javaClass
+                                                        .simpleName,
+                                        )
+                                }
+                    },
+                ),
+            ) {
+                "Queued pump request accepted Act must enter execution custody"
+            }
         }
 
     /**
