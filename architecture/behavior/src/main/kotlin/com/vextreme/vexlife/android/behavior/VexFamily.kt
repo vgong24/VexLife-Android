@@ -326,6 +326,14 @@ abstract class VexFamily<
                     State,
                     Effect
                 >,
+            /**
+             * Maintained-work identity bound by [activate] from the live Family + triggering Control
+             * (+ typed ResourceId when that Control relationship requires one).
+             *
+             * This coordinate belongs to acceptance, not pure [Act] resolution. Ordinary Control
+             * payload is not identity, and realization consumes this value rather than reconstructing
+             * the relationship downstream.
+             */
             val relationshipId:
                 VexExecution.RelationshipId?,
             private val executionOwner:
