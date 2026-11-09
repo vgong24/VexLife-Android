@@ -16,7 +16,7 @@ import com.vextreme.vexlife.android.behavior.VexMethod
  * The outbound pump path reuses the established Family grammar:
  *
  *     Parameter -> Control -> accepted Act -> Begin -> exact Effect -> Act.Method
- *     -> Act.launch(...) -> Pump Partner Connection
+ *     -> Act.Accepted.launch(...) -> Pump Partner Connection
  *
  * and deliberately does NOT admit a delivered-insulin State from provider acknowledgement.
  */

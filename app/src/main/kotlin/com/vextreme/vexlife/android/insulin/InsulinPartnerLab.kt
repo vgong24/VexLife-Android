@@ -197,7 +197,7 @@ internal class InsulinPartnerLab(
 
     /**
      * Human/Synthetic Surface -> Family Control -> accepted Act -> Begin -> exact Effect ->
-     * bound Act.Method -> Act.launch(...) -> Pump Partner.
+     * bound Act.Method -> Act.Accepted.launch(...) -> Pump Partner.
      *
      * Begin preserves the authored Queued relationship before the concrete Pump Connection is added
      * as the Method's realization capability. Provider acknowledgement updates only the lab
