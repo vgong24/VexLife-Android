@@ -230,7 +230,7 @@ class VexFamilyHighConfidenceTest {
             family.states.value,
         )
 
-        val effect =
+        val accepted =
             family.activate(
                 ValueFamily.Control.Save(
                     value = "one",
@@ -241,7 +241,9 @@ class VexFamilyHighConfidenceTest {
             ValueFamily.Effect.Save(
                 value = "one",
             ),
-            effect?.effect,
+            accepted
+                ?.begin
+                ?.effect,
         )
         assertEquals(
             ValueFamily.State.Ready(
