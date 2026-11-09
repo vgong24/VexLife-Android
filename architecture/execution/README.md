@@ -196,7 +196,8 @@ Do not persist the runtime RelationshipId and do not substitute the Partner Conn
 Connection.Id belongs to source/observation provenance; RelationshipId coordinates active Jobs.
 
 Likewise, a Family-authored Pump request uses beginQueued(Effect) -> activate() -> accepted Act
-RelationshipId -> launchWith() -> Method. The Method/executor does not choose Queued again.
+RelationshipId -> exact Effect-bound Method -> Act.launch(...) -> VexExecution. The Method/executor
+does not choose Queued again, and no intermediate follow-up object reconstructs the accepted Act.
 
 ## Maintained semantic relationships
 
@@ -361,7 +362,7 @@ meaningful accepted/observed failure facts to VexLogger when that history is req
 
 PR #209 exercises the refined execution law through:
 
-- ThemeMode Save: Family Parameter.Mode is carried through Control/Effect into fully-bound Act.Method.Save; accepted Act launchWith(...) consumes its live Family owner + Control.Select RelationshipId + authored Approach -> zero-argument direct VexExecution -> Job custody;
+- ThemeMode Save: Family Parameter.Mode is carried through Control/Effect; Act.Method.Save carries the exact accepted Effect; accepted Act.launch(...) verifies that Effect and consumes its live Family owner + Control.Select RelationshipId + authored Approach -> zero-argument direct VexExecution -> Job custody;
 - VexMaps Distribution Session directly uses VexExecution for async work whose meaning and lifecycle the Session already owns;
 - VexMaps destination/place search source-addressed replacement;
 - VexStream application/session and service execution roots;

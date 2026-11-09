@@ -215,10 +215,13 @@ Parameter.Mode(Dark)
 realization boundary
 -> Act.Method.Save(
        ThemeModeStore,
-       the same Parameter.Mode
+       the exact accepted Effect.Save
    )
--> accepted Act.launchWith(VexExecutionRoot)
--> MethodFollowUp.method(Method.Save)
+-> accepted Act.launch(
+       VexExecutionRoot,
+       Method.Save
+   )
+   verifies Method carries the exact Begin Effect
    consumes the Act's live Family owner + authored Approach + RelationshipId
 -> VexExecution Job custody
 -> ThemeModeStore.save(Dark)
@@ -506,8 +509,9 @@ Debug Menu action
 -> Act
    -> immediate State?
    -> beginLatest(Effect.Save(the same Mode))
--> Act.Method.Save(ThemeModeStore, the same Mode)
--> Act.launchWith(VexExecutionRoot).method(Method.Save)
+-> Act.Method.Save(ThemeModeStore, the exact accepted Effect.Save)
+-> Act.launch(VexExecutionRoot, Method.Save)
+   -> verifies the exact accepted Begin Effect
    -> returns one VexMethod Result form: Success / Failure / Error
    -> consumes already-bound live Family owner
    -> consumes already-authored Approach

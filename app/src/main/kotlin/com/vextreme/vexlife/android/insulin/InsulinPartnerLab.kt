@@ -227,21 +227,16 @@ internal class InsulinPartnerLab(
             InsulinFamily.Act.Method.RequestPumpDelivery(
                 connection =
                     pumpConnection,
-                parameter =
-                    effect.amount,
+                effect =
+                    effect,
             )
 
-        return checkNotNull(
-            act.launchWith(
+        return act.launch(
+            executionRoot =
                 executionRoot,
-            ),
-        ) {
-            "Pump request Effect requires an executable Family Act"
-        }
-            .method(
-                method =
-                    method,
-                onResult = { result ->
+            method =
+                method,
+            onResult = { result ->
                     mutablePumpRequestStatus.value =
                         when (
                             result
@@ -278,8 +273,8 @@ internal class InsulinPartnerLab(
                                                 .simpleName,
                                 )
                         }
-                },
-            )
+            },
+        )
     }
 
     /**

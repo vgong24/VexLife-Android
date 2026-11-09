@@ -306,98 +306,58 @@ abstract class VexFamily<
                 *,
                 *,
                 *
-            >
-
-
-        /**
-         * Compiler-visible continuation from an accepted Act into its Method.
-         *
-         * This type owns no semantic meaning. It only prevents callers from re-supplying the
-         * already-authored Approach, RelationshipId, or execution owner while selecting the exact
-         * bound Method that will realize the consequence.
-         */
-        class MethodFollowUp<
-            Family,
-        > internal constructor(
-            private val executionRoot:
-                VexExecutionRoot,
-            private val owner:
-                Any,
-            private val approach:
-                VexExecution.Approach,
-            private val relationshipId:
-                VexExecution.RelationshipId?,
-        ) where
-            Family : VexFamily<
-                Family,
-                *,
-                *,
-                *
             > {
-            fun <SuccessOutput, FailureOutput> method(
-                method:
-                    Method<
-                        Family,
-                        SuccessOutput,
-                        FailureOutput
-                    >,
-                beforeOperation:
-                    () -> Unit =
-                    {},
-                onResult:
-                    (
-                        VexMethod.Result<
-                            SuccessOutput,
-                            FailureOutput
-                        >
-                    ) -> Unit =
-                    {},
-            ):
-                Job =
-                VexExecution.begin(
-                    executionRoot =
-                        executionRoot,
-                    owner =
-                        owner,
-                    approach =
-                        approach,
-                    relationshipId =
-                        relationshipId,
-                    operation =
-                        method::invoke,
-                    beforeOperation =
-                        beforeOperation,
-                    onResult = { result ->
-                        onResult(
-                            result,
-                        )
-                    },
-                    onFailure = { error ->
-                        onResult(
-                            VexMethod.Result.Error(
-                                cause =
-                                    error,
-                            ),
-                        )
-                    },
-                )
+            /**
+             * Exact accepted Family Effect this Method realizes.
+             *
+             * Method construction binds realization to the Effect object already authored by
+             * [Begin]. Callers do not reconstruct Effect payload into a second semantic input.
+             */
+            val effect:
+                VexFamily.Effect<Family>
         }
 
         /**
-         * Continue one accepted Act through the execution relationship it already authored.
+         * Launch one exact Method for this accepted Act.
          *
-         * null means this Act has no runtime consequence. The caller supplies only the
-         * VexExecutionRoot and then one bound Family Method; Approach, RelationshipId, and the live
-         * Family owner are consumed from this accepted Act rather than reconstructed downstream.
+         * The Act already owns Begin / Approach / RelationshipId / live Family owner. The Method
+         * must carry the exact same Effect object as Begin. VexExecution receives that completed
+         * relationship and owns only coroutine Job custody.
          */
-        fun launchWith(
+        fun <SuccessOutput, FailureOutput> launch(
             executionRoot:
                 VexExecutionRoot,
+            method:
+                Method<
+                    Family,
+                    SuccessOutput,
+                    FailureOutput
+                >,
+            beforeOperation:
+                () -> Unit =
+                {},
+            onResult:
+                (
+                    VexMethod.Result<
+                        SuccessOutput,
+                        FailureOutput
+                    >
+                ) -> Unit =
+                {},
         ):
-            MethodFollowUp<Family>? {
+            Job {
             val authoredBegin =
-                begin
-                    ?: return null
+                checkNotNull(
+                    begin,
+                ) {
+                    "Only an Act with Begin may launch a Method"
+                }
+            check(
+                method.effect ===
+                    authoredBegin.effect,
+            ) {
+                "Act Method must carry the exact accepted Begin Effect"
+            }
             val owner =
                 checkNotNull(
                     executionOwner,
@@ -405,7 +365,7 @@ abstract class VexFamily<
                     "Only an Act accepted by VexFamily.activate(...) may launch"
                 }
 
-            return MethodFollowUp(
+            return VexExecution.begin(
                 executionRoot =
                     executionRoot,
                 owner =
@@ -414,6 +374,23 @@ abstract class VexFamily<
                     authoredBegin.approach,
                 relationshipId =
                     relationshipId,
+                operation =
+                    method::invoke,
+                beforeOperation =
+                    beforeOperation,
+                onResult = { result ->
+                    onResult(
+                        result,
+                    )
+                },
+                onFailure = { error ->
+                    onResult(
+                        VexMethod.Result.Error(
+                            cause =
+                                error,
+                        ),
+                    )
+                },
             )
         }
 

@@ -41,8 +41,8 @@ class InsulinPartnerCircuitTest {
                 InsulinFamily.Act.Method.RequestPumpDelivery(
                     connection =
                         lab.pumpConnection,
-                    parameter =
-                        effect.amount,
+                    effect =
+                        effect,
                 )
 
             assertSame(
@@ -50,8 +50,8 @@ class InsulinPartnerCircuitTest {
                 effect.amount,
             )
             assertSame(
-                amount,
-                method.parameter,
+                effect,
+                method.effect,
             )
             assertEquals(
                 com.vextreme.vexlife.android.execution.VexExecution.Approach.Queued,

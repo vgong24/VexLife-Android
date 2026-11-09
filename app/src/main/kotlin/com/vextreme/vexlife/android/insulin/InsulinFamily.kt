@@ -105,8 +105,8 @@ internal class InsulinFamily :
             class RequestPumpDelivery(
                 private val connection:
                     InsulinPumpPartner.Connection,
-                val parameter:
-                    Parameter.InsulinAmount,
+                override val effect:
+                    Effect.RequestPumpDelivery,
             ) :
                 Method<
                     InsulinPumpPartner.Connection.Acknowledgement.Accepted,
@@ -121,7 +121,8 @@ internal class InsulinFamily :
                         val acknowledgement =
                             connection.requestDelivery(
                                 unitsHundredths =
-                                    parameter
+                                    effect
+                                        .amount
                                         .unitsHundredths,
                             )
                     ) {

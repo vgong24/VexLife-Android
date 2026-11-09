@@ -61,7 +61,8 @@ class VexFamilyHighConfidenceTest {
         }
 
         class SaveMethod(
-            private val value: String,
+            override val effect:
+                Effect.Save,
             private val shouldFail: Boolean,
         ) :
             VexFamily.Act.Method<
@@ -84,12 +85,15 @@ class VexFamilyHighConfidenceTest {
                 } else {
                     VexMethod.Result.Success(
                         output =
-                            value,
+                            effect.value,
                     )
                 }
         }
 
-        class ThrowingSaveMethod :
+        class ThrowingSaveMethod(
+            override val effect:
+                Effect.Save,
+        ) :
             VexFamily.Act.Method<
                 ValueFamily,
                 String,
@@ -252,13 +256,19 @@ class VexFamilyHighConfidenceTest {
         runBlocking {
             val success =
                 ValueFamily.SaveMethod(
-                    value = "saved",
+                    effect =
+                        ValueFamily.Effect.Save(
+                            value = "saved",
+                        ),
                     shouldFail = false,
                 )()
 
             val failure =
                 ValueFamily.SaveMethod(
-                    value = "ignored",
+                    effect =
+                        ValueFamily.Effect.Save(
+                            value = "ignored",
+                        ),
                     shouldFail = true,
                 )()
 
@@ -307,22 +317,25 @@ class VexFamilyHighConfidenceTest {
                 null
 
             try {
-                val job =
+                val effect =
                     checkNotNull(
-                        act.launchWith(
+                        act.effect as?
+                            ValueFamily.Effect.Save,
+                    )
+                val job =
+                    act.launch(
+                        executionRoot =
                             root,
-                        ),
-                    ) {
-                        "Save Effect requires an executable Act Begin"
-                    }
-                        .method(
-                            method =
-                                ValueFamily.ThrowingSaveMethod(),
-                            onResult = { result ->
-                                received =
-                                    result
-                            },
-                        )
+                        method =
+                            ValueFamily.ThrowingSaveMethod(
+                                effect =
+                                    effect,
+                            ),
+                        onResult = { result ->
+                            received =
+                                result
+                        },
+                    )
 
                 job.join()
 
@@ -339,6 +352,58 @@ class VexFamilyHighConfidenceTest {
                 )
             }
         }
+
+    @Test
+    fun acceptedActRejectsAMethodThatReconstructsItsEffect() {
+        val root =
+            VexExecutionRoot()
+        val family =
+            ValueFamily(
+                initialState =
+                    ValueFamily.State.Empty,
+            )
+        val act =
+            checkNotNull(
+                family.activate(
+                    ValueFamily.Control.Save(
+                        value =
+                            "one",
+                    ),
+                ),
+            )
+        val copiedEffect =
+            ValueFamily.Effect.Save(
+                value =
+                    "one",
+            )
+
+        try {
+            val failure =
+                runCatching {
+                    act.launch(
+                        executionRoot =
+                            root,
+                        method =
+                            ValueFamily.SaveMethod(
+                                effect =
+                                    copiedEffect,
+                                shouldFail =
+                                    false,
+                            ),
+                    )
+                }
+                    .exceptionOrNull()
+
+            assertTrue(
+                failure is
+                    IllegalStateException,
+            )
+        } finally {
+            root.forceStopAll(
+                "test complete",
+            )
+        }
+    }
 
     @Test
     fun availabilityInspectsTheSameRelationshipWithoutMutatingStateOrRealizingEffect() {

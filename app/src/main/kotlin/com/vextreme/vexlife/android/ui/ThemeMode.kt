@@ -178,8 +178,8 @@ internal class ThemeModeFamily(
             class Save(
                 private val store:
                     ThemeModeStore,
-                val parameter:
-                    Parameter.Mode,
+                override val effect:
+                    Effect.Save,
             ) :
                 Method<
                     ThemeMode,
@@ -192,12 +192,12 @@ internal class ThemeModeFamily(
                     > =
                     if (
                         store.save(
-                            parameter.mode,
+                            effect.mode.mode,
                         )
                     ) {
                         VexMethod.Result.Success(
                             output =
-                                parameter.mode,
+                                effect.mode.mode,
                         )
                     } else {
                         VexMethod.Result.Failure(
@@ -469,21 +469,16 @@ internal fun activateThemeMode(
                 ThemeModeFamily.Act.Method.Save(
                     store =
                         store,
-                    parameter =
-                        effect.mode,
+                    effect =
+                        effect,
                 )
 
-            checkNotNull(
-                act.launchWith(
+            act.launch(
+                executionRoot =
                     executionRoot,
-                ),
-            ) {
-                "ThemeMode Save Effect requires an executable Act Begin"
-            }
-                .method(
-                    method =
-                        method,
-                    beforeOperation = {
+                method =
+                    method,
+                beforeOperation = {
                         recordThemeModeFact(
                             logger =
                                 logger,
@@ -579,8 +574,8 @@ internal fun activateThemeMode(
                                 )
                             }
                         }
-                    },
-                )
+                },
+            )
         }
     }
 
