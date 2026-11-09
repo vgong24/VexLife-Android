@@ -34,8 +34,12 @@ class InsulinPartnerCircuitTest {
                     ),
                 )
 
+            val begin =
+                checkNotNull(
+                    act?.begin,
+                )
             val effect =
-                act?.effect as
+                begin.effect as
                     InsulinFamily.Effect.RequestPumpDelivery
             val method =
                 InsulinFamily.Act.Method.RequestPumpDelivery(

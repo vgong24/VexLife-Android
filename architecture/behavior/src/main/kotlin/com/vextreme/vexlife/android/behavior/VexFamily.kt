@@ -418,12 +418,6 @@ abstract class VexFamily<
                         owner
                 }
 
-        val effect:
-            Effect?
-            get() =
-                begin
-                    ?.effect
-
         /**
          * Execution relationship authored by the Act, not an executor and not another Effect layer.
          *

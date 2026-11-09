@@ -218,11 +218,15 @@ internal class InsulinPartnerLab(
                     ),
                 ),
             )
-        val effect =
+        val begin =
             checkNotNull(
-                act.effect as?
-                    InsulinFamily.Effect.RequestPumpDelivery,
-            )
+                act.begin,
+            ) {
+                "Pump request Act must carry Begin"
+            }
+        val effect =
+            begin.effect as
+                InsulinFamily.Effect.RequestPumpDelivery
         val method =
             InsulinFamily.Act.Method.RequestPumpDelivery(
                 connection =

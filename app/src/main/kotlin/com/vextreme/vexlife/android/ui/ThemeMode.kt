@@ -457,13 +457,14 @@ internal fun activateThemeMode(
         )
     }
 
+    val begin =
+        act.begin
+            ?: return true
+
     when (
         val effect =
-            act.effect
+            begin.effect
     ) {
-        null ->
-            Unit
-
         is ThemeModeFamily.Effect.Save -> {
             val method =
                 ThemeModeFamily.Act.Method.Save(

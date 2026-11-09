@@ -52,8 +52,12 @@ class ThemeModeTest {
                 ),
             )
 
+        val begin =
+            checkNotNull(
+                act?.begin,
+            )
         val effect =
-            act?.effect as
+            begin.effect as
                 ThemeModeFamily.Effect.Save
 
         assertSame(

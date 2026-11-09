@@ -317,11 +317,13 @@ class VexFamilyHighConfidenceTest {
                 null
 
             try {
-                val effect =
+                val begin =
                     checkNotNull(
-                        act.effect as?
-                            ValueFamily.Effect.Save,
+                        act.begin,
                     )
+                val effect =
+                    begin.effect as
+                        ValueFamily.Effect.Save
                 val job =
                     act.launch(
                         executionRoot =

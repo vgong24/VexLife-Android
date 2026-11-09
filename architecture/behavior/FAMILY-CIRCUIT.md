@@ -213,15 +213,19 @@ Parameter.Mode(Dark)
 -> beginLatest(Effect.Save(the same Parameter.Mode))
 
 realization boundary
+-> accepted Act.begin
+   -> exact Effect.Save
+   -> authored Approach.Latest
 -> Act.Method.Save(
        ThemeModeStore,
-       the exact accepted Effect.Save
+       that exact Effect.Save
    )
 -> accepted Act.launch(
        VexExecutionRoot,
        Method.Save
    )
-   verifies Method carries the exact Begin Effect
+   fails closed unless Method carries that same in-memory Effect instance
+   (object identity here proves provenance; it is not a new semantic identity system)
    consumes the Act's live Family owner + authored Approach + RelationshipId
 -> VexExecution Job custody
 -> ThemeModeStore.save(Dark)

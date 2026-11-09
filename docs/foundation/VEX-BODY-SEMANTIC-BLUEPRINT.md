@@ -1590,9 +1590,15 @@ Family.activate(...)
 accepted Act
         |
         v
+Begin
+        |
+        +-> exact Effect.Save
+        +-> Latest
+        |
+        v
 Act.Method.Save(
     ThemeModeStore,
-    exact accepted Effect.Save
+    that exact Effect.Save
 )
         |
         v
@@ -1601,7 +1607,8 @@ Act.launch(
     Method.Save
 )
         |
-        +-> verifies Method.effect === Begin.effect
+        +-> fails closed unless Method.effect === Begin.effect
+            (same in-memory consequence provenance, not semantic identity)
         +-> consumes owner
         +-> consumes Latest
         +-> consumes RelationshipId
