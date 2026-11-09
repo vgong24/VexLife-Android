@@ -103,8 +103,6 @@ internal object VexStreamPlaybackTrace {
         title: String? = null,
         artist: String? = null,
         glanceId: String? = null,
-        desiredRevision: Long? = null,
-        renderedRevision: Long? = null,
         detail: String? = null,
     ) {
         val sequence =
@@ -121,10 +119,6 @@ internal object VexStreamPlaybackTrace {
                     title = title,
                     artist = artist,
                     glanceId = glanceId,
-                    desiredRevision =
-                        desiredRevision,
-                    renderedRevision =
-                        renderedRevision,
                     detail = detail,
                 ),
             )
@@ -140,8 +134,6 @@ internal object VexStreamPlaybackTrace {
         title: String? = null,
         artist: String? = null,
         glanceId: String? = null,
-        desiredRevision: Long? = null,
-        renderedRevision: Long? = null,
         detail: String? = null,
     ): String {
         require(
@@ -186,22 +178,6 @@ internal object VexStreamPlaybackTrace {
             glanceId?.let {
                 appendField(
                     "glanceId",
-                    it,
-                )
-            }
-            desiredRevision?.let {
-                append(
-                    " desired=",
-                )
-                append(
-                    it,
-                )
-            }
-            renderedRevision?.let {
-                append(
-                    " rendered=",
-                )
-                append(
                     it,
                 )
             }

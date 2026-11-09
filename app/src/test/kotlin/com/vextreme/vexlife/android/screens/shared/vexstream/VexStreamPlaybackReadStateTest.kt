@@ -45,16 +45,16 @@ class VexStreamPlaybackReadStateTest {
     }
 
     @Test
-    fun playbackTraceMessageKeepsProjectionBreadcrumbsCompactAndSingleLine() {
+    fun playbackTraceMessageKeepsProviderWidgetBreadcrumbsCompactAndSingleLine() {
         assertEquals(
-            "seq=7 stage=widget.state.persisted " +
+            "seq=7 stage=widget.surface-state.published " +
                 "mediaId=track.2 title=Little~Bit " +
                 "artist=The~Main~Squeeze glanceId=AppWidgetId(4) " +
-                "desired=9 rendered=8 detail=shouldRender=true~next~line",
+                "detail=shouldRender=true~next~line",
             VexStreamPlaybackTrace.message(
                 sequence = 7L,
                 stage =
-                    "widget.state.persisted",
+                    "widget.surface-state.published",
                 mediaId =
                     "track.2",
                 title =
@@ -63,10 +63,6 @@ class VexStreamPlaybackReadStateTest {
                     "The Main Squeeze",
                 glanceId =
                     "AppWidgetId(4)",
-                desiredRevision =
-                    9L,
-                renderedRevision =
-                    8L,
                 detail =
                     "shouldRender=true\nnext line",
             ),
