@@ -45,9 +45,8 @@ import com.vextreme.vexlife.android.VexApplication
 import com.vextreme.vexlife.android.data.vexstream.VexStreamArtworkStore
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
-import com.vextreme.vexlife.android.vexstream.playback.PartnerVexStreamPlaybackConnection
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackConnectionFactory
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackTrace
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
@@ -881,15 +880,14 @@ class VexStreamPlaybackWidgetActionCallback :
                 command
             ) {
                 is VexStreamPlaybackWidgetCommand.Playback ->
-                    PartnerVexStreamPlaybackConnection(
-                        family =
-                            appContext
-                                .vexStreamPlaybackFamily(),
-                        effectConnection =
+                    appContext
+                        .vexStreamPlaybackConnectionFactory()
+                        .create(
                             playerConnection,
-                    ).activate(
-                        command.control,
-                    )
+                        )
+                        .activate(
+                            command.control,
+                        )
 
                 is VexStreamPlaybackWidgetCommand.Queue ->
                     PartnerVexStreamQueueConnection(
@@ -1005,8 +1003,8 @@ private fun Context.vexStreamPlaybackWidgetRelay():
         )
 }
 
-private fun Context.vexStreamPlaybackFamily():
-    VexStreamPlaybackFamily {
+private fun Context.vexStreamPlaybackConnectionFactory():
+    VexStreamPlaybackConnectionFactory {
     val vexApplication =
         applicationContext as?
             VexApplication
@@ -1019,7 +1017,7 @@ private fun Context.vexStreamPlaybackFamily():
         .resolve(
             vexApplication
                 .dependencyModule
-                .playbackFamily,
+                .playbackConnectionFactory,
         )
 }
 

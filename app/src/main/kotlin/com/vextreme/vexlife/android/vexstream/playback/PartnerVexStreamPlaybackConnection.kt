@@ -10,24 +10,61 @@ internal class PartnerVexStreamPlaybackConnection(
         VexStreamPlaybackFamily,
     private val effectConnection:
         VexStreamPlaybackEffectConnection,
+    private val onFamilyCurrent:
+        (VexStreamPlaybackState) -> Unit =
+        {},
 ) :
     VexStreamPlaybackConnection {
     override fun activate(
         control:
             VexStreamPlaybackControl,
     ) {
-        val effect =
+        val act =
             family
                 .activate(
                     control,
                 )
-                ?.effect
+                ?: return
+
+        act.admittedState
+            ?.let(
+                onFamilyCurrent,
+            )
+
+        val effect =
+            act.effect
                 ?: return
 
         effectConnection.realize(
             effect,
         )
     }
+}
+
+/**
+ * Feature-local construction boundary that keeps every Playback Control path on the same Family
+ * admission -> Widget relationship -> Effect realization sequence.
+ */
+internal class VexStreamPlaybackConnectionFactory(
+    private val family:
+        VexStreamPlaybackFamily,
+    private val onFamilyCurrent:
+        (VexStreamPlaybackState) -> Unit =
+        {},
+) {
+    fun create(
+        effectConnection:
+            VexStreamPlaybackEffectConnection,
+    ):
+        VexStreamPlaybackConnection =
+        PartnerVexStreamPlaybackConnection(
+            family =
+                family,
+            effectConnection =
+                effectConnection,
+            onFamilyCurrent =
+                onFamilyCurrent,
+        )
 }
 
 // [VXG RealForever][VEXSTREAM][PLAYBACK][PLAYER-PARTNER]

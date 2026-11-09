@@ -15,6 +15,7 @@ import com.vextreme.vexlife.android.screens.shared.maps.VexMapsNavigationProcess
 import com.vextreme.vexlife.android.screens.shared.maps.VexNavigationSession
 import com.vextreme.vexlife.android.ui.SharedPreferencesThemeModeStore
 import com.vextreme.vexlife.android.ui.ThemeModeStore
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackConnectionFactory
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerObservationReceiver
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
@@ -146,12 +147,18 @@ internal class VexApplicationDependencyModule(
 
     val playbackWidgetRelay =
         PlaybackWidgetRelayProvider(
-            executionRoot =
-                processExecutionRoot,
             playerStore =
                 playerStore,
             playbackFamily =
                 playbackFamily,
+        )
+
+    val playbackConnectionFactory =
+        PlaybackConnectionFactoryProvider(
+            playbackFamily =
+                playbackFamily,
+            playbackWidgetRelay =
+                playbackWidgetRelay,
         )
 
     val playerObservationReceiver =
@@ -187,6 +194,7 @@ internal class VexApplicationDependencyModule(
             navigationSession,
             backgroundServiceRelay,
             playbackWidgetRelay,
+            playbackConnectionFactory,
             playerObservationReceiver,
             playbackWidgetUpdateExecution,
         )
@@ -385,10 +393,6 @@ internal class VexApplicationDependencyModule(
      * remain the rightful owners of their source truths.
      */
     internal class PlaybackWidgetRelayProvider(
-        private val executionRoot:
-            VexDependencyProvider<
-                VexExecutionRoot
-            >,
         private val playerStore:
             VexDependencyProvider<
                 VexStreamPlayerStore
@@ -403,7 +407,6 @@ internal class VexApplicationDependencyModule(
         >(
             dependencies =
                 listOf(
-                    executionRoot,
                     playerStore,
                     playbackFamily,
                 ),
@@ -414,10 +417,6 @@ internal class VexApplicationDependencyModule(
         ):
             VexStreamPlaybackWidgetRelay =
             VexStreamPlaybackWidgetRelay(
-                executionRoot =
-                    dependencies.require(
-                        executionRoot,
-                    ),
                 playerStore =
                     dependencies.require(
                         playerStore,
@@ -427,6 +426,57 @@ internal class VexApplicationDependencyModule(
                         playbackFamily,
                     ),
             )
+    }
+
+    /**
+     * One construction path for Playback Controls across UI and Widget callers.
+     *
+     * Family admission is projected to the Widget Relay before Effect realization; the factory keeps
+     * that consequence path consistent without making the feature connection depend on Widget.
+     */
+    internal class PlaybackConnectionFactoryProvider(
+        private val playbackFamily:
+            VexDependencyProvider<
+                VexStreamPlaybackFamily
+            >,
+        private val playbackWidgetRelay:
+            VexDependencyProvider<
+                VexStreamPlaybackWidgetRelay
+            >,
+    ) :
+        VexDependencyProvider<
+            VexStreamPlaybackConnectionFactory
+        >(
+            dependencies =
+                listOf(
+                    playbackFamily,
+                    playbackWidgetRelay,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexStreamPlaybackConnectionFactory {
+            val relay =
+                dependencies.require(
+                    playbackWidgetRelay,
+                )
+
+            return VexStreamPlaybackConnectionFactory(
+                family =
+                    dependencies.require(
+                        playbackFamily,
+                    ),
+                onFamilyCurrent = {
+                        familyState,
+                        ->
+                    relay.admitFamilyCurrent(
+                        familyState,
+                    )
+                },
+            )
+        }
     }
 
     /**

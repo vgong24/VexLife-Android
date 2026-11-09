@@ -11,8 +11,8 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.vextreme.vexlife.android.VexApplication
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackService
-import com.vextreme.vexlife.android.vexstream.playback.PartnerVexStreamPlaybackConnection
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackConnection
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackConnectionFactory
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackProgressConnection
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackSeekConnection
@@ -54,6 +54,16 @@ internal class VexStreamPlayerConnectionViewModel(
                 vexApplication
                     .dependencyModule
                     .playbackFamily,
+            )
+
+    private val playbackConnectionFactory:
+        VexStreamPlaybackConnectionFactory =
+        vexApplication
+            .dependencies
+            .resolve(
+                vexApplication
+                    .dependencyModule
+                    .playbackConnectionFactory,
             )
 
     val executionRoot =
@@ -168,12 +178,10 @@ internal class VexStreamPlayerConnectionViewModel(
                         playerRequestConnection =
                             playerConnection
                         connection =
-                            PartnerVexStreamPlaybackConnection(
-                                family =
-                                    family,
-                                effectConnection =
+                            playbackConnectionFactory
+                                .create(
                                     playerConnection,
-                            )
+                                )
                         queueConnection =
                             PartnerVexStreamQueueConnection(
                                 store =

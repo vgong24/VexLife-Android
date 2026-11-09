@@ -9,6 +9,60 @@ import org.junit.Test
 
 class VexStreamPlaybackFamilyTest {
     @Test
+    fun partnerConnectionPublishesAdmittedFamilyCurrentBeforeEffectRealization() {
+        val family =
+            VexStreamPlaybackFamily(
+                VexStreamPlaybackState.Media(
+                    playRequested = false,
+                    phase =
+                        VexStreamPlaybackPhase.Ready,
+                    playPauseAvailable = true,
+                ),
+            )
+        val sequence =
+            mutableListOf<String>()
+        var admittedState:
+            VexStreamPlaybackState? =
+            null
+        val connection =
+            PartnerVexStreamPlaybackConnection(
+                family =
+                    family,
+                effectConnection =
+                    VexStreamPlaybackEffectConnection {
+                        sequence +=
+                            "effect"
+                        assertEquals(
+                            family.currentState,
+                            admittedState,
+                        )
+                    },
+                onFamilyCurrent = { state ->
+                    sequence +=
+                        "state"
+                    admittedState =
+                        state
+                },
+            )
+
+        connection.activate(
+            VexStreamPlaybackControl.PlayPause,
+        )
+
+        assertEquals(
+            listOf(
+                "state",
+                "effect",
+            ),
+            sequence,
+        )
+        assertEquals(
+            family.currentState,
+            admittedState,
+        )
+    }
+
+    @Test
     fun playPauseResolvesAgainstExactCurrentStateAndAdmitsPendingIntent() {
         val family =
             VexStreamPlaybackFamily(

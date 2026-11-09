@@ -26,7 +26,9 @@ VexWidget
 
 The root does not make Widget a product-State owner. A concrete `Widget.Relay` may reuse
 `VexCompoundRelay` when that Widget genuinely needs to converge bounded CURRENT from independent
-owners. Relay remains the relationship mechanism; Widget remains the remote-surface owner.
+owners. Input origins should remain explicit when ordering matters; the VexStream patient zero uses
+separate post-Family `ProviderRoundTrip` and `FamilyCurrent` admissions rather than racing passive
+owner subscriptions. Relay remains the relationship mechanism; Widget remains the remote-surface owner.
 
 ## Current architecture
 

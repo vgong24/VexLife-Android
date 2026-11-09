@@ -1,11 +1,9 @@
 package com.vextreme.vexlife.android.widget.vexstream
 
-import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.relay.VexCompoundRelay
 import com.vextreme.vexlife.android.relay.VexCompoundState
 import com.vextreme.vexlife.android.relay.VexInputState
 import com.vextreme.vexlife.android.relay.VexOutputState
-import com.vextreme.vexlife.android.relay.vexObserveDependencies
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackProjection
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
@@ -124,14 +122,12 @@ internal data class VexStreamPlaybackWidgetRelayOutputState(
 /**
  * Playback Widget relationship current over bounded Player Store + Playback Family truth.
  *
- * Family-only semantic changes arrive through the Family State flow. Provider-origin changes enter
- * through [admitProviderRoundTrip] only after the Player Store has admitted the occurrence and the
- * Playback Family has reconciled it. The Relay therefore composes exact rightful currents rather than
- * predicting another owner's next State or publishing a naive latest/latest pair.
+ * Both input origins are explicit. Provider-origin changes enter through [admitProviderRoundTrip]
+ * only after Player Store admission + Playback Family reconciliation. Family Control changes enter
+ * through [admitFamilyCurrent] only after Family.activate(...) has admitted the semantic State. The
+ * Relay therefore composes exact rightful currents without an ambiguous observer race.
  */
 internal class VexStreamPlaybackWidgetRelay(
-    executionRoot:
-        VexExecutionRoot,
     playerStore:
         VexStreamPlayerStore,
     playbackFamily:
@@ -163,33 +159,10 @@ internal class VexStreamPlaybackWidgetRelay(
                 familyState =
                     playbackFamily.currentState,
             ),
-        executionRoot =
-            executionRoot,
-        observedDependencies =
-            vexObserveDependencies<
-                VexStreamPlaybackWidgetRelayInputState
-            > {
-                observe(
-                    dependencyRef =
-                        "playback.family.current",
-                    flow =
-                        playbackFamily.states,
-                ) { state ->
-                    VexStreamPlaybackWidgetRelayInputState(
-                        playback =
-                            state
-                                .deepCopyForWidgetRelay(),
-                    )
-                }
-            },
     ),
     VexWidget.Relay<
         VexStreamPlaybackWidget
     > {
-    init {
-        startObservedDependencies()
-    }
-
     internal fun admitProviderRoundTrip(
         playerCurrent:
             VexStreamPlayerPartner.Current,
@@ -201,6 +174,19 @@ internal class VexStreamPlaybackWidgetRelay(
                 player =
                     playerCurrent
                         .toVexStreamPlaybackWidgetPlayerInput(),
+                playback =
+                    familyState
+                        .deepCopyForWidgetRelay(),
+            ),
+        )
+    }
+
+    internal fun admitFamilyCurrent(
+        familyState:
+            VexStreamPlaybackState,
+    ) {
+        send(
+            VexStreamPlaybackWidgetRelayInputState(
                 playback =
                     familyState
                         .deepCopyForWidgetRelay(),
