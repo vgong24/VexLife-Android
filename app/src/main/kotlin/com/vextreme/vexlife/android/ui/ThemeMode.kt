@@ -66,11 +66,12 @@ internal class ThemeModeFamily(
      *
      * This is the SAME Family Parameter.Mode instance already carried through Control -> Effect ->
      * Method. No generation/trace/operation ID is minted. The marker exists only so an older Store
-     * observation cannot overwrite a newer accepted semantic selection while that selection still
-     * has an active realization occurrence.
+     * observation cannot overwrite a newer accepted semantic selection while that selection's
+     * realization remains unsettled.
      *
      * act(...) remains pure. The realization boundary enters the fence through activateSelection(...)
-     * and leaves it when the corresponding execution Job completes, including cancellation.
+     * and leaves it when execution custody terminates (including cancellation) or when custody could
+     * not be established and launch fails synchronously.
      */
     private val selectionObservationLock =
         Any()
