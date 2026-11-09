@@ -292,6 +292,7 @@ abstract class VexFamily<
         private var realizationAdmission:
             (
                 (
+                    VexExecutionRoot,
                     () -> Job
                 ) -> Job
             )? =
@@ -393,7 +394,9 @@ abstract class VexFamily<
                     "Accepted Act Begin is missing its realization admission binding"
                 }
 
-            return admit {
+            return admit(
+                executionRoot,
+            ) {
                 VexExecution.begin(
                     executionRoot =
                         executionRoot,
@@ -438,6 +441,7 @@ abstract class VexFamily<
             realizationAdmission:
                 (
                     (
+                        VexExecutionRoot,
                         () -> Job
                     ) -> Job
                 )? =
@@ -594,6 +598,15 @@ abstract class VexFamily<
                 RealizationBinding
             > =
             mutableListOf()
+
+        /*
+         * Runtime continuity only. While one or more accepted bindings still have Job custody,
+         * overlapping admissions must stay inside the same execution root so Approach remains one
+         * relationship instead of splitting across independent custody maps.
+         */
+        var custodyRoot:
+            VexExecutionRoot? =
+            null
     }
 
     private val relationshipLock =
@@ -1046,10 +1059,12 @@ abstract class VexFamily<
                     realizationAdmission =
                         realizationBinding
                             ?.let { binding ->
-                                { formJob ->
+                                { executionRoot, formJob ->
                                     admitRealization(
                                         binding =
                                             binding,
+                                        executionRoot =
+                                            executionRoot,
                                         formJob =
                                             formJob,
                                     )
@@ -1074,6 +1089,8 @@ abstract class VexFamily<
     private fun admitRealization(
         binding:
             RealizationBinding,
+        executionRoot:
+            VexExecutionRoot,
         formJob:
             () -> Job,
     ):
@@ -1157,11 +1174,25 @@ abstract class VexFamily<
                             "Earliest accepted consequence is no longer the unresolved earliest realization"
                         }
                     }
+
+                    lane.custodyRoot
+                        ?.let { activeRoot ->
+                            check(
+                                activeRoot ===
+                                    executionRoot,
+                            ) {
+                                "Overlapping accepted realizations must share one VexExecutionRoot"
+                            }
+                        }
+                        ?: run {
+                            lane.custodyRoot =
+                                executionRoot
+                        }
                 }
 
             /*
              * Mark admission before the lazy Job is started so a re-entrant acceptance cannot treat
-             * this binding as still pending. A pre-custody failure rolls the flag back.
+             * this binding as still pending. A pre-custody failure rolls the flag/root back.
              */
             binding.admitted =
                 true
@@ -1175,6 +1206,25 @@ abstract class VexFamily<
                 ) {
                     binding.admitted =
                         false
+
+                    binding.relationshipId
+                        ?.let { relationshipId ->
+                            acceptanceLanes[
+                                relationshipId
+                            ]
+                                ?.let { lane ->
+                                    if (
+                                        lane.bindings
+                                            .none { candidate ->
+                                                candidate.admitted
+                                            }
+                                    ) {
+                                        lane.custodyRoot =
+                                            null
+                                    }
+                                }
+                        }
+
                     throw failure
                 }
 
@@ -1191,6 +1241,15 @@ abstract class VexFamily<
                                     lane.bindings.remove(
                                         binding,
                                     )
+                                    if (
+                                        lane.bindings
+                                            .none { candidate ->
+                                                candidate.admitted
+                                            }
+                                    ) {
+                                        lane.custodyRoot =
+                                            null
+                                    }
                                     if (
                                         lane.bindings.isEmpty()
                                     ) {
