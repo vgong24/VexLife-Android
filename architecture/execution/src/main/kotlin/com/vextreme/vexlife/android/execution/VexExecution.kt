@@ -1253,11 +1253,12 @@ abstract class VexExecution protected constructor(
                     onFailure,
             )
 
-        if (
-            admission.createdNewOccurrence
-        ) {
-            admission.job.start()
-        }
+        /*
+         * begin(...) means the selected custody occurrence must be running. This is intentionally
+         * unconditional: a reused Earliest occurrence may have been admitted lazily by the
+         * foundation handoff and not started yet. Job.start() is harmless when it is already active.
+         */
+        admission.job.start()
 
         return admission.job
     }
