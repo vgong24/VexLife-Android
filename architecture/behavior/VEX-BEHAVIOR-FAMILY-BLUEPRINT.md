@@ -896,11 +896,13 @@ app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/
 | Act | generic accepted VexFamily.Act<VexStreamPlaybackFamily,...>; no peer feature Act type |
 | Effect | [VexStreamPlaybackEffect](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackEffect.kt) |
 | Ordered Family admission | [VexStreamPlaybackAdmission](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackAdmission.kt) |
-| Family -> Partner connection | [PartnerVexStreamPlaybackConnection](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/PartnerVexStreamPlaybackConnection.kt) |
+| Family -> Partner connection / accepted Act execution | [PartnerVexStreamPlaybackConnection](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/PartnerVexStreamPlaybackConnection.kt) |
+| Accepted Effect Method | feature-local VexFamily.Act.Method inside PartnerVexStreamPlaybackConnection |
+| Compose relationship current | [VexStreamPlaybackExperienceRelay](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackExperienceRelay.kt) |
 | Outside Partner | [VexStreamPlayerPartner](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/player/VexStreamPlayerPartner.kt) |
 | Outside CURRENT | [VexStreamPlayerStore](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/player/VexStreamPlayerStore.kt) |
 | Media3 request realization | [Media3VexStreamPlayerControlConnection](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/player/Media3VexStreamPlayerControlConnection.kt) |
-| Sustained Media3 observation | [Media3VexStreamPlayerConnection](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/player/Media3VexStreamPlayerConnection.kt) |
+| Sustained Media3 observation / Connection-local execution custody | [Media3VexStreamPlayerConnection](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/player/Media3VexStreamPlayerConnection.kt) |
 | Request/progress lifetime host | [VexStreamPlayerConnectionViewModel](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/player/VexStreamPlayerConnectionViewModel.kt) |
 | Pending reconciliation | [VexStreamPlaybackPending](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackPending.kt) |
 | UI membrane | [VexStreamPlaybackExperience](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackExperience.kt) |

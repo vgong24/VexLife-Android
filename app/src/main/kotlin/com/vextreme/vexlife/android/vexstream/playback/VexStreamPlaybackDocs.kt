@@ -5,9 +5,9 @@ package com.vextreme.vexlife.android.vexstream.playback
  *
  * Human question:
  *
- *     "What is Playback's current semantic truth, what may the person request, and how do outside
- *      Player truth, sustained Service realization, UI, and Widget consequences stay connected
- *      without becoming competing State owners?"
+ *     "What is Playback's current semantic truth, how does outside Player truth enter it, how does a
+ *      Control become real work, and how do UI / Widget consumers receive coherent relationship
+ *      current without becoming competing State owners?"
  *
  * ## One semantic owner
  *
@@ -16,40 +16,83 @@ package com.vextreme.vexlife.android.vexstream.playback
  *     CURRENT State + Control
  *         -> accepted Act
  *         -> admitted pending State when truthful
- *         -> Effect
+ *         -> Effect + authored execution Approach / RelationshipId
  *
- * Provider truth does not become Playback State by being observed. The Player Partner path admits
- * outside truth first, then reconciles it through the exact current Family:
+ * Provider truth does not become Playback State by being observed.
+ *
+ * ## Outside Player -> Family
  *
  *     Media3 Player
- *         -> VexStream Player Partner Connection
+ *         -> VexStreamPlayerPartner.Connection
+ *         -> Conversion
  *         -> Signal / Observation
- *         -> Player Store CURRENT
- *         -> Playback admission
+ *         -> VexStreamPlayerStore CURRENT
+ *         -> VexStreamPlaybackAdmission
  *         -> Family.observe(reconciled State)
+ *         -> exact admitted Playback Family CURRENT
  *
- * ## Ordered admission
+ * [Media3VexStreamPlayerConnection] is itself a [com.vextreme.vexlife.android.execution.VexExecution]
+ * owner over the process execution root. Its queued Opened / Observed / Closed deliveries therefore
+ * have Connection-lifetime custody instead of entering the root's direct-owner retention map.
+ * close() removes the provider listener and queues terminal Closed behind earlier deliveries rather
+ * than cancelling the lane and losing terminal ordering.
+ *
+ * ## Ordered Family admission
  *
  * [VexStreamPlaybackAdmission] is a feature-local serialization boundary, not another truth owner.
- * It keeps Family mutation plus the immediate post-admission relationship consequence in one order
- * across both provider reconciliation and Control activation.
+ * It keeps Family mutation plus immediate downstream relationship admission in one order across
+ * provider reconciliation and Control activation.
  *
- * ## Control / realization return path
+ * ## Family -> Player realization
  *
- * [VexStreamPlaybackConnectionFactory] gives UI and Widget callers the same construction path:
+ * [VexStreamPlaybackConnectionFactory] gives UI and Widget callers the same Control path:
  *
  *     Control
  *         -> PartnerVexStreamPlaybackConnection
  *         -> Playback admission
  *         -> Family.activate(Control)
  *         -> exact admitted Family CURRENT
- *         -> bounded relationship consequence
- *         -> accepted Effect
+ *         -> consumer relationship admission(s)
+ *         -> accepted Act.launchWith(VexExecutionRoot)
+ *         -> Family-owned Method
  *         -> Player Partner request realization
- *         -> Media3
+ *         -> Media3 provider looper
  *
- * Provider acknowledgement returns independently through the Player Partner observation path above.
- * The concrete request connection remains provider-specific; the Family does not call Media3.
+ * The accepted Act's Approach, RelationshipId and live Family execution owner are consumed rather
+ * than discarded. Playback uses Latest overlap for Play/Pause/Restart, so a newer accepted request
+ * cancels the older active relationship Job before the replacement realization proceeds.
+ *
+ * [Media3VexStreamPlayerControlConnection] re-enters the MediaController application looper inside
+ * its suspend realization boundary. A short-lived Widget controller waits for the returned Job before
+ * release; configuration-lived UI controllers may ignore the Job while the same execution custody
+ * remains active.
+ *
+ * ## Consumer relationship currents
+ *
+ * Provider and Control origins feed two separate bounded consumers from the same exact admissions:
+ *
+ *     Player Store CURRENT + admitted Family CURRENT
+ *          |                         |
+ *          +-> VexStreamPlaybackWidgetRelay
+ *          |      -> Widget SurfaceState -> Glance
+ *          |
+ *          +-> VexStreamPlaybackExperienceRelay
+ *                 -> bounded UI read facts + Playback Projection
+ *                 -> Compose Playback Experience
+ *
+ * Neither Relay samples Store and Family independently. ProviderRoundTrip is admitted only after
+ * Store admission + Family reconciliation. FamilyCurrent is admitted only after Family.activate(...)
+ * has admitted the semantic State.
+ *
+ * Widget Relay carries only remote-surface facts. Playback Experience Relay carries only UI playback
+ * metadata, queue count/current index and the semantic Playback Projection. Full QueueItems remain
+ * Player Store / Queue Experience-owned.
+ *
+ * ## Live progress
+ *
+ * Position / duration / buffered progress advances without a Player Partner occurrence, so it is not
+ * retained in either relationship Relay. Compose layers the concrete Player Progress connection over
+ * the coherent Playback Experience Relay current.
  *
  * ## Sustained Android realization
  *
@@ -58,47 +101,19 @@ package com.vextreme.vexlife.android.vexstream.playback
  * Connection. Service teardown closes that Connection; it does not manufacture a second semantic
  * NoMedia path.
  *
- * ## Widget relationship
+ * ## Non-collapse
  *
- * VexStream Playback is the patient zero for the rooted VexWidget relationship:
+ *     Partner != Store
+ *     Store != Family
+ *     Admission != State owner
+ *     Family != Relay
+ *     Widget Relay != Experience Relay
+ *     SurfaceState != product State
+ *     Service != semantic owner
+ *     VexExecution != semantic owner
  *
- *     Player Store bounded facts ----\
- *                                    -> Playback Widget.Relay
- *     admitted Playback Family -----/          |
- *                                               v
- *                                      Widget SurfaceState
- *                                               |
- *                                               v
- *                                      Glance Projection
- *
- * Provider-origin Widget Relay admission happens only after Store admission + Family reconciliation.
- * Control-origin admission happens only after Family.activate(...) has admitted its semantic State.
- * The Relay carries only the Widget facts it needs; full QueueItems remain Store-owned.
- *
- * Widget durable SurfaceState is remote presentation custody, not Playback State. Artwork-availability
- * backfill remains a Widget-owned presentation transform rather than synthetic product truth.
- *
- * ## UI
- *
- * [VexStreamPlaybackExperience] observes Family State and combines it with provider/read metadata
- * from [VexStreamPlaybackReadState] for display. [VexStreamPlaybackDisplayState] and [present] are
- * projections only; neither owns Playback truth.
- *
- * The UI read/display composition is still a separate consumer relationship from Widget Relay and
- * should not be silently treated as transactionally paired Store + Family CURRENT.
- *
- * ## Provider latency
- *
- * Pending Play/Pause/Restart intent is represented in the shared Family State. A stale Media3
- * callback cannot erase a newer admitted Control; [reconcileVexStreamPlaybackObservation] compares
- * provider reality with the exact Family current inside the Playback admission gate before
- * [VexStreamPlaybackFamily.observe].
- *
- * ## Sibling boundaries
- *
- * Queue, Repeat, Seek, media source/loading, Widget remote-surface custody, Player Partner outside
- * truth, and higher convergence remain separate questions. Playback does not absorb them merely
- * because they meet in one music experience.
+ * Queue, Repeat, Seek, media source/loading and other consumer relationships remain separate
+ * questions even though they meet on one music surface.
  */
 // Documentation/navigation only.
 @Suppress("unused")

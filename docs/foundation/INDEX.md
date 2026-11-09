@@ -580,35 +580,46 @@ activate(Control)
 
 and `VexPortFlow` adds a current `StateFlow` projection when observation over time is required.
 
-The current VexStream Play/Pause pressure example now crosses the Partner / Family / Widget roots:
+The current VexStream Play/Pause pressure example now closes the Partner / Family / Execution /
+consumer-relay circuit:
 
 ~~~text
 Media3 Player
-    -> VexStreamPlayerPartner.Connection
-    -> Observation
+    -> Media3VexStreamPlayerConnection : VexExecution
+    -> Partner Signal / Observation
     -> VexStreamPlayerStore CURRENT
     -> VexStreamPlaybackAdmission
     -> VexStreamPlaybackFamily CURRENT
 
-Control activation
+Control
     -> VexStreamPlaybackConnectionFactory
     -> PartnerVexStreamPlaybackConnection
     -> VexStreamPlaybackAdmission
-    -> Family Act / admitted State
-    -> Effect
-    -> Player Partner request realization
-    -> Media3
+    -> accepted Family Act + admitted State
+    -> exact consumer relationship admission
+    -> Act.launchWith(process VexExecutionRoot)
+    -> Family-owned Method
+    -> Media3VexStreamPlayerControlConnection
+    -> Media3 provider looper
 
-Player Store bounded facts + exact admitted Playback Family current
+exact Player Store + admitted Family current
     -> VexStreamPlaybackWidgetRelay
-    -> Widget SurfaceState
-    -> Glance Projection
+       -> Widget SurfaceState / Glance
+
+exact Player Store + admitted Family current
+    -> VexStreamPlaybackExperienceRelay
+       -> bounded UI read current / Playback Projection
+       -> Compose
+
+live progress
+    -> concrete Player Progress connection
+    -> layered over Experience Relay current
 ~~~
 
-VexStreamPlaybackAdmission is serialization around Family admission + its immediate relationship
-consequence, not another State owner. The Player Store remains outside truth, Family remains semantic
-truth, Widget Relay owns only its bounded remote-surface relationship current, and the ViewModel
-remains an Android lifetime host for request/progress connections.
+VexStreamPlaybackAdmission owns ordering, not State. The Player Store remains outside truth, Family
+remains semantic truth, each consumer Relay owns only its bounded cross-owner current, and
+VexExecution owns actual Job overlap/custody rather than semantic meaning. Full QueueItems remain
+Store/Queue-owned rather than being copied into Playback consumer Relays.
 
 Control meaning is semantic-first as `Available(Act)` / `Unavailable`; Boolean availability is
 derived convenience. Every authored `on(...)` must explicitly terminate in `.stay()` or
