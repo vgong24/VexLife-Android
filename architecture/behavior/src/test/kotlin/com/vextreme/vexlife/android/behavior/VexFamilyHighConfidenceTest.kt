@@ -152,6 +152,8 @@ class VexFamilyHighConfidenceTest {
                             Effect.Save(
                                 value = control.value,
                             ),
+                        approach =
+                            VexExecution.Approach.Independent,
                     )
             }
     }

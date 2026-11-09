@@ -583,36 +583,27 @@ abstract class VexFamily<
             FamilyEffect
         >?
 
-    protected fun stay():
-        Act<
-            Family,
-            FamilyState,
-            FamilyEffect
-        > =
-        Act(
-            admittedState =
-                null,
-            effect =
-                null,
-            approach =
-                null,
-            relationshipId =
-                null,
-        )
-
     protected fun stay(
         effect:
-            FamilyEffect,
+            FamilyEffect? =
+            null,
         approach:
-            VexExecution.Approach =
-            VexExecution.Approach.Independent,
+            VexExecution.Approach? =
+            null,
     ):
         Act<
             Family,
             FamilyState,
             FamilyEffect
-        > =
-        Act(
+        > {
+        require(
+            (effect == null) ==
+                (approach == null),
+        ) {
+            "VexFamily stay Effect and Approach must either both exist or both be absent"
+        }
+
+        return Act(
             admittedState =
                 null,
             effect =
@@ -622,42 +613,31 @@ abstract class VexFamily<
             relationshipId =
                 null,
         )
-
-    protected fun admit(
-        state:
-            FamilyState,
-    ):
-        Act<
-            Family,
-            FamilyState,
-            FamilyEffect
-        > =
-        Act(
-            admittedState =
-                state,
-            effect =
-                null,
-            approach =
-                null,
-            relationshipId =
-                null,
-        )
+    }
 
     protected fun admit(
         state:
             FamilyState,
         effect:
-            FamilyEffect,
+            FamilyEffect? =
+            null,
         approach:
-            VexExecution.Approach =
-            VexExecution.Approach.Independent,
+            VexExecution.Approach? =
+            null,
     ):
         Act<
             Family,
             FamilyState,
             FamilyEffect
-        > =
-        Act(
+        > {
+        require(
+            (effect == null) ==
+                (approach == null),
+        ) {
+            "VexFamily admit Effect and Approach must either both exist or both be absent"
+        }
+
+        return Act(
             admittedState =
                 state,
             effect =
@@ -667,6 +647,7 @@ abstract class VexFamily<
             relationshipId =
                 null,
         )
+    }
 
     /**
      * Derive outward display meaning from one exact semantic State snapshot.
