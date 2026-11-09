@@ -34,15 +34,19 @@ class InsulinPartnerCircuitTest {
                 )
 
             val act =
-                family.activate(
-                    InsulinFamily.Control.RequestPumpDelivery(
-                        amount =
-                            amount,
+                checkNotNull(
+                    family.activate(
+                        InsulinFamily.Control.RequestPumpDelivery(
+                            amount =
+                                amount,
+                        ),
                     ),
                 )
 
             val effect =
-                act?.effect as
+                checkNotNull(
+                    act.effect,
+                ) as
                     InsulinFamily.Effect.RequestPumpDelivery
             val method =
                 InsulinFamily.Act.Method.RequestPumpDelivery(
@@ -69,25 +73,25 @@ class InsulinPartnerCircuitTest {
             )
 
             val secondAct =
-                family.activate(
-                    InsulinFamily.Control.RequestPumpDelivery(
-                        amount =
-                            InsulinFamily.Parameter.InsulinAmount(
-                                unitsHundredths =
-                                    125,
-                            ),
+                checkNotNull(
+                    family.activate(
+                        InsulinFamily.Control.RequestPumpDelivery(
+                            amount =
+                                InsulinFamily.Parameter.InsulinAmount(
+                                    unitsHundredths =
+                                        125,
+                                ),
+                        ),
                     ),
                 )
 
             assertEquals(
                 VexExecution.Approach.Queued,
-                secondAct
-                    ?.approach,
+                secondAct.approach,
             )
             assertEquals(
                 act.relationshipId,
-                secondAct
-                    ?.relationshipId,
+                secondAct.relationshipId,
             )
             assertEquals(
                 InsulinFamily.State.Empty,
