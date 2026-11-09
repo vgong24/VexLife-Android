@@ -1,12 +1,14 @@
 package com.vextreme.vexlife.android.vexstream.player
 
 import com.vextreme.vexlife.android.behavior.VexPartner
-import com.vextreme.vexlife.android.convergence.VexConvergence
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackAdmission
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackPhase
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.playback.reconcileVexStreamPlaybackObservation
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
@@ -52,12 +54,12 @@ internal data class VexStreamPlayerRetainedCurrent(
  * One provider occurrence is admitted as one observation batch, so several facet Signals from that
  * occurrence converge into one coherent Player CURRENT emission.
  */
-internal class VexStreamPlayerStore :
-    VexConvergence<
-        VexStreamPlayerStoreUpdate,
-        VexStreamPlayerRetainedCurrent
-    >(
-        initialCurrent =
+internal class VexStreamPlayerStore {
+    private val lock =
+        Any()
+
+    private val mutableRetainedStates =
+        MutableStateFlow(
             VexStreamPlayerRetainedCurrent(
                 connectionId =
                     null,
@@ -65,7 +67,20 @@ internal class VexStreamPlayerStore :
                     VexStreamPlayerPartner.Current
                         .Unavailable,
             ),
-    ) {
+        )
+
+    private val retainedStates:
+        StateFlow<
+            VexStreamPlayerRetainedCurrent
+        > =
+        mutableRetainedStates
+            .asStateFlow()
+
+    private val retainedCurrent:
+        VexStreamPlayerRetainedCurrent
+        get() =
+            retainedStates.value
+
     data class Admission(
         val accepted:
             Boolean,
@@ -77,7 +92,7 @@ internal class VexStreamPlayerStore :
         Flow<
             VexStreamPlayerPartner.Current
         > =
-        convergedStates
+        retainedStates
             .map { retained ->
                 retained.current
             }
@@ -142,7 +157,7 @@ internal class VexStreamPlayerStore :
     val current:
         VexStreamPlayerPartner.Current
         get() =
-            convergedCurrent
+            retainedCurrent
                 .current
 
     val currentQueue:
@@ -216,7 +231,7 @@ internal class VexStreamPlayerStore :
     ):
         Admission {
         val before =
-            convergedCurrent
+            retainedCurrent
         val after =
             admit(
                 VexStreamPlayerStoreUpdate
@@ -236,7 +251,7 @@ internal class VexStreamPlayerStore :
         )
     }
 
-    override fun converge(
+    private fun converge(
         update:
             VexStreamPlayerStoreUpdate,
         current:
@@ -334,6 +349,35 @@ internal class VexStreamPlayerStore :
                 } else {
                     current
                 }
+        }
+
+    private fun admit(
+        update:
+            VexStreamPlayerStoreUpdate,
+    ):
+        VexStreamPlayerRetainedCurrent =
+        synchronized(
+            lock,
+        ) {
+            val current =
+                mutableRetainedStates.value
+            val next =
+                converge(
+                    update =
+                        update,
+                    current =
+                        current,
+                )
+
+            if (
+                next !=
+                current
+            ) {
+                mutableRetainedStates.value =
+                    next
+            }
+
+            mutableRetainedStates.value
         }
 
     private fun admitAndReport(
