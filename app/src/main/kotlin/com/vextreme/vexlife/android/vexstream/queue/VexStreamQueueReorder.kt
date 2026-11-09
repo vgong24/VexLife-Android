@@ -6,35 +6,6 @@ import com.vextreme.vexlife.android.vexstream.player.queueMoveTargetIndex
 internal typealias VexStreamQueueReorderDirection =
     VexStreamPlayerPartner.QueueMove
 
-internal data class VexStreamQueueReorderRequest(
-    val occurrence:
-        VexStreamQueueOccurrence,
-    val direction:
-        VexStreamQueueReorderDirection,
-)
-
-internal fun vexStreamQueueReorderTargetIndex(
-    request:
-        VexStreamQueueReorderRequest,
-    currentMediaIds:
-        List<
-            String
-        >,
-    changeAvailable:
-        Boolean,
-):
-    Int? =
-    queueMoveTargetIndex(
-        occurrence =
-            request.occurrence,
-        move =
-            request.direction,
-        currentMediaIds =
-            currentMediaIds,
-        changeAvailable =
-            changeAvailable,
-    )
-
 internal fun vexStreamQueueAdjacentMoveTarget(
     currentIndex:
         Int,

@@ -1,57 +1,5 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
-import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
-import com.vextreme.vexlife.android.vexstream.player.seekTarget
-
-internal data class VexStreamPlaybackSeekRequest(
-    val mediaId:
-        String,
-    val mediaItemIndex:
-        Int,
-    val positionMs:
-        Long,
-) {
-    init {
-        require(
-            mediaId.isNotBlank(),
-        )
-        require(
-            mediaItemIndex >=
-                0,
-        )
-        require(
-            positionMs >=
-                0L,
-        )
-    }
-}
-
-internal fun vexStreamPlaybackSeekTarget(
-    request:
-        VexStreamPlaybackSeekRequest,
-    currentMediaId:
-        String?,
-    currentMediaItemIndex:
-        Int,
-    seekAvailable:
-        Boolean,
-):
-    Long? =
-    seekTarget(
-        mediaId =
-            request.mediaId,
-        mediaItemIndex =
-            request.mediaItemIndex,
-        positionMs =
-            request.positionMs,
-        currentMediaId =
-            currentMediaId,
-        currentMediaItemIndex =
-            currentMediaItemIndex,
-        seekAvailable =
-            seekAvailable,
-    )
-
 internal fun vexStreamPlaybackSeekPositionMs(
     fraction:
         Float,
