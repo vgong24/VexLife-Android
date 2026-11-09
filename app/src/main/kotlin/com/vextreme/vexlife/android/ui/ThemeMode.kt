@@ -96,16 +96,25 @@ internal class ThemeModeFamily(
             unsettledSelection =
                 control.mode
 
-            activate(
-                control,
-            ).also { accepted ->
-                if (
-                    accepted ==
-                    null
-                ) {
-                    unsettledSelection =
-                        previous
+            try {
+                activate(
+                    control,
+                ).also { accepted ->
+                    if (
+                        accepted ==
+                        null
+                    ) {
+                        unsettledSelection =
+                            previous
+                    }
                 }
+            } catch (
+                failure:
+                    Throwable,
+            ) {
+                unsettledSelection =
+                    previous
+                throw failure
             }
         }
 
