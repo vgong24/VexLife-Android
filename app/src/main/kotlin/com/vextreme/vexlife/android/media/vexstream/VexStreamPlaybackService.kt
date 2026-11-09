@@ -17,7 +17,8 @@ import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackTrace
  * Android-native owner for VexStream audio playback realization lifetime.
  *
  * Playback semantic State remains in the process-shared VexStreamPlaybackFamily. This Service keeps
- * Media3/Player realization alive while UI is absent and reconciles provider truth into that Family.
+ * Media3/Player realization alive while UI is absent. Its Player Partner Connection admits provider
+ * observations to Player Store; the process Store observation path reconciles that truth into Family.
  *
  * Local file MediaItems are resolved by DefaultDataSource. Opaque vexstream:// media requests flow
  * through [VexStreamNetworkDataSource], which loads the remembered endpoint/token and pins the
