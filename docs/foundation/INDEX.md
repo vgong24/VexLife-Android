@@ -376,7 +376,12 @@ Entry:
 ### Intention
 
 A developer should not decide coroutine ownership ad hoc from whichever Screen, repository, Service,
-or callback needs asynchronous work.
+or callback needs asynchronous work. That is an ownership rule, not universal VexExecution admission:
+first identify the rightful semantic and runtime lifetime owners, then use VexExecution only when the
+work actually needs its custody semantics such as maintained overlap, exact-source
+replacement/cancellation, recovery, active custody coordination/inspection, or a distinct sustained
+execution work set. A bounded owner-local coroutine lifetime is not debt merely because it uses a
+different mechanism.
 
 PR #209 refines the accepted execution base to the smaller current law:
 
