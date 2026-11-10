@@ -124,10 +124,11 @@ Is there a genuinely distinct sustained execution responsibility with its own li
     -> a concrete VexExecution owner may be earned
 ~~~
 
-The permanent law is one truthful owner for the work's lifetime and meaning, not one mandatory
-coroutine implementation mechanism. VexExecution is earned by execution-custody requirements; a raw
-owner-local CoroutineScope is not architectural debt by definition when it creates no duplicate
-semantic owner, active-work registry, or coordination address.
+The permanent law is truthful ownership at each boundary, not one mandatory coroutine implementation
+mechanism. Semantic meaning stays with its rightful semantic owner; runtime lifetime stays with its
+rightful runtime owner. VexExecution is earned by execution-custody requirements; an owner-local
+CoroutineScope is not architectural debt by definition when it creates no duplicate semantic owner,
+active-work registry, or coordination address.
 
 These routes intentionally produce different Kotlin shapes while preserving the same responsibility
 law. Similar syntax is not evidence that two meanings should share another abstraction, and different
@@ -408,7 +409,7 @@ PR #209 exercises the refined execution law through:
 - VexMaps Distribution Session directly uses VexExecution because its existing Session meaning also needs source-addressed preparation/leg replacement and cancellation custody;
 - VexMaps destination/place search uses source-addressed replacement where exact-source currentness is part of the work contract;
 - VexStream application/session and Service execution roots are used only for the concrete execution work sets they actually own, such as one ordered Widget publication observation stream;
-- VexMaps NavigationService remains valid counter-pressure: its current two Android-Service-lifetime collectors stay owner-local because no maintained relationship, source-uniqueness, recovery, cross-owner coordination, or active-custody requirement has been demonstrated that would earn VexExecution merely for consistency;
+- VexMaps NavigationService is counter-pressure against mechanism-by-consistency: its current two Android-Service-lifetime collectors are not architectural debt merely because they are owner-local; any future VexExecution migration must first demonstrate a custody requirement such as maintained relationship/source coordination, recovery, inspection, or replacement semantics;
 - Partner patient zero: inbound receipt/admission is queued under a private owner-local RelationshipId on each live Connection, while Store -> Family Flow observation remains exact-source addressed; durable Connection.Id provenance is deliberately not reused as runtime RelationshipId;
 - owner-scoped shutdown while a root may host sibling owners.
 
