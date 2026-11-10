@@ -205,6 +205,119 @@ class VexMapsNavigationServiceExecutionContractTest {
             )
             advanceUntilIdle()
         }
+    @Test
+    fun terminalShutdownInvalidatesCompletionAwareRestartBeforeRootStops() =
+        runTest {
+            val cleanupRelease =
+                CompletableDeferred<Unit>()
+            observationFlow =
+                flow {
+                    try {
+                        awaitCancellation()
+                    } finally {
+                        withContext(
+                            NonCancellable,
+                        ) {
+                            cleanupRelease.await()
+                        }
+                    }
+                }
+
+            val executionRoot =
+                VexExecutionRoot(
+                    dispatcher =
+                        StandardTestDispatcher(
+                            testScheduler,
+                        ),
+                )
+            val owner =
+                Any()
+            val source =
+                this@VexMapsNavigationServiceExecutionContractTest::
+                    exactObservationSource
+
+            var currentObservation:
+                Job? =
+                VexExecution.observe(
+                    executionRoot =
+                        executionRoot,
+                    owner =
+                        owner,
+                    source =
+                        source,
+                    restartOnSourceFailure =
+                        false,
+                ) {
+                    Unit
+                }
+
+            runCurrent()
+
+            val predecessor =
+                requireNotNull(
+                    currentObservation,
+                )
+            predecessor.cancel()
+            runCurrent()
+
+            assertFalse(
+                predecessor.isCompleted,
+            )
+
+            var restartCount =
+                0
+            restartVexMapsNavigationObservationAfterCompletion(
+                observation =
+                    predecessor,
+                currentObservation = {
+                    currentObservation
+                },
+                shouldRestart = {
+                    true
+                },
+                restart = {
+                    restartCount +=
+                        1
+                    VexExecution.observe(
+                        executionRoot =
+                            executionRoot,
+                        owner =
+                            owner,
+                        source =
+                            source,
+                        restartOnSourceFailure =
+                            false,
+                    ) {
+                        Unit
+                    }
+                },
+            )
+
+            /*
+             * Mirror Service terminal ordering: invalidate the callback's exact-current coordinate
+             * before stopping the root. The predecessor may complete during root shutdown, but it
+             * can no longer satisfy the restart identity predicate.
+             */
+            currentObservation =
+                null
+            executionRoot.forceStopAll(
+                "terminal Service shutdown",
+            )
+
+            cleanupRelease.complete(
+                Unit,
+            )
+            advanceUntilIdle()
+
+            assertTrue(
+                predecessor.isCompleted,
+            )
+            assertEquals(
+                0,
+                restartCount,
+            )
+        }
+
 }
 
 // [VXG RealForever][VEXARCHITECTURE][NAVIGATION-SERVICE][VEXEXECUTION][CURRENT-MAIN]

@@ -107,11 +107,16 @@ class VexMapsNavigationService :
     ): IBinder? = null
 
     override fun onDestroy() {
+        /*
+         * Invalidate completion-aware restart coordinates before terminal root shutdown. A location
+         * observation may still be cancelling; clearing the Service's current handles first makes
+         * any predecessor completion callback inert before forceStopAll() can complete that Job.
+         */
+        locationObservationJob = null
+        stateObservationJob = null
         executionRoot.forceStopAll(
             "VexMaps NavigationService destroyed",
         )
-        locationObservationJob = null
-        stateObservationJob = null
 
         if (
             !stopping &&
