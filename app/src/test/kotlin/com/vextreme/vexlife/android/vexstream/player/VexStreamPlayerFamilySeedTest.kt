@@ -11,6 +11,9 @@ import com.vextreme.vexlife.android.vexstream.queue.observeVexStreamQueuePlayerS
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatFamily
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatState
 import com.vextreme.vexlife.android.vexstream.repeat.observeVexStreamRepeatPlayerStore
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -108,6 +111,157 @@ class VexStreamPlayerFamilySeedTest {
             )
         }
     }
+
+    @Test
+    fun liveObservationContinuesAfterSynchronousSeed() =
+        runBlocking {
+            val store =
+                VexStreamPlayerStore()
+            val connectionId =
+                VexStreamPlayerPartner.Connection.Id(
+                    value =
+                        "live-test",
+                    occurrence =
+                        1L,
+                )
+            store.connectionOpened(
+                connectionId =
+                    connectionId,
+                observations =
+                    observations(
+                        connectionId,
+                    ),
+            )
+
+            val playback =
+                VexStreamPlaybackFamily()
+            val queue =
+                VexStreamQueueFamily()
+            val repeat =
+                VexStreamRepeatFamily()
+            val root =
+                VexExecutionRoot()
+
+            try {
+                observeVexStreamPlaybackPlayerStore(
+                    family =
+                        playback,
+                    store =
+                        store,
+                    executionRoot =
+                        root,
+                )
+                observeVexStreamQueuePlayerStore(
+                    family =
+                        queue,
+                    store =
+                        store,
+                    executionRoot =
+                        root,
+                )
+                observeVexStreamRepeatPlayerStore(
+                    family =
+                        repeat,
+                    store =
+                        store,
+                    executionRoot =
+                        root,
+                )
+
+                store.receive(
+                    observations =
+                        listOf(
+                            VexStreamPlayerPartner.Connection.Observation(
+                                connectionId =
+                                    connectionId,
+                                signal =
+                                    VexStreamPlayerPartner.Signal.Playback(
+                                        hasMedia =
+                                            true,
+                                        playRequested =
+                                            false,
+                                        phase =
+                                            VexStreamPlayerPartner.PlaybackPhase.Ready,
+                                        playPauseAvailable =
+                                            true,
+                                        restartAvailable =
+                                            true,
+                                    ),
+                                observedAtEpochMillis =
+                                    2L,
+                            ),
+                            VexStreamPlayerPartner.Connection.Observation(
+                                connectionId =
+                                    connectionId,
+                                signal =
+                                    VexStreamPlayerPartner.Signal.QueueNavigation(
+                                        currentIndex =
+                                            1,
+                                        previousAvailable =
+                                            false,
+                                        nextAvailable =
+                                            true,
+                                        changeMediaItemsAvailable =
+                                            false,
+                                    ),
+                                observedAtEpochMillis =
+                                    2L,
+                            ),
+                            VexStreamPlayerPartner.Connection.Observation(
+                                connectionId =
+                                    connectionId,
+                                signal =
+                                    VexStreamPlayerPartner.Signal.Repeat(
+                                        enabled =
+                                            false,
+                                        toggleAvailable =
+                                            false,
+                                    ),
+                                observedAtEpochMillis =
+                                    2L,
+                            ),
+                        ),
+                )
+
+                withTimeout(
+                    2_000L,
+                ) {
+                    while (
+                        playback.currentState !=
+                            VexStreamPlaybackState.Media(
+                                playRequested =
+                                    false,
+                                phase =
+                                    VexStreamPlaybackPhase.Ready,
+                                playPauseAvailable =
+                                    true,
+                            ) ||
+                        queue.currentState !=
+                            VexStreamQueueState.NonEmpty(
+                                previousAvailable =
+                                    false,
+                                nextAvailable =
+                                    true,
+                                shuffleAvailable =
+                                    false,
+                                clearAvailable =
+                                    false,
+                            ) ||
+                        repeat.currentState !=
+                            VexStreamRepeatState.Disabled(
+                                toggleAvailable =
+                                    false,
+                            )
+                    ) {
+                        yield()
+                    }
+                }
+            } finally {
+                root.joinStopAll(
+                    "live observation seed test complete",
+                )
+            }
+        }
 
     private fun observations(
         connectionId:
