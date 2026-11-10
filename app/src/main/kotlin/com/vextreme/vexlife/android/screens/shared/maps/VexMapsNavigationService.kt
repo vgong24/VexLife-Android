@@ -146,47 +146,116 @@ class VexMapsNavigationService :
         )
         session.start()
 
-        locationObservationJob?.cancel()
-        locationObservationJob =
-            VexExecution.observe(
-                executionRoot =
-                    executionRoot,
-                owner =
-                    this,
-                source =
-                    ::locationUpdatesForExecution,
-                restartOnSourceFailure =
-                    false,
-            ) { sample ->
-                VexMapsNavigationProcess
-                    .acceptLocation(
-                        sample = sample,
-                        nowElapsedRealtimeMillis =
-                            SystemClock
-                                .elapsedRealtime(),
-                    )
+        ensureLocationObservation(
+            session,
+        )
+        ensureStateObservation()
+    }
 
-                session
-                    .current
-                    .pendingReroute
-                    ?.let { request ->
-                        runCatching {
-                            VexMapsNavigationProcess
-                                .reroutePending(
-                                    context =
-                                        this@VexMapsNavigationService,
-                                    requestRef =
-                                        request.requestRef,
-                                )
-                        }.onFailure {
-                            session.rerouteFailed(
-                                request.requestRef,
-                            )
-                        }
-                    }
+    private fun ensureLocationObservation(
+        session: VexNavigationSession,
+    ) {
+        val currentObservation =
+            locationObservationJob
+
+        when {
+            currentObservation == null ||
+                currentObservation.isCompleted -> {
+                locationObservationJob =
+                    observeLocation(
+                        session,
+                    )
             }
 
-        stateObservationJob?.cancel()
+            currentObservation.isActive ->
+                Unit
+
+            else ->
+                restartVexMapsNavigationObservationAfterCompletion(
+                    observation =
+                        currentObservation,
+                    currentObservation = {
+                        locationObservationJob
+                    },
+                    shouldRestart = {
+                        when (
+                            VexMapsNavigationProcess
+                                .session
+                                .current
+                                .phase
+                        ) {
+                            VexNavigationSessionPhase.ACTIVE,
+                            VexNavigationSessionPhase.OFF_ROUTE,
+                            VexNavigationSessionPhase.LOCATION_HELD,
+                            -> true
+
+                            VexNavigationSessionPhase.IDLE,
+                            VexNavigationSessionPhase.READY,
+                            VexNavigationSessionPhase.ARRIVED,
+                            -> false
+                        }
+                    },
+                    restart = {
+                        locationObservationJob =
+                            null
+                        ensureLocationObservation(
+                            session,
+                        )
+                    },
+                )
+        }
+    }
+
+    private fun observeLocation(
+        session: VexNavigationSession,
+    ): Job =
+        VexExecution.observe(
+            executionRoot =
+                executionRoot,
+            owner =
+                this,
+            source =
+                ::locationUpdatesForExecution,
+            restartOnSourceFailure =
+                false,
+        ) { sample ->
+            VexMapsNavigationProcess
+                .acceptLocation(
+                    sample = sample,
+                    nowElapsedRealtimeMillis =
+                        SystemClock
+                            .elapsedRealtime(),
+                )
+
+            session
+                .current
+                .pendingReroute
+                ?.let { request ->
+                    runCatching {
+                        VexMapsNavigationProcess
+                            .reroutePending(
+                                context =
+                                    this@VexMapsNavigationService,
+                                requestRef =
+                                    request.requestRef,
+                            )
+                    }.onFailure {
+                        session.rerouteFailed(
+                            request.requestRef,
+                        )
+                    }
+                }
+        }
+
+    private fun ensureStateObservation() {
+        if (
+            stateObservationJob
+                ?.isCompleted ==
+            false
+        ) {
+            return
+        }
+
         stateObservationJob =
             VexExecution.observe(
                 executionRoot =
@@ -269,8 +338,13 @@ class VexMapsNavigationService :
     private fun finishForegroundService(
         retainNotification: Boolean,
     ) {
+        /*
+         * Keep the cancelling Job handle until completion. A new prepared start may reach this same
+         * Service instance before callbackFlow/LocationManager cleanup finishes; retaining the handle
+         * lets ensureLocationObservation defer same-source VexExecution admission until custody is
+         * actually released.
+         */
         locationObservationJob?.cancel()
-        locationObservationJob = null
         ServiceCompat.stopForeground(
             this,
             if (retainNotification) {
@@ -560,6 +634,23 @@ class VexMapsNavigationService :
                     ACTION_STOP,
                 ),
             )
+        }
+    }
+}
+
+internal fun restartVexMapsNavigationObservationAfterCompletion(
+    observation: Job,
+    currentObservation: () -> Job?,
+    shouldRestart: () -> Boolean,
+    restart: () -> Unit,
+) {
+    observation.invokeOnCompletion {
+        if (
+            currentObservation() ===
+            observation &&
+            shouldRestart()
+        ) {
+            restart()
         }
     }
 }
