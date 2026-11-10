@@ -270,6 +270,10 @@ internal fun observeVexStreamQueuePlayerStore(
     executionRoot:
         VexExecutionRoot,
 ) {
+    family.observeStore(
+        store.currentQueue,
+    )
+
     VexExecution.observe(
         executionRoot =
             executionRoot,

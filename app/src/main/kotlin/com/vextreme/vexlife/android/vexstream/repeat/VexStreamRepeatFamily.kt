@@ -192,6 +192,10 @@ internal fun observeVexStreamRepeatPlayerStore(
     executionRoot:
         VexExecutionRoot,
 ) {
+    family.observeStore(
+        store.currentRepeatSignal(),
+    )
+
     VexExecution.observe(
         executionRoot =
             executionRoot,
@@ -223,5 +227,13 @@ internal fun VexStreamPlayerPartner.Signal.Repeat?.toVexStreamRepeatState():
                     true,
         )
     }
+
+private fun VexStreamPlayerStore.currentRepeatSignal():
+    VexStreamPlayerPartner.Signal.Repeat? =
+    (
+        current as?
+            VexStreamPlayerStore.Snapshot.Available
+    )
+        ?.repeat
 
 // [VXG RealForever][VEXSTREAM][REPEAT][DIRECT-FAMILY]

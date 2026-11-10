@@ -380,6 +380,10 @@ internal fun observeVexStreamPlaybackPlayerStore(
     executionRoot:
         VexExecutionRoot,
 ) {
+    family.observePlayer(
+        store.currentPlaybackSignal(),
+    )
+
     VexExecution.observe(
         executionRoot =
             executionRoot,
