@@ -23,7 +23,7 @@ class ThemeModePersistenceTest {
     fun saveMethodOwnsTheFamilyModeParameterAndConcreteStoreCall() {
         val store =
             RecordingThemeModeStore(
-                ThemeMode.Light,
+                ThemeMode.NotSet,
             )
         val parameter =
             ThemeModeFamily.Parameter.Mode(
@@ -236,7 +236,7 @@ class ThemeModePersistenceTest {
             VexExecutionRoot()
         val store =
             RecordingThemeModeStore(
-                ThemeMode.NotSet,
+                ThemeMode.Light,
             )
         val family =
             ThemeModeFamily(
