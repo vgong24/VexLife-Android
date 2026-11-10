@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicLong
  * Provider-derived Playback read data used by view-facing DisplayState.
  *
  * This is not the semantic [VexStreamPlaybackState]. It carries Media3 read data such as metadata,
- * queue position and progress that the view needs alongside the Behavior Projection.
+ * queue position and progress that the view needs alongside the Playback Family projection.
  */
 internal data class VexStreamPlaybackReadState(
     val currentMediaId: String? = null,

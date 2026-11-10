@@ -110,7 +110,7 @@ vexstream/queue/
 vexstream/track/
     human questions: play this rendered track context / place this rendered track next or at queue end
     typed Track requests + source-resolution / Media3 provider-capability Connection
-    composition boundary only; not another finite Behavior family
+    composition boundary only; not another finite semantic Family
 
 vexstream/collection/
     human question: play this rendered collection naturally or as one shuffled start order
