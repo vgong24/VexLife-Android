@@ -99,15 +99,36 @@ Do not begin with "which Execution class should I create?". First identify what 
 Does semantic/domain structure already define a maintained relationship?
     -> consume its RelationshipId + authored Approach
 
-Is the exact callable / Flow source itself the local work being controlled?
+Is the exact callable / Flow source itself the local work being controlled,
+and does it need source-addressed uniqueness/replacement/cancellation or bounded recovery?
     -> source-addressed launch / observation may be sufficient
 
 Does an existing Session/service/domain owner already own the operation and its lifetime?
-    -> keep the operation there; use VexExecution for custody
 
-Is there a genuinely distinct sustained execution responsibility with its own lifetime/work set?
-    -> a concrete VexExecution owner may be earned
+    Does that work need VexExecution custody semantics such as:
+      maintained RelationshipId overlap,
+      exact-source duplicate/replacement/cancellation,
+      bounded source/subscription recovery,
+      or owner-isolated stop/join when shared custody is actually required?
+
+        yes
+        -> keep semantic/runtime meaning on the existing owner;
+           use the smallest VexExecution custody surface that supplies the required mechanic
+
+        no
+        -> keep ordinary owner-local coroutine lifetime local;
+           do not introduce VexExecution solely for implementation uniformity
+
+After a custody requirement is already earned, is there a genuinely distinct sustained execution
+responsibility with its own lifetime/work set?
+    -> a concrete VexExecution owner may be earned; otherwise direct entry may be sufficient
 ~~~
+
+The permanent law is truthful ownership at each boundary, not one mandatory coroutine implementation
+mechanism. Semantic meaning stays with its rightful semantic owner; runtime lifetime stays with its
+rightful runtime owner. VexExecution is earned by execution-custody requirements; an owner-local
+CoroutineScope is not architectural debt by definition when it creates no duplicate semantic owner,
+active-work registry, or coordination address.
 
 These routes intentionally produce different Kotlin shapes while preserving the same responsibility
 law. Similar syntax is not evidence that two meanings should share another abstraction, and different
@@ -385,9 +406,10 @@ meaningful accepted/observed failure facts to VexLogger when that history is req
 PR #209 exercises the refined execution law through:
 
 - ThemeMode Save: Family Parameter.Mode is carried through Control/Effect; Act.Method.Save carries the exact accepted Effect; Act.Accepted.launch(...) verifies that Effect and consumes its live Family owner + Control.Select RelationshipId + authored Approach -> zero-argument direct VexExecution -> Job custody;
-- VexMaps Distribution Session directly uses VexExecution for async work whose meaning and lifecycle the Session already owns;
-- VexMaps destination/place search source-addressed replacement;
-- VexStream application/session and service execution roots;
+- VexMaps Distribution Session directly uses VexExecution because its existing Session meaning also needs source-addressed preparation/leg replacement and cancellation custody;
+- VexMaps destination/place search uses source-addressed replacement where exact-source currentness is part of the work contract;
+- VexStream application/session and Service execution roots are used for concrete custody needs such as one maintained exact-source Widget publication observation under Service lifetime;
+- VexMaps NavigationService is counter-pressure against mechanism-by-consistency: its current two Android-Service-lifetime collectors are not architectural debt merely because they are owner-local; any future VexExecution migration must first demonstrate a custody requirement such as maintained RelationshipId overlap, exact-source duplicate/replacement/cancellation, bounded source/subscription recovery, or owner-isolated stop/join under shared custody;
 - Partner patient zero: inbound receipt/admission is queued under a private owner-local RelationshipId on each live Connection, while Store -> Family Flow observation remains exact-source addressed; durable Connection.Id provenance is deliberately not reused as runtime RelationshipId;
 - owner-scoped shutdown while a root may host sibling owners.
 
@@ -405,7 +427,7 @@ The focused execution tests pressure:
 - provider handoff;
 - root terminal shutdown.
 
-Repository-owned Gradle/JVM proof remains required on the exact candidate head before this PR may
-claim the refinement proved.
+PR #209 is accepted/merged provenance for this refinement. Current repository source and tests own
+present execution behavior; any future execution candidate must earn its own exact-head evidence.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][ARCHITECTURE][EXECUTION] -->

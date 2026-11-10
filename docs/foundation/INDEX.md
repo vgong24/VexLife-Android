@@ -258,9 +258,9 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 | F1_UI_BLUEPRINT_HOME | element cells + placement + first Home practicum | **MERGED / LIVED DEVICE RUN OBSERVED / AGGREGATE TEST PROOF PENDING** | Make UI identity, placement, intent, navigation and diagnostics human-perceivable before feature depth | aggregate Gradle proof + clean rerun before any formal foundation checkpoint |
 | VEX_COMPOSE | VexModifier root + inherited custom-Compose identity + sanctioned cells | **ACCEPTED ON MAIN / PR #88 / A013 LOCAL + PHYSICAL DEVICE PASS / ADVISORY MIGRATION ACTIVE** | Make custom Compose inherit the same semantic lattice as ScreenBlueprint so product UI cannot silently fall back to detached primitive code | migrate one real consumer at a time; preserve exact runtime identities; keep raw-Compose findings advisory until replacements are earned |
 | ANDROID_WIDGET_SURFACE | Glance App Widget projection/callback boundary | **DRAFT CANDIDATE / SOURCE PROOF PENDING** | Let home-screen widgets consume feature-owned projections and return stable interaction identity without becoming product State or Effect owners | prove :architecture:widget + aggregate local build, then pressure with the compact VexStream playback patient zero |
-| EXECUTION_BRIDGE | VexExecution owner + RelationshipId -> actual Job(s) custody | **ACCEPTED BASE ON MAIN / PR #87; PR #209 REFINEMENT DRAFT / PROOF PENDING** | Keep asynchronous work under explicit runtime owners while making the actual Job the occurrence and removing parallel InstanceId/SourceRef/Handle/history architecture | exact #209 `vexVerifyLocal` + review owner isolation / overlap / recovery behavior |
-| READABLE_DEPENDENCY_TOPOLOGY | lazy prerequisite construction + lifetime memoization | **PR #209 DRAFT / PROOF PENDING** | Make production construction order, reuse and lifetime relationships inspectable without reflection/service-locator lookup or another identity namespace | exact #209 `vexVerifyLocal` + source review of application/session graph |
-| LOGGER_TRACEABILITY | one chronology + Blueprint-derived readable interpretation | **PR #209 REFINEMENT DRAFT / PROOF PENDING** | Let UI/semantic/runtime facts share one chronology and resolve stable UI coordinates through the existing Blueprint registry while exposing missing mappings | exact #209 `vexVerifyLocal` + Debug Log lived review |
+| EXECUTION_BRIDGE | VexExecution owner + RelationshipId -> actual Job(s) custody | **ACCEPTED ON MAIN / PR #87 BASE + PR #209 MERGED REFINEMENT** | Keep asynchronous work under explicit runtime owners while making the actual Job the occurrence and removing parallel InstanceId/SourceRef/Handle/history architecture | current source/tests own behavior; future candidates require exact-head owner isolation / overlap / recovery proof |
+| READABLE_DEPENDENCY_TOPOLOGY | lazy prerequisite construction + lifetime memoization | **ACCEPTED ON MAIN / PR #209 MERGED ORIGIN** | Make production construction order, reuse and lifetime relationships inspectable without reflection/service-locator lookup or another identity namespace | current owning source/tests; future topology changes require exact-head source review and repository proof |
+| LOGGER_TRACEABILITY | one chronology + Blueprint-derived readable interpretation | **ACCEPTED ON MAIN / PR #209 MERGED REFINEMENT** | Let UI/semantic/runtime facts share one chronology and resolve stable UI coordinates through the existing Blueprint registry while exposing missing mappings | current owning source/tests; additional lived Debug Log review is required only for new lived claims |
 | BODY_SEMANTIC_BLUEPRINT | first-principle purpose -> primitive -> relationship -> form orientation | **DOCUMENTATION FOUNDATION / NO NEW RUNTIME CONTRACT** | Let a fresh human/AI recognize reusable semantic roles across differently named domains without turning the map into one class hierarchy | pressure the map against live feature/foundation examples; promote a primitive to a type/interface only when addressability or an executable invariant earns it |
 | BEHAVIOR_BLUEPRINT_EXPERIMENT | family-bound relational Behavior foundation | **ACCEPTED ON MAIN / PR #82 + #85 / EXACT `vexVerifyLocal` PASS / VEXSTREAM PLAYBACK CONSUMER CURRENT** | Preserve lawful Control + current State -> Act and current State + Act -> Effect + admitted State relationships while deriving reusable projections without a second UI state table | extend from independent real behavioral questions; keep runtime request payloads and generic Experience abstraction held until repeated consumers earn them |
 | DATA_REPOSITORY | domain repositories + Room local persistence + reusable data fixtures | **MERGED / LIVED PARTIAL / INTEGRATION PROOF PENDING** | Let screens observe data without knowing DAO/storage/backend details; first consumer is Log History | aggregate unit/build + Room migration/integration proof + clean lived rerun |
@@ -376,7 +376,13 @@ Entry:
 ### Intention
 
 A developer should not decide coroutine ownership ad hoc from whichever Screen, repository, Service,
-or callback needs asynchronous work.
+or callback needs asynchronous work. That is an ownership rule, not universal VexExecution admission:
+first identify the rightful semantic and runtime lifetime owners, then use VexExecution only when the
+work actually needs its custody semantics such as maintained RelationshipId overlap, exact-source
+duplicate/replacement/cancellation, bounded source/subscription recovery, or owner-isolated stop/join
+when shared custody is actually required. Whether that earned custody becomes direct entry or a
+concrete VexExecution owner is a later source-shape question, not an independent admission reason. A
+bounded owner-local coroutine lifetime is not debt merely because it uses a different mechanism.
 
 PR #209 refines the accepted execution base to the smaller current law:
 
@@ -407,7 +413,8 @@ Owner-scoped stop/join is now distinct from root shutdown, so sibling VexExecuti
 root do not terminate one another.
 
 ThemeMode, VexMaps Distribution/search, and VexStream roots provide current production pressure.
-Exact-head repository-owned proof is pending for PR #209.
+PR #209 is accepted/merged provenance for this refinement; current repository source and tests own
+present execution behavior, and future candidates require their own exact-head proof.
 
 ## Readable dependency topology candidate
 
