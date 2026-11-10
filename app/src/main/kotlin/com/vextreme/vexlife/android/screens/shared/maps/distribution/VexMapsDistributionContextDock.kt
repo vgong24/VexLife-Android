@@ -21,7 +21,7 @@ import com.vextreme.vexlife.android.screens.shared.maps.VexMapsScreen
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteLegAttempt
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteLegFailureStage
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationRelationshipStatus
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeState
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeFamily
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteControl
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteState
 
@@ -54,8 +54,8 @@ internal fun vexMapsDistributionContextDockPage(
     val session by
         ui.states
             .collectAsState()
-    val modeProjection by
-        ui.modeProjections
+    val modeState by
+        ui.modeStates
             .collectAsState()
     val deliveryRouteProjection by
         ui.deliveryRouteProjections
@@ -72,8 +72,8 @@ internal fun vexMapsDistributionContextDockPage(
     val plan =
         session.plan
     val distributionActive =
-        modeProjection.state is
-            VexMapsDistributionModeState.Distribution
+        modeState is
+            VexMapsDistributionModeFamily.State.Distribution
     val draftEditable =
         !session.draftOperationInFlight &&
             (

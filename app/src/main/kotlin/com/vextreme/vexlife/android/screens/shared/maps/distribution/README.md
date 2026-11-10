@@ -29,7 +29,9 @@ design/records/
 ```text
 WHEN IS MAPS OPERATING FOR DISTRIBUTION WORK?
     distribution/mode/
-    -> Distribution Mode Behavior
+    -> VexMapsDistributionModeFamily
+    -> Direct VexFamily semantic State + Control
+    -> no provider / Connection / runtime Effect
 
 WHAT DELIVERY OBLIGATIONS DID THE HUMAN ENTER?
     data/maps/distribution/
@@ -170,8 +172,11 @@ post-merge exact-tree verification = PASS
 The accepted composition preserves the ownership laws above:
 
 ~~~text
-Behavior families
-    own Distribution Mode / Delivery Route local semantics
+Direct VexFamily
+    owns Distribution Mode local semantics
+
+Compatibility Behavior family
+    still owns Delivery Route local semantics pending separate pressure
 
 Convergence Relays
     own relationships among independently complete truths
@@ -186,8 +191,64 @@ UI / Context Dock
     presents already-resolved truth
 ~~~
 
-This feature is therefore a worked production consumer of the accepted Behavior, Relay and
-VexExecution foundations rather than a separate VexMaps-only architecture.
+This feature is therefore a mixed but source-explicit production consumer while architecture converges:
+Distribution Mode is the first bounded Direct VexFamily migration; Delivery Route remains on the
+accepted compatibility Behavior foundation until its own pressure earns a change. Relay and
+VexExecution ownership remain unchanged.
+
+## Direct Family convergence proof — Distribution Mode
+
+Current source pressure showed that Distribution Mode had no provider/API realization and no async
+work, yet the compatibility shape carried Behavior + Act + Effect + Connection + VexPortFlow merely
+to own the two-state semantic question.
+
+The bounded refinement is:
+
+~~~text
+VexMapsDistributionModeFamily
+    State
+      Regular
+      Distribution
+
+    Control
+      ToggleDistribution
+      UseDistribution
+
+    Effect
+      no concrete Effect currently earned
+
+CURRENT State + Control
+-> Family.act(...)
+-> immediate admitted State
+~~~
+
+Consumers now read the one semantic truth directly:
+
+~~~text
+Mode Family.states
+-> Mode / Delivery Route convergence Relay
+
+Mode Family.states
+-> Distribution UI / Context Dock
+~~~
+
+Permanent:
+
+~~~text
+MODE FAMILY != DISTRIBUTION SESSION
+MODE FAMILY != DELIVERY ROUTE
+MODE FAMILY != RELAY
+SEMANTIC STATE CHANGE != NEED FOR VEXEXECUTION
+
+NO PROVIDER
++ NO UNFINISHED RUNTIME WORK
+-> NO CONNECTION / EXECUTION OWNER INVENTED FOR SYMMETRY
+~~~
+
+This first migration is evidence for the broader compatibility-family convergence question, not
+authority to rewrite Playback, Queue, Repeat or Delivery Route. Provider-backed consumers must first
+prove how Direct Family authors their semantic Effect without forcing immediate provider commands
+through VexExecution merely for shape consistency.
 
 ## Remaining proof debt
 

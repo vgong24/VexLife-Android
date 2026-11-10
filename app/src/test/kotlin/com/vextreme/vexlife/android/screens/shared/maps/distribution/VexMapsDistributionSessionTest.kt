@@ -19,7 +19,7 @@ import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteLegFailureStage
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteLegTarget
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationRelationshipStatus
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeState
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeFamily
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.planning.VexMapsDistributionPlan
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.planning.VexMapsDistributionPreparationSnapshot
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteState
@@ -1537,10 +1537,10 @@ class VexMapsDistributionSessionTest {
         withTimeout(
             1_000L,
         ) {
-            session.modeProjections
+            session.modeStates
                 .first {
-                    it.state is
-                        VexMapsDistributionModeState.Distribution
+                    it is
+                        VexMapsDistributionModeFamily.State.Distribution
                 }
         }
     }
