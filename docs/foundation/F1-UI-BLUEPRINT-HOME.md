@@ -213,6 +213,75 @@ rotation) keeps the same semantic Screen and open modal state.
 That is NOT a process-death restoration claim. Screen-local Compose-only state must still explicitly
 choose rememberSaveable or another rightful longer-lived owner when it needs that behavior.
 
+## Stable text identity with mapped or bound value
+
+Some visible text is one stable product object even though its displayed value may come from different
+sources.
+
+Examples from Home:
+
+~~~text
+element.home.body.vexstream.title
+  identity / role / style = stable semantic meaning
+  Android value mapping = R.string.home_vexstream_music
+
+element.home.body.vexstream.status
+  identity / role / style = stable semantic meaning
+  current value = VexStream connection / Hub projection
+
+element.home.body.vexstream.body
+  identity / role / style = stable semantic meaning
+  current value = disconnected or paired explanatory copy
+~~~
+
+These are all `TextElement` identities.
+
+~~~text
+TextElement
+  stable elementId
+  semantic TextRole / style
+  optional Android textRes mapping
+  no runtime/domain value storage
+
+VexText(element)
+  uses element.textRes when a target-resource mapping exists
+
+VexText(element, text = currentValue)
+  realizes the same element identity from current State/data
+~~~
+
+The generic `VexElementTree` accepts a nullable `textValue(TextElement)` resolver. Returning null
+means the Android resource mapping remains the value source; returning a value means the current
+Screen/runtime projection supplies that occurrence's rendered value.
+
+This is an Android realization of the broader Origin rule:
+
+~~~text
+TEXT_IDENTITY != CONTENT_ORIGIN
+CONTENT_ORIGIN != ANDROID_RESOURCE_ID
+TEXT_VALUE_SOURCE != TEXT_ELEMENT_TYPE
+
+one semantic text identity
++ target resource mapping OR runtime binding
+-> one Android TextElement realization
+~~~
+
+Android `R.string.*` remains a target-native resource coordinate. It is not the portable content
+Origin merely because Android currently stores the accepted wording there during reverse adoption.
+
+Permanent:
+
+~~~text
+TEXT_IDENTITY != TEXT_VALUE
+VALUE_BINDING != ELEMENT_IDENTITY
+ANDROID_RESOURCE_MAPPING != PORTABLE_CONTENT_IDENTITY
+SCREEN_BLUEPRINT_REGISTRATION != RUNTIME_STATE_STORAGE
+~~~
+
+Do not create fake string resources merely to make runtime text registerable, do not mint a
+`DynamicTextElement` merely because State chooses the current value, and do not put current
+repository/session values into the static Screen Blueprint.
+
 ## Form interactions
 
 Editable fields keep draft values as presentation state. Keystrokes are not semantic runtime actions

@@ -89,7 +89,7 @@ abstract class ScreenBlueprint(
 
     protected fun textRef(
         id: String,
-        @StringRes textRes: Int,
+        @StringRes textRes: Int? = null,
         role: TextRole = TextRole.Body,
         style: ElementStyleKey = VexElementStyles.Default,
     ): TextElement =
@@ -197,13 +197,15 @@ class ScreenLayoutScope internal constructor(
 
     fun text(
         id: String,
-        @StringRes textRes: Int,
+        @StringRes textRes: Int? = null,
         role: TextRole = TextRole.Body,
+        style: ElementStyleKey = VexElementStyles.Default,
     ): TextElement {
         val element = TextElement(
             elementId = screen.elementId(childPath(id)),
             textRes = textRes,
             role = role,
+            style = style,
         )
         place(element)
         return element
