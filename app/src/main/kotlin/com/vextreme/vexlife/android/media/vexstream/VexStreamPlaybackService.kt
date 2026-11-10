@@ -5,10 +5,11 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import com.vextreme.vexlife.android.VexApplication
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
-import com.vextreme.vexlife.android.vexstream.playback.Media3VexStreamCurrentPlaybackObserver
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamCurrentPlaybackObserver
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackTrace
+import com.vextreme.vexlife.android.vexstream.player.Media3PlayerConnection
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerObservationReceiver
 import com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetUpdateExecution
 import kotlinx.coroutines.Dispatchers
 
@@ -26,8 +27,8 @@ class VexStreamPlaybackService : MediaSessionService() {
             dispatcher =
                 Dispatchers.Default,
         )
-    private var currentPlaybackObserver:
-        VexStreamCurrentPlaybackObserver? =
+    private var playerConnection:
+        Media3PlayerConnection? =
         null
     private var widgetUpdateExecution:
         VexStreamPlaybackWidgetUpdateExecution? =
@@ -69,12 +70,40 @@ class VexStreamPlaybackService : MediaSessionService() {
                 "looper=${player.applicationLooper.thread.name}",
         )
 
-        val playbackObserver =
-            Media3VexStreamCurrentPlaybackObserver(
-                player,
+        val vexApplication =
+            application as?
+                VexApplication
+                ?: error(
+                    "VexStream PlaybackService requires VexApplication",
+                )
+        val playerStore =
+            vexApplication
+                .dependencies
+                .resolve(
+                    vexApplication
+                        .dependencyModule
+                        .playerStore,
+                )
+        val processExecutionRoot =
+            vexApplication
+                .dependencies
+                .resolve(
+                    vexApplication
+                        .dependencyModule
+                        .processExecutionRoot,
+                )
+
+        playerConnection =
+            Media3PlayerConnection(
+                player =
+                    player,
+                receiver =
+                    VexStreamPlayerObservationReceiver(
+                        playerStore,
+                    ),
+                executionRoot =
+                    processExecutionRoot,
             )
-        currentPlaybackObserver =
-            playbackObserver
         widgetUpdateExecution =
             VexStreamPlaybackWidgetUpdateExecution(
                 root =
@@ -82,12 +111,11 @@ class VexStreamPlaybackService : MediaSessionService() {
                 context =
                     applicationContext,
                 observations =
-                    playbackObserver
-                        .observations,
+                    playerStore.states,
             )
         VexStreamPlaybackTrace.record(
             stage =
-                "service.widget-observer.attached",
+                "service.player-partner.attached",
         )
     }
 
@@ -101,9 +129,9 @@ class VexStreamPlaybackService : MediaSessionService() {
             stage =
                 "service.destroy",
         )
-        currentPlaybackObserver
+        playerConnection
             ?.close()
-        currentPlaybackObserver =
+        playerConnection =
             null
         widgetUpdateExecution =
             null

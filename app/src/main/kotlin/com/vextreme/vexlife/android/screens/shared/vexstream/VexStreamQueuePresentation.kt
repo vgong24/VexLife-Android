@@ -75,9 +75,7 @@ internal fun VexStreamQueueContent(
     runtime: VexRuntime,
 ) {
     val queueExperience =
-        rememberVexStreamQueueExperience(
-            controller,
-        )
+        rememberVexStreamQueueExperience()
     val queueProjection =
         queueExperience.projection
     val queuePlayConnection =
@@ -89,9 +87,7 @@ internal fun VexStreamQueueContent(
             controller,
         )
     val repeatExperience =
-        rememberVexStreamRepeatExperience(
-            controller,
-        )
+        rememberVexStreamRepeatExperience()
     val repeatProjection =
         repeatExperience.projection
 

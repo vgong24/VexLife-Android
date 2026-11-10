@@ -1,6 +1,6 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
-import com.vextreme.vexlife.android.behavior.VexBehaviorFamily
+import com.vextreme.vexlife.android.behavior.VexFamily
 
 enum class VexStreamPlaybackPhase {
     Idle,
@@ -9,7 +9,7 @@ enum class VexStreamPlaybackPhase {
 }
 
 sealed interface VexStreamPlaybackState :
-    VexBehaviorFamily.State<
+    VexFamily.State<
         VexStreamPlaybackFamily
     > {
     data object NoMedia :

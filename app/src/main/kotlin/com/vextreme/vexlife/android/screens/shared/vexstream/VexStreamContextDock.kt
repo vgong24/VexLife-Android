@@ -103,9 +103,7 @@ private fun VexStreamContextDockContent(
             .displayState
             .playback
     val queueExperience =
-        rememberVexStreamQueueExperience(
-            controller,
-        )
+        rememberVexStreamQueueExperience()
     val queueProjection =
         queueExperience.projection
     val queuePlayConnection =
