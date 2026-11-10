@@ -475,13 +475,36 @@ internal fun activateThemeMode(
                 )
 
             val job =
-                try {
-                    act.launch(
-                        executionRoot =
-                            executionRoot,
-                        method =
-                            method,
-                        beforeOperation = {
+                try { act.launch(
+                executionRoot =
+                    executionRoot,
+                method =
+                    method,
+                beforeOperation = {
+                        recordThemeModeFact(
+                            logger =
+                                logger,
+                            event =
+                                VexLogger.Event.Runtime(
+                                    subjectRef =
+                                        THEME_MODE_FAMILY_SUBJECT,
+                                    action =
+                                        "EffectRequested",
+                                    detailsJson =
+                                        themeModeSaveDetails(
+                                            effect,
+                                        ),
+                                ),
+                        )
+                    },
+                    onResult = { result ->
+                        when (
+                            result
+                        ) {
+                            is VexMethod.Result.Success -> {
+                                family.selectionRealizationFinished(
+                                    effect.mode,
+                                )
                                 recordThemeModeFact(
                                     logger =
                                         logger,
@@ -490,96 +513,71 @@ internal fun activateThemeMode(
                                             subjectRef =
                                                 THEME_MODE_FAMILY_SUBJECT,
                                             action =
-                                                "EffectRequested",
+                                                "EffectSucceeded",
                                             detailsJson =
                                                 themeModeSaveDetails(
                                                     effect,
                                                 ),
                                         ),
                                 )
-                            },
-                            onResult = { result ->
-                                when (
-                                    result
-                                ) {
-                                    is VexMethod.Result.Success -> {
-                                        family.selectionRealizationFinished(
-                                            effect.mode,
-                                        )
-                                        recordThemeModeFact(
-                                            logger =
-                                                logger,
-                                            event =
-                                                VexLogger.Event.Runtime(
-                                                    subjectRef =
-                                                        THEME_MODE_FAMILY_SUBJECT,
-                                                    action =
-                                                        "EffectSucceeded",
-                                                    detailsJson =
-                                                        themeModeSaveDetails(
-                                                            effect,
-                                                        ),
+                                observeThemeModeState(
+                                    family =
+                                        family,
+                                    observed =
+                                        result.output,
+                                    logger =
+                                        logger,
+                                )
+                            }
+
+                            is VexMethod.Result.Failure -> {
+                                family.selectionRealizationFinished(
+                                    effect.mode,
+                                )
+                                recordThemeModeFact(
+                                    logger =
+                                        logger,
+                                    event =
+                                        VexLogger.Event.Runtime(
+                                            subjectRef =
+                                                THEME_MODE_FAMILY_SUBJECT,
+                                            action =
+                                                "EffectFailed",
+                                            detailsJson =
+                                                themeModeSaveDetails(
+                                                    effect =
+                                                        effect,
                                                 ),
-                                        )
-                                        observeThemeModeState(
-                                            family =
-                                                family,
-                                            observed =
-                                                result.output,
-                                            logger =
-                                                logger,
-                                        )
-                                    }
-        
-                                    is VexMethod.Result.Failure -> {
-                                        family.selectionRealizationFinished(
-                                            effect.mode,
-                                        )
-                                        recordThemeModeFact(
-                                            logger =
-                                                logger,
-                                            event =
-                                                VexLogger.Event.Runtime(
-                                                    subjectRef =
-                                                        THEME_MODE_FAMILY_SUBJECT,
-                                                    action =
-                                                        "EffectFailed",
-                                                    detailsJson =
-                                                        themeModeSaveDetails(
-                                                            effect =
-                                                                effect,
-                                                        ),
+                                        ),
+                                )
+                            }
+
+                            is VexMethod.Result.Error -> {
+                                family.selectionRealizationFinished(
+                                    effect.mode,
+                                )
+                                recordThemeModeFact(
+                                    logger =
+                                        logger,
+                                    event =
+                                        VexLogger.Event.Runtime(
+                                            subjectRef =
+                                                THEME_MODE_FAMILY_SUBJECT,
+                                            action =
+                                                "EffectErrored",
+                                            detailsJson =
+                                                themeModeSaveDetails(
+                                                    effect =
+                                                        effect,
+                                                    failure =
+                                                        result.cause,
                                                 ),
-                                        )
-                                    }
-        
-                                    is VexMethod.Result.Error -> {
-                                        family.selectionRealizationFinished(
-                                            effect.mode,
-                                        )
-                                        recordThemeModeFact(
-                                            logger =
-                                                logger,
-                                            event =
-                                                VexLogger.Event.Runtime(
-                                                    subjectRef =
-                                                        THEME_MODE_FAMILY_SUBJECT,
-                                                    action =
-                                                        "EffectErrored",
-                                                    detailsJson =
-                                                        themeModeSaveDetails(
-                                                            effect =
-                                                                effect,
-                                                            failure =
-                                                                result.cause,
-                                                        ),
-                                                ),
-                                        )
-                                    }
-                                }
-                        },
-                    )
-                } catch (
+                                        ),
+                                )
+                            }
+                        }
+                },
+                ) } catch (
                     failure:
                         Throwable,
                 ) {
