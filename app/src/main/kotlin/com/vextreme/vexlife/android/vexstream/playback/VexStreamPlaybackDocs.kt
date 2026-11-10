@@ -1,4 +1,3 @@
-
 package com.vextreme.vexlife.android.vexstream.playback
 
 /**
@@ -8,142 +7,63 @@ package com.vextreme.vexlife.android.vexstream.playback
  *
  * "How does VexStream Playback fit together?"
  *
- * This class is documentation/navigation only. It owns no playback state, provider, lifecycle, or
- * semantic behavior.
+ * This class is documentation/navigation only.
  *
- * ## What should Compose depend on?
+ * ## UI membrane
  *
- * Start at [VexStreamPlaybackExperience].
+ * Start at [VexStreamPlaybackExperience]. It observes the one process-shared
+ * [VexStreamPlaybackFamily], combines that semantic projection with presentation-only
+ * [VexStreamPlaybackReadState], and classifies [VexStreamPlaybackDisplayState].
  *
- * [rememberVexStreamPlaybackExperience] is the UI-facing membrane:
+ * Provider/controller connection availability remains visible: no request connection means the UI
+ * stays Unknown rather than pretending the provider can currently accept a Control.
  *
- * - [VexStreamPlaybackExperience.displayState] supplies the final view-facing output.
- * - [VexStreamPlaybackExperience.activate] carries [VexStreamPlaybackControl] back into the
- *   internal Port.
+ * ## Semantic owner
  *
- * Compose should not assemble Connection + VexPortFlow + Projection + DisplayState itself.
+ * [VexStreamPlaybackFamily] owns finite Play/Pause/Restart meaning:
  *
- * The Experience internally observes [Media3VexStreamPlaybackConnection], derives
- * [VexStreamPlaybackProjection], combines provider-derived [VexStreamPlaybackReadState], and
- * classifies [VexStreamPlaybackDisplayState].
+ * CURRENT [VexStreamPlaybackState]
+ * + [VexStreamPlaybackControl]
+ * -> accepted [VexStreamPlaybackEffect]
+ * -> Latest realization relationship
+ * -> exact bounded Player request
+ * -> later outside Player observation
+ * -> Family State
  *
- * ## What can Playback truthfully be?
+ * [VexStreamPlaybackPending] documents the feature-local reconciliation law. Accepted intent is
+ * visible immediately; stale outside truth cannot erase it. Realization failure may roll back only
+ * the exact still-current accepted occurrence.
  *
- * Start at [VexStreamPlaybackState].
+ * ## Outside Player relationship
  *
- * Compiler kinship is declared by [VexStreamPlaybackFamily].
+ * Service Player truth enters through
+ * [com.vextreme.vexlife.android.vexstream.player.Media3PlayerConnection]
+ * -> [com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore].
  *
- * ## What can the human interact with?
+ * Configuration/widget finite requests use
+ * [com.vextreme.vexlife.android.vexstream.player.Media3ControllerConnection].
+ * The request boundary re-checks Media3 capability on the controller application looper.
  *
- * See [VexStreamPlaybackControl].
+ * [com.vextreme.vexlife.android.vexstream.VexStreamMusicViewModel] owns the configuration-lifetime
+ * MediaController only. It borrows the process Family / Store / execution root; it does not become a
+ * second semantic owner.
  *
- * A Control is stable affordance identity. Its current meaning is resolved from State.
+ * ## Seek remains separate
  *
- * ## What does a Control mean right now?
+ * Seek carries runtime media/index/position payload and stays with [VexStreamPlaybackSeekRequest] /
+ * [Media3VexStreamPlaybackSeekConnection]. Finite Family migration does not absorb it into the Player
+ * Partner request vocabulary.
  *
- * See [VexStreamPlaybackAct].
+ * ## Presentation
  *
- * One PlayPause Control may currently mean Play or Pause.
+ * [VexStreamPlaybackProjection] and [toVexStreamPlaybackDisplayState] are projections of already-owned
+ * meaning, not another state machine. Pending State projects as Transitioning; no projection is
+ * Unknown; converged media is Active.
  *
- * ## What should runtime attempt?
- *
- * See [VexStreamPlaybackEffect].
- *
- * Effect is attempted runtime meaning, not provider success.
- *
- * ## Where are the relationships authored?
- *
- * See [vexStreamPlaybackBehavior].
- *
- * Read the full equations as:
- *
- * Control + CURRENT State -> Act
- *
- * CURRENT State + Act -> Effect + admitted State
- *
- * CURRENT State + Controls -> Projection
- *
- * ## Who talks to Media3?
- *
- * See [Media3VexStreamPlaybackConnection].
- *
- * It implements the reusable
- * [com.vextreme.vexlife.android.behavior.VexPortFlow] boundary while keeping an ordinary concrete
- * Connection name.
- *
- * The generic two-way contract is [com.vextreme.vexlife.android.behavior.VexPort].
- *
- * ## Who keeps the Connection alive on Android?
- *
- * See [VexStreamPlaybackConnectionViewModel].
- *
- * The ViewModel owns Android configuration lifetime only. MediaSession/Player remain playback truth
- * owners. There is no generic Host abstraction to learn: this concrete Connection simply uses the
- * rightful Android lifetime owner it needs.
- *
- * Previous / Next / Shuffle belong to the sibling Queue Behavior family.
- *
- * ## What about Seek?
- *
- * Seek carries a runtime position and therefore is not forced through the finite-Control Behavior
- * vocabulary. [VexStreamPlaybackSeekRequest] carries the exact Media3 ID/index coordinate + target
- * position, and [Media3VexStreamPlaybackSeekConnection] re-checks that coordinate plus Media3 seek
- * capability when the request is dispatched. A stale scrub therefore cannot seek a different item
- * or another queued occurrence of the same media ID.
- *
- * This is a playback-local payload boundary, not a generic PayloadPort abstraction.
- *
- * ## How is provider latency reconciled?
- *
- * See [VexStreamPlaybackPending].
- *
- * Local admitted intent may be published before Media3 acknowledgement without pretending provider
- * convergence already happened.
- *
- * ## How does the view know how to treat the arrived Projection?
- *
- * See [VexStreamPlaybackDisplayState] and [toVexStreamPlaybackDisplayState].
- *
- * The classification is pure and deterministic:
- *
- * - no Projection -> Unknown
- * - NoMedia -> Inactive(projection)
- * - pending admitted intent -> Transitioning(projection)
- * - otherwise -> Active(projection)
- *
- * This is not another state owner. It replaces repeated view-level if/null gates with one sealed
- * interpretation of the Projection that already arrived.
- *
- * ## How does semantic meaning become UI meaning?
- *
- * See [VexStreamPlaybackControlPresentation] and [present].
- *
- * Presentation maps projected semantic meaning into icon/enabled treatment. Projected Control
- * meaning is explicit as Available(Act) / Unavailable; Boolean enabled state is derived convenience.
- * Presentation is not another State owner.
- *
- * ## What types should normal callers use?
- *
- * Prefer:
- *
- * - [VexStreamPlaybackConnection]
- * - [VexStreamPlaybackConnectionFlow]
- * - [VexStreamPlaybackProjection]
- * - [VexStreamPlaybackSeekRequest] / [VexStreamPlaybackSeekConnection]
- *
- * These preserve the full Family-bound generic contract underneath without making ordinary Compose
- * code read the complete generic equation.
- *
- * ## What is intentionally still outside this family?
- *
- * Queue, repeat, media loading/source selection, generic UIElement binding, and higher convergence
- * are not silently owned by Playback merely because they are nearby. Seek stays in the Playback
- * neighborhood as a typed request boundary without becoming a finite Behavior Control.
- *
- * If one of those becomes an independently meaningful behavioral question, it may earn a sibling
- * package/family rather than making Playback grow forever.
+ * Queue and Repeat remain sibling semantic Families. Track/Collection source selection and higher
+ * convergence remain outside Playback.
  */
 @Suppress("unused")
 internal class VexStreamPlaybackDocs private constructor()
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][PLAYBACK][DIRECT-FAMILY]
