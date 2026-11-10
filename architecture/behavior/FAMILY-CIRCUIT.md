@@ -137,13 +137,13 @@ because it can admit observed truth.
 
 ThemeMode carries one concrete example of that law without adding a revision/trace identity. The same
 `Parameter.Mode` instance already flowing through Control -> Effect -> Method remains the local
-currentness fence until that exact Method reaches a terminal result.
+currentness fence while that exact accepted selection still owns an unresolved realization
+obligation.
 
 While that Parameter is unsettled, a Store observation that disagrees with its mode has no revision
 evidence proving it is newer than the accepted selection, so ThemeMode holds it. A matching
-observation may be read without changing semantic State, but only the terminal result of the exact
-bound Method clears that Parameter fence. Parameter identity therefore protects both delayed
-bootstrap truth and delayed observation from a prior local Save.
+observation may be read without changing semantic State. The fence releases when the exact
+realization obligation ends; a terminal Method Result is one lawful ending, not the exclusive one.
 
 ~~~text
 Parameter.Mode(Light)
@@ -155,21 +155,37 @@ Parameter.Mode(Light)
         |       -> held while Light Parameter is unsettled
         |
         v
-exact Method result
--> settle the SAME Parameter identity
--> ordinary Store observations resume
+exact realization obligation ends
+    -> Success / Failure / Error Result
+    -> Job cancellation with no Result
+    -> synchronous custody-establishment failure with no Job / Result
+    -> lawful no-occurrence / supersession
+-> settleSelectionCurrentness(the SAME Parameter identity)
+-> ordinary Store observations may reconcile again
 
 rapid follow-up:
 
 Parameter.Mode(Dark)
 -> replaces the unsettled Light Parameter
+-> older Light realization later terminates
+   -> cannot settle newer Dark currentness because identity differs
 -> older Light Store observation
-   cannot overwrite newer Dark semantic State
+   cannot overwrite newer Dark semantic State while Dark remains unsettled
+~~~
+
+Permanent:
+
+~~~text
+VexMethod.Result
+!= Job terminal disposition
+!= realization-obligation terminality
+!= durable Store truth
 ~~~
 
 This is ThemeMode/provider currentness, not a generation counter or Execution status registry.
-The reusable VexMethod Result topology reports Method realization through Success / Failure / Error positions; it
-does not decide whether an observation is current or author semantic State.
+The reusable VexMethod Result topology reports Method realization through Success / Failure / Error
+positions; it does not decide whether an observation is current, whether a cancelled/no-occurrence
+realization still exists, or what semantic State outside truth earns.
 
 ## Act / Effect / execution relationship
 

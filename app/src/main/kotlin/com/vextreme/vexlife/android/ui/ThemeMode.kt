@@ -66,11 +66,11 @@ internal class ThemeModeFamily(
      *
      * This is the SAME Family Parameter.Mode instance already carried through Control -> Effect ->
      * Method. No generation/trace/operation ID is minted. The marker exists only so an older Store
-     * observation cannot overwrite a newer accepted semantic selection while that exact Method is
-     * still unresolved.
+     * observation cannot overwrite a newer accepted semantic selection while that exact accepted
+     * selection still owns an unresolved realization obligation.
      *
      * act(...) remains pure. The realization boundary enters/leaves this fence through
-     * activateSelection(...) / selectionRealizationFinished(...).
+     * activateSelection(...) / settleSelectionCurrentness(...).
      */
     private val selectionObservationLock =
         Any()
@@ -108,7 +108,15 @@ internal class ThemeModeFamily(
             }
         }
 
-    internal fun selectionRealizationFinished(
+    /**
+     * Settle the feature-owned Store-observation fence for one exact accepted selection.
+     *
+     * This ends the currentness obligation for that Parameter identity; it does not interpret a
+     * VexMethod.Result. The obligation may end through Success / Failure / Error, Job cancellation,
+     * synchronous custody-establishment failure, or lawful no-occurrence/supersession. The identity
+     * guard prevents an older realization from clearing a newer accepted selection.
+     */
+    internal fun settleSelectionCurrentness(
         parameter:
             Parameter.Mode,
     ) {
@@ -474,7 +482,8 @@ internal fun activateThemeMode(
                         effect,
                 )
 
-            act.launch(
+            val job =
+                try { act.launch(
                 executionRoot =
                     executionRoot,
                 method =
@@ -501,7 +510,7 @@ internal fun activateThemeMode(
                             result
                         ) {
                             is VexMethod.Result.Success -> {
-                                family.selectionRealizationFinished(
+                                family.settleSelectionCurrentness(
                                     effect.mode,
                                 )
                                 recordThemeModeFact(
@@ -530,7 +539,7 @@ internal fun activateThemeMode(
                             }
 
                             is VexMethod.Result.Failure -> {
-                                family.selectionRealizationFinished(
+                                family.settleSelectionCurrentness(
                                     effect.mode,
                                 )
                                 recordThemeModeFact(
@@ -552,7 +561,7 @@ internal fun activateThemeMode(
                             }
 
                             is VexMethod.Result.Error -> {
-                                family.selectionRealizationFinished(
+                                family.settleSelectionCurrentness(
                                     effect.mode,
                                 )
                                 recordThemeModeFact(
@@ -576,7 +585,30 @@ internal fun activateThemeMode(
                             }
                         }
                 },
-            )
+                ) } catch (
+                    failure:
+                        Throwable,
+                ) {
+                    family.settleSelectionCurrentness(
+                        effect.mode,
+                    )
+                    throw failure
+                }
+
+            if (
+                job !=
+                    null
+            ) {
+                job.invokeOnCompletion {
+                    family.settleSelectionCurrentness(
+                        effect.mode,
+                    )
+                }
+            } else {
+                family.settleSelectionCurrentness(
+                    effect.mode,
+                )
+            }
         }
     }
 
