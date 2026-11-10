@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.vexstream.VexStreamMusicViewModel
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
 
 /** UI-facing membrane for the process-shared VexStream Playback Family. */
 internal interface VexStreamPlaybackExperience {
@@ -27,6 +28,8 @@ private class CurrentVexStreamPlaybackExperience(
         VexStreamPlaybackFamily,
     private val connection:
         VexStreamPlayerPartner.Connection.Request?,
+    private val playerStore:
+        VexStreamPlayerStore,
     private val executionRoot:
         VexExecutionRoot,
 ) :
@@ -46,6 +49,8 @@ private class CurrentVexStreamPlaybackExperience(
                 control,
             connection =
                 requestConnection,
+            playerStore =
+                playerStore,
             executionRoot =
                 executionRoot,
         )
@@ -102,6 +107,7 @@ internal fun rememberVexStreamPlaybackExperience():
         displayState,
         family,
         connection,
+        owner.playerStore,
         owner.executionRoot,
     ) {
         CurrentVexStreamPlaybackExperience(
@@ -111,6 +117,8 @@ internal fun rememberVexStreamPlaybackExperience():
                 family,
             connection =
                 connection,
+            playerStore =
+                owner.playerStore,
             executionRoot =
                 owner.executionRoot,
         )

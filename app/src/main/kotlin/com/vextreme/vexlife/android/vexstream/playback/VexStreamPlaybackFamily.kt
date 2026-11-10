@@ -8,6 +8,13 @@ import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
 import kotlinx.coroutines.Job
 
+private typealias AcceptedPlayback =
+    VexFamily.Act.Accepted<
+        VexStreamPlaybackFamily,
+        VexStreamPlaybackState,
+        VexStreamPlaybackEffect
+    >
+
 /**
  * One live semantic owner for VexStream Play/Pause/Restart meaning.
  *
@@ -29,29 +36,35 @@ internal class VexStreamPlaybackFamily(
             initialState,
     ) {
     /*
-     * Feature-owned currentness fence between accepted semantic intent and later Store observation.
-     * This is not a generation/revision protocol. The lock exists only so an older provider
-     * observation cannot interleave between reading current pending intent and admitting the
-     * reconciled State.
+     * Feature-owned fence between accepted semantic intent, later provider observation, and
+     * realization failure. The already-existing Accepted occurrence is the identity; no feature
+     * generation/revision/operation ID is minted.
      */
     private val observationLock =
         Any()
+    private var unsettledAccepted:
+        AcceptedPlayback? =
+        null
 
     internal fun activatePlayback(
         control:
             VexStreamPlaybackControl,
     ):
-        VexFamily.Act.Accepted<
-            VexStreamPlaybackFamily,
-            VexStreamPlaybackState,
-            VexStreamPlaybackEffect
-        >? =
+        AcceptedPlayback? =
         synchronized(
             observationLock,
         ) {
             activate(
                 control,
-            )
+            ).also { accepted ->
+                if (
+                    accepted !=
+                    null
+                ) {
+                    unsettledAccepted =
+                        accepted
+                }
+            }
         }
 
     internal fun observePlayer(
@@ -62,16 +75,55 @@ internal class VexStreamPlaybackFamily(
         synchronized(
             observationLock,
         ) {
-            val observed =
-                playback
-                    .toVexStreamPlaybackState()
+            val after =
+                observe(
+                    reconcileVexStreamPlaybackObservation(
+                        observed =
+                            playback
+                                .toVexStreamPlaybackState(),
+                        current =
+                            currentState,
+                    ),
+                )
+
+            if (
+                !after.hasPendingPlaybackIntent()
+            ) {
+                unsettledAccepted =
+                    null
+            }
+
+            after
+        }
+
+    /**
+     * Roll back one exact still-current accepted intent when its realization could not be dispatched.
+     *
+     * An older completion cannot clear a newer A -> B -> A intent because Accepted identity, not
+     * State/effect equality, guards this correction.
+     */
+    internal fun settlePlaybackRealizationFailure(
+        accepted:
+            AcceptedPlayback,
+        playback:
+            VexStreamPlayerPartner.Signal.Playback?,
+    ):
+        VexStreamPlaybackState =
+        synchronized(
+            observationLock,
+        ) {
+            if (
+                unsettledAccepted !==
+                accepted
+            ) {
+                return@synchronized currentState
+            }
+
+            unsettledAccepted =
+                null
             observe(
-                reconcileVexStreamPlaybackObservation(
-                    observed =
-                        observed,
-                    current =
-                        currentState,
-                ),
+                playback
+                    .toVexStreamPlaybackState(),
             )
         }
 
@@ -162,31 +214,28 @@ internal class VexStreamPlaybackFamily(
         ) :
             VexFamily.Act.Method<
                 VexStreamPlaybackFamily,
-                Unit,
+                Boolean,
                 Nothing
             > {
             override suspend fun invoke():
                 VexMethod.Result<
-                    Unit,
+                    Boolean,
                     Nothing
-                > {
-                when (
-                    effect
-                ) {
-                    VexStreamPlaybackEffect.RequestPlay ->
-                        connection.play()
+                > =
+                VexMethod.Result.Success(
+                    when (
+                        effect
+                    ) {
+                        VexStreamPlaybackEffect.RequestPlay ->
+                            connection.play()
 
-                    VexStreamPlaybackEffect.RequestPause ->
-                        connection.pause()
+                        VexStreamPlaybackEffect.RequestPause ->
+                            connection.pause()
 
-                    VexStreamPlaybackEffect.RestartCurrent ->
-                        connection.restartCurrent()
-                }
-
-                return VexMethod.Result.Success(
-                    Unit,
+                        VexStreamPlaybackEffect.RestartCurrent ->
+                            connection.restartCurrent()
+                    },
                 )
-            }
         }
     }
 }
@@ -221,6 +270,8 @@ internal fun activateVexStreamPlayback(
         VexStreamPlaybackControl,
     connection:
         VexStreamPlayerPartner.Connection.Request,
+    playerStore:
+        VexStreamPlayerStore,
     executionRoot:
         VexExecutionRoot,
 ):
@@ -232,19 +283,85 @@ internal fun activateVexStreamPlayback(
             ?: return null
     val begin =
         accepted.realizationBegin
-            ?: return null
 
-    return accepted.launch(
-        executionRoot =
-            executionRoot,
-        method =
-            VexStreamPlaybackFamily.Act.Method(
-                connection =
-                    connection,
-                effect =
-                    begin.effect,
-            ),
-    )
+    if (
+        begin ==
+        null
+    ) {
+        family.settlePlaybackRealizationFailure(
+            accepted =
+                accepted,
+            playback =
+                playerStore.currentPlaybackSignal(),
+        )
+        return null
+    }
+
+    fun settleFailure() {
+        family.settlePlaybackRealizationFailure(
+            accepted =
+                accepted,
+            playback =
+                playerStore.currentPlaybackSignal(),
+        )
+    }
+
+    val job =
+        try {
+            accepted.launch(
+                executionRoot =
+                    executionRoot,
+                method =
+                    VexStreamPlaybackFamily.Act.Method(
+                        connection =
+                            connection,
+                        effect =
+                            begin.effect,
+                    ),
+                onResult = { result ->
+                    when (
+                        result
+                    ) {
+                        is VexMethod.Result.Success ->
+                            if (
+                                !result.output
+                            ) {
+                                settleFailure()
+                            }
+
+                        is VexMethod.Result.Failure ->
+                            settleFailure()
+
+                        is VexMethod.Result.Error ->
+                            settleFailure()
+                    }
+                },
+            )
+        } catch (
+            failure:
+                Throwable,
+        ) {
+            settleFailure()
+            throw failure
+        }
+
+    if (
+        job ==
+        null
+    ) {
+        settleFailure()
+    } else {
+        job.invokeOnCompletion { failure ->
+            if (
+                failure !=
+                null
+            ) {
+                settleFailure()
+            }
+        }
+    }
+
+    return job
 }
 
 internal fun observeVexStreamPlaybackPlayerStore(
@@ -309,5 +426,28 @@ internal fun VexStreamPlayerPartner.Signal.Playback?.toVexStreamPlaybackState():
                     playPauseAvailable,
             )
     }
+
+private fun VexStreamPlaybackState.hasPendingPlaybackIntent():
+    Boolean =
+    when (
+        this
+    ) {
+        VexStreamPlaybackState.NoMedia ->
+            false
+
+        is VexStreamPlaybackState.Media ->
+            requestPending
+
+        is VexStreamPlaybackState.Ended ->
+            restartPending
+    }
+
+private fun VexStreamPlayerStore.currentPlaybackSignal():
+    VexStreamPlayerPartner.Signal.Playback? =
+    (
+        current as?
+            VexStreamPlayerStore.Snapshot.Available
+    )
+        ?.playback
 
 // [VXG RealForever][VEXSTREAM][PLAYBACK][DIRECT-FAMILY]

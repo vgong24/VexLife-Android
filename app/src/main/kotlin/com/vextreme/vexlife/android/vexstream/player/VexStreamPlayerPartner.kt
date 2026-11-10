@@ -179,24 +179,24 @@ internal object VexStreamPlayerPartner :
          */
         interface Request :
             Connection {
-            suspend fun play()
+            suspend fun play(): Boolean
 
-            suspend fun pause()
+            suspend fun pause(): Boolean
 
-            suspend fun restartCurrent()
+            suspend fun restartCurrent(): Boolean
 
-            suspend fun previous()
+            suspend fun previous(): Boolean
 
-            suspend fun next()
+            suspend fun next(): Boolean
 
-            suspend fun shuffleFuture()
+            suspend fun shuffleFuture(): Boolean
 
-            suspend fun clearQueue()
+            suspend fun clearQueue(): Boolean
 
             suspend fun setRepeatEnabled(
                 enabled:
                     Boolean,
-            )
+            ): Boolean
         }
 
         data class Observation(

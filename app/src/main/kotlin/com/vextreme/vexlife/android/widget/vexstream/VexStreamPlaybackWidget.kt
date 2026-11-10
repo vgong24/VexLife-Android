@@ -847,6 +847,14 @@ class VexStreamPlaybackWidgetActionCallback :
             context.applicationContext as?
                 VexApplication
                 ?: return
+        val playerStore =
+            vexApplication
+                .dependencies
+                .resolve(
+                    vexApplication
+                        .dependencyModule
+                        .playerStore,
+                )
         val root =
             vexApplication
                 .dependencies
@@ -877,6 +885,8 @@ class VexStreamPlaybackWidgetActionCallback :
                                 command.control,
                             connection =
                                 connection,
+                            playerStore =
+                                playerStore,
                             executionRoot =
                                 root,
                         )

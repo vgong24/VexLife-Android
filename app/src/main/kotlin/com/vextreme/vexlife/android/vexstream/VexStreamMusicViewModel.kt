@@ -14,6 +14,7 @@ import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackService
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
 import com.vextreme.vexlife.android.vexstream.player.Media3ControllerConnection
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueFamily
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatFamily
 
@@ -69,6 +70,16 @@ internal class VexStreamMusicViewModel(
                 vexApplication
                     .dependencyModule
                     .repeatFamily,
+            )
+
+    val playerStore:
+        VexStreamPlayerStore =
+        vexApplication
+            .dependencies
+            .resolve(
+                vexApplication
+                    .dependencyModule
+                    .playerStore,
             )
 
     val executionRoot =

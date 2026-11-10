@@ -17,12 +17,8 @@ import kotlinx.coroutines.withContext
 /**
  * Configuration/widget realization of the finite VexStream Player request relationship.
  *
- * This class does not reconstruct Playback / Queue / Repeat semantic State. It receives exact
- * already-authored Family Effects through the Partner request vocabulary and hands them to Media3
- * on the controller application looper.
- *
- * Track / Collection submission, Seek, Queue-row Play and Reorder intentionally retain their
- * existing payload/currentness connections outside this finite Partner request boundary.
+ * Every request re-checks current Media3 capability on the provider application looper. Boolean
+ * result means the provider request was actually dispatched; it is not later provider convergence.
  */
 internal class Media3ControllerConnection(
     private val controller:
@@ -42,39 +38,52 @@ internal class Media3ControllerConnection(
             "VexStream Media3 controller",
         )
 
-    override suspend fun play() {
+    override suspend fun play():
+        Boolean =
         withContext(
             providerDispatcher,
         ) {
             if (
+                controller.mediaItemCount >
+                    0 &&
                 controller.isCommandAvailable(
                     Player.COMMAND_PLAY_PAUSE,
                 )
             ) {
                 controller.play()
+                true
+            } else {
+                false
             }
         }
-    }
 
-    override suspend fun pause() {
+    override suspend fun pause():
+        Boolean =
         withContext(
             providerDispatcher,
         ) {
             if (
+                controller.mediaItemCount >
+                    0 &&
                 controller.isCommandAvailable(
                     Player.COMMAND_PLAY_PAUSE,
                 )
             ) {
                 controller.pause()
+                true
+            } else {
+                false
             }
         }
-    }
 
-    override suspend fun restartCurrent() {
+    override suspend fun restartCurrent():
+        Boolean =
         withContext(
             providerDispatcher,
         ) {
             if (
+                controller.currentMediaItem !=
+                    null &&
                 controller.isCommandAvailable(
                     Player.COMMAND_SEEK_TO_DEFAULT_POSITION,
                 ) &&
@@ -84,64 +93,81 @@ internal class Media3ControllerConnection(
             ) {
                 controller.seekToDefaultPosition()
                 controller.play()
+                true
+            } else {
+                false
             }
         }
-    }
 
-    override suspend fun previous() {
+    override suspend fun previous():
+        Boolean =
         withContext(
             providerDispatcher,
         ) {
             if (
+                controller.hasPreviousMediaItem() &&
                 controller.isCommandAvailable(
                     Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
                 )
             ) {
                 controller.seekToPreviousMediaItem()
+                true
+            } else {
+                false
             }
         }
-    }
 
-    override suspend fun next() {
+    override suspend fun next():
+        Boolean =
         withContext(
             providerDispatcher,
         ) {
             if (
+                controller.hasNextMediaItem() &&
                 controller.isCommandAvailable(
                     Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
                 )
             ) {
                 controller.seekToNextMediaItem()
+                true
+            } else {
+                false
             }
         }
-    }
 
-    override suspend fun shuffleFuture() {
+    override suspend fun shuffleFuture():
+        Boolean =
         withContext(
             providerDispatcher,
         ) {
-            controller.shuffleVexStreamFutureQueue()
+            controller
+                .shuffleVexStreamFutureQueue()
         }
-    }
 
-    override suspend fun clearQueue() {
+    override suspend fun clearQueue():
+        Boolean =
         withContext(
             providerDispatcher,
         ) {
             if (
+                controller.mediaItemCount >
+                    0 &&
                 controller.isCommandAvailable(
                     Player.COMMAND_CHANGE_MEDIA_ITEMS,
                 )
             ) {
                 controller.clearMediaItems()
+                true
+            } else {
+                false
             }
         }
-    }
 
     override suspend fun setRepeatEnabled(
         enabled:
             Boolean,
-    ) {
+    ):
+        Boolean =
         withContext(
             providerDispatcher,
         ) {
@@ -158,9 +184,11 @@ internal class Media3ControllerConnection(
                     } else {
                         Player.REPEAT_MODE_OFF
                     }
+                true
+            } else {
+                false
             }
         }
-    }
 }
 
 /**
