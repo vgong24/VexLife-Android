@@ -119,32 +119,41 @@ internal class VexStreamQueueFamily(
             VexFamily.Act.Method<
                 VexStreamQueueFamily,
                 Unit,
-                Nothing
+                Unit
             > {
             override suspend fun invoke():
                 VexMethod.Result<
                     Unit,
-                    Nothing
+                    Unit
                 > {
-                when (
-                    effect
+                val dispatched =
+                    when (
+                        effect
+                    ) {
+                        VexStreamQueueEffect.SeekPrevious ->
+                            connection.previous()
+
+                        VexStreamQueueEffect.SeekNext ->
+                            connection.next()
+
+                        VexStreamQueueEffect.ShuffleFuture ->
+                            connection.shuffleFuture()
+
+                        VexStreamQueueEffect.ClearQueue ->
+                            connection.clearQueue()
+                    }
+
+                return if (
+                    dispatched
                 ) {
-                    VexStreamQueueEffect.SeekPrevious ->
-                        connection.previous()
-
-                    VexStreamQueueEffect.SeekNext ->
-                        connection.next()
-
-                    VexStreamQueueEffect.ShuffleFuture ->
-                        connection.shuffleFuture()
-
-                    VexStreamQueueEffect.ClearQueue ->
-                        connection.clearQueue()
+                    VexMethod.Result.Success(
+                        Unit,
+                    )
+                } else {
+                    VexMethod.Result.Failure(
+                        Unit,
+                    )
                 }
-
-                return VexMethod.Result.Success(
-                    Unit,
-                )
             }
         }
     }

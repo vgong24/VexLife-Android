@@ -113,30 +113,39 @@ internal class VexStreamRepeatFamily(
             VexFamily.Act.Method<
                 VexStreamRepeatFamily,
                 Unit,
-                Nothing
+                Unit
             > {
             override suspend fun invoke():
                 VexMethod.Result<
                     Unit,
-                    Nothing
+                    Unit
                 > {
-                when (
-                    effect
+                val dispatched =
+                    when (
+                        effect
+                    ) {
+                        VexStreamRepeatEffect.RequestEnableAll ->
+                            connection.setRepeatEnabled(
+                                true,
+                            )
+
+                        VexStreamRepeatEffect.RequestDisable ->
+                            connection.setRepeatEnabled(
+                                false,
+                            )
+                    }
+
+                return if (
+                    dispatched
                 ) {
-                    VexStreamRepeatEffect.RequestEnableAll ->
-                        connection.setRepeatEnabled(
-                            true,
-                        )
-
-                    VexStreamRepeatEffect.RequestDisable ->
-                        connection.setRepeatEnabled(
-                            false,
-                        )
+                    VexMethod.Result.Success(
+                        Unit,
+                    )
+                } else {
+                    VexMethod.Result.Failure(
+                        Unit,
+                    )
                 }
-
-                return VexMethod.Result.Success(
-                    Unit,
-                )
             }
         }
     }

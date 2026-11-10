@@ -214,15 +214,15 @@ internal class VexStreamPlaybackFamily(
         ) :
             VexFamily.Act.Method<
                 VexStreamPlaybackFamily,
-                Boolean,
-                Nothing
+                Unit,
+                Unit
             > {
             override suspend fun invoke():
                 VexMethod.Result<
-                    Boolean,
-                    Nothing
-                > =
-                VexMethod.Result.Success(
+                    Unit,
+                    Unit
+                > {
+                val dispatched =
                     when (
                         effect
                     ) {
@@ -234,8 +234,20 @@ internal class VexStreamPlaybackFamily(
 
                         VexStreamPlaybackEffect.RestartCurrent ->
                             connection.restartCurrent()
-                    },
-                )
+                    }
+
+                return if (
+                    dispatched
+                ) {
+                    VexMethod.Result.Success(
+                        Unit,
+                    )
+                } else {
+                    VexMethod.Result.Failure(
+                        Unit,
+                    )
+                }
+            }
         }
     }
 }
@@ -323,11 +335,7 @@ internal fun activateVexStreamPlayback(
                         result
                     ) {
                         is VexMethod.Result.Success ->
-                            if (
-                                !result.output
-                            ) {
-                                settleFailure()
-                            }
+                            Unit
 
                         is VexMethod.Result.Failure ->
                             settleFailure()
