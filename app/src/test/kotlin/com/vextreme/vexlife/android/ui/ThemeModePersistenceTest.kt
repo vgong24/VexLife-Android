@@ -23,7 +23,7 @@ class ThemeModePersistenceTest {
     fun saveMethodOwnsTheFamilyModeParameterAndConcreteStoreCall() {
         val store =
             RecordingThemeModeStore(
-                ThemeMode.NotSet,
+                ThemeMode.Light,
             )
         val parameter =
             ThemeModeFamily.Parameter.Mode(
@@ -281,19 +281,41 @@ class ThemeModePersistenceTest {
             family.currentState,
         )
 
-        observeThemeModeState(
-            family =
-                family,
-            observed =
-                ThemeMode.Light,
-            logger =
-                logger,
-        )
+        val observationRoot =
+            VexExecutionRoot()
 
-        assertEquals(
-            ThemeMode.Light,
-            family.currentState,
-        )
+        try {
+            observeThemeModeStore(
+                family =
+                    family,
+                store =
+                    store,
+                executionRoot =
+                    observationRoot,
+                logger =
+                    logger,
+            )
+
+            runBlocking {
+                withTimeout(
+                    5_000,
+                ) {
+                    while (
+                        family.currentState !=
+                        ThemeMode.Light
+                    ) {
+                        yield()
+                    }
+                }
+            }
+
+            assertEquals(
+                ThemeMode.Light,
+                family.currentState,
+            )
+        } finally {
+            observationRoot.forceStopAll()
+        }
     }
 
     @Test
@@ -361,19 +383,39 @@ class ThemeModePersistenceTest {
                     },
             )
 
-            observeThemeModeState(
-                family =
-                    family,
-                observed =
-                    ThemeMode.Light,
-                logger =
-                    logger,
-            )
+            val observationRoot =
+                VexExecutionRoot()
 
-            assertEquals(
-                ThemeMode.Light,
-                family.currentState,
-            )
+            try {
+                observeThemeModeStore(
+                    family =
+                        family,
+                    store =
+                        store,
+                    executionRoot =
+                        observationRoot,
+                    logger =
+                        logger,
+                )
+
+                withTimeout(
+                    5_000,
+                ) {
+                    while (
+                        family.currentState !=
+                        ThemeMode.Light
+                    ) {
+                        yield()
+                    }
+                }
+
+                assertEquals(
+                    ThemeMode.Light,
+                    family.currentState,
+                )
+            } finally {
+                observationRoot.forceStopAll()
+            }
         }
 
     @Test
