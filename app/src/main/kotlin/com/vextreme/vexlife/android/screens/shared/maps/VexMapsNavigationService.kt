@@ -16,14 +16,14 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.vextreme.vexlife.android.MainActivity
 import com.vextreme.vexlife.android.R
+import com.vextreme.vexlife.android.execution.VexExecution
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.launch
 
 /**
  * Android lifetime carrier for a user-started active VexMaps navigation session.
@@ -33,9 +33,9 @@ import kotlinx.coroutines.launch
  */
 class VexMapsNavigationService :
     Service() {
-    private val serviceScope =
-        CoroutineScope(
-            SupervisorJob() +
+    private val executionRoot =
+        VexExecutionRoot(
+            dispatcher =
                 Dispatchers.Main.immediate,
         )
 
@@ -47,8 +47,8 @@ class VexMapsNavigationService :
     private val speechGate =
         VexNavigationCueSpeechGate()
 
-    private var locationJob: Job? = null
-    private var stateJob: Job? = null
+    private var locationObservationJob: Job? = null
+    private var stateObservationJob: Job? = null
     private var stopping = false
 
     override fun onCreate() {
@@ -107,8 +107,11 @@ class VexMapsNavigationService :
     ): IBinder? = null
 
     override fun onDestroy() {
-        locationJob?.cancel()
-        stateJob?.cancel()
+        executionRoot.forceStopAll(
+            "VexMaps NavigationService destroyed",
+        )
+        locationObservationJob = null
+        stateObservationJob = null
 
         if (
             !stopping &&
@@ -123,7 +126,6 @@ class VexMapsNavigationService :
         }
 
         navigationSpeech.close()
-        serviceScope.cancel()
         super.onDestroy()
     }
 
@@ -144,82 +146,116 @@ class VexMapsNavigationService :
         )
         session.start()
 
-        locationJob?.cancel()
-        locationJob =
-            serviceScope.launch {
-                locationSource
-                    .navigationUpdates()
-                    .catch { error ->
-                        if (
-                            error !is
-                            CancellationException
-                        ) {
-                            // Preserve the route, but make the shared session truth say that
-                            // navigation currently lacks a usable location stream.
-                            session.locationUnavailable()
-                        }
-                    }
-                    .collect { sample ->
-                        VexMapsNavigationProcess
-                            .acceptLocation(
-                                sample = sample,
-                                nowElapsedRealtimeMillis =
-                                    SystemClock
-                                        .elapsedRealtime(),
-                            )
+        locationObservationJob?.cancel()
+        locationObservationJob =
+            VexExecution.observe(
+                executionRoot =
+                    executionRoot,
+                owner =
+                    this,
+                source =
+                    ::locationUpdatesForExecution,
+                restartOnSourceFailure =
+                    false,
+            ) { sample ->
+                VexMapsNavigationProcess
+                    .acceptLocation(
+                        sample = sample,
+                        nowElapsedRealtimeMillis =
+                            SystemClock
+                                .elapsedRealtime(),
+                    )
 
-                        session
-                            .current
-                            .pendingReroute
-                            ?.let { request ->
-                                runCatching {
-                                    VexMapsNavigationProcess
-                                        .reroutePending(
-                                            context =
-                                                this@VexMapsNavigationService,
-                                            requestRef =
-                                                request.requestRef,
-                                        )
-                                }.onFailure {
-                                    session.rerouteFailed(
+                session
+                    .current
+                    .pendingReroute
+                    ?.let { request ->
+                        runCatching {
+                            VexMapsNavigationProcess
+                                .reroutePending(
+                                    context =
+                                        this@VexMapsNavigationService,
+                                    requestRef =
                                         request.requestRef,
-                                    )
-                                }
-                            }
+                                )
+                        }.onFailure {
+                            session.rerouteFailed(
+                                request.requestRef,
+                            )
+                        }
                     }
             }
 
-        stateJob?.cancel()
-        stateJob =
-            serviceScope.launch {
-                session.states.collect { state ->
-                    updateNotification(state)
+        stateObservationJob?.cancel()
+        stateObservationJob =
+            VexExecution.observe(
+                executionRoot =
+                    executionRoot,
+                owner =
+                    this,
+                source =
+                    ::navigationStatesForExecution,
+                restartOnSourceFailure =
+                    false,
+            ) { state ->
+                updateNotification(state)
 
-                    speechGate
-                        .nextCue(state)
-                        ?.let { cue ->
-                            navigationSpeech.speak(
-                                cue,
-                            )
-                        }
-
-                    when {
-                        state.phase ==
-                            VexNavigationSessionPhase.IDLE ->
-                            finishForegroundService(
-                                retainNotification = false,
-                            )
-
-                        shouldRetainVexMapsNavigationNotification(
-                            state.phase,
-                        ) ->
-                            finishForegroundService(
-                                retainNotification = true,
-                            )
+                speechGate
+                    .nextCue(state)
+                    ?.let { cue ->
+                        navigationSpeech.speak(
+                            cue,
+                        )
                     }
+
+                when {
+                    state.phase ==
+                        VexNavigationSessionPhase.IDLE ->
+                        finishForegroundService(
+                            retainNotification = false,
+                        )
+
+                    shouldRetainVexMapsNavigationNotification(
+                        state.phase,
+                    ) ->
+                        finishForegroundService(
+                            retainNotification = true,
+                        )
                 }
             }
     }
+
+    private val locationUpdatesForExecution:
+        Flow<
+            VexNavigationLocationSample
+        >
+        get() =
+            locationSource
+                .navigationUpdates()
+                .catch { error ->
+                    if (
+                        error !is
+                        CancellationException
+                    ) {
+                        /*
+                         * Preserve the route, but make shared Navigation truth say that location is
+                         * currently unavailable. Source recovery remains disabled for this Service
+                         * observation, matching the prior one-shot collector lifetime.
+                         */
+                        VexMapsNavigationProcess
+                            .session
+                            .locationUnavailable()
+                    }
+                }
+
+    private val navigationStatesForExecution:
+        StateFlow<
+            VexNavigationSessionState
+        >
+        get() =
+            VexMapsNavigationProcess
+                .session
+                .states
 
     private fun stopNavigation() {
         stopping = true
@@ -233,8 +269,8 @@ class VexMapsNavigationService :
     private fun finishForegroundService(
         retainNotification: Boolean,
     ) {
-        locationJob?.cancel()
-        locationJob = null
+        locationObservationJob?.cancel()
+        locationObservationJob = null
         ServiceCompat.stopForeground(
             this,
             if (retainNotification) {
