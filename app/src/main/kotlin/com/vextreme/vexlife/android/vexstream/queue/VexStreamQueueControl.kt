@@ -7,7 +7,7 @@ import com.vextreme.vexlife.android.behavior.VexFamily
  *
  * All four values belong to one maintained Queue-command relationship. The value still names the
  * exact semantic request, while the shared Control class lets VexFamily preserve mixed command
- * arrival order through one Queued realization lane.
+ * Family acceptance order through one Queued realization lane.
  */
 internal class VexStreamQueueControl private constructor(
     val name:

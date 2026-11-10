@@ -10,8 +10,9 @@ package com.vextreme.vexlife.android.vexstream.queue
  * [VexStreamQueueFamily] owns the finite Previous / Next / Shuffle / Clear semantic question.
  * [VexStreamQueueState] carries only the outside truth those Controls need.
  *
- * Each accepted finite Control authors its exact [VexStreamQueueEffect] as an Independent runtime
- * consequence and keeps semantic State unchanged until later outside Player truth is observed.
+ * Each accepted finite Control authors its exact [VexStreamQueueEffect] into one Queued runtime
+ * relationship so mixed Previous / Next / Shuffle / Clear requests retain Family acceptance order,
+ * while semantic State remains unchanged until later outside Player truth is observed.
  *
  * Outside queue/currentness enters through the shared VexStream Player Partner / Player Store rather
  * than a Queue-owned Media3 semantic Connection. Concrete finite requests are handed to
