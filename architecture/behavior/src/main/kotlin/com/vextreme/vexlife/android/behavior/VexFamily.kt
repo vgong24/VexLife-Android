@@ -1065,7 +1065,9 @@ abstract class VexFamily<
                     }
                 } else {
                     val binding =
-                        realizationBinding
+                        checkNotNull(
+                            realizationBinding,
+                        )
                     val begin =
                         authoredBegin
 
@@ -1102,7 +1104,9 @@ abstract class VexFamily<
                         null
                 ) {
                     val binding =
-                        realizationBinding
+                        checkNotNull(
+                            realizationBinding,
+                        )
                     val begin =
                         authoredBegin
 
