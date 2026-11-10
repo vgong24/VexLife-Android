@@ -38,6 +38,12 @@ internal data class VexStreamQueueProjection(
 
                     VexStreamQueueControl.Clear ->
                         clearAvailable
+
+                    else ->
+                        error(
+                            "Unknown VexStream Queue Control: " +
+                                control,
+                        )
                 },
         )
 }

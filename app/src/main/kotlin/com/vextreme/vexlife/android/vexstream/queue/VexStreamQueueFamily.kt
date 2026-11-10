@@ -73,10 +73,16 @@ internal class VexStreamQueueFamily(
                             .takeIf {
                                 currentState.clearAvailable
                             }
+
+                    else ->
+                        error(
+                            "Unknown VexStream Queue Control: " +
+                                control,
+                        )
                 }
                     ?.let { effect ->
                         stay(
-                            begin(
+                            beginQueued(
                                 effect,
                             ),
                         )
@@ -225,6 +231,12 @@ private fun vexStreamQueueControlAvailable(
 
                 VexStreamQueueControl.Clear ->
                     state.clearAvailable
+
+                else ->
+                    error(
+                        "Unknown VexStream Queue Control: " +
+                            control,
+                    )
             }
     }
 

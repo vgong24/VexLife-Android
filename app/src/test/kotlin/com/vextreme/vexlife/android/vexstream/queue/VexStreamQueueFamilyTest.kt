@@ -42,7 +42,7 @@ class VexStreamQueueFamilyTest {
     }
 
     @Test
-    fun nonEmptyQueueAuthorsExactIndependentEffectsWithoutClaimingOutcome() {
+    fun nonEmptyQueueAuthorsExactQueuedEffectsWithoutClaimingOutcome() {
         val state =
             VexStreamQueueState.NonEmpty(
                 previousAvailable =
@@ -91,7 +91,7 @@ class VexStreamQueueFamilyTest {
                 begin.effect,
             )
             assertSame(
-                VexExecution.Approach.Independent,
+                VexExecution.Approach.Queued,
                 begin.approach,
             )
             assertEquals(
@@ -99,6 +99,54 @@ class VexStreamQueueFamilyTest {
                 family.currentState,
             )
         }
+    }
+
+    @Test
+    fun mixedQueueControlsShareOneOrderedRelationship() {
+        val family =
+            VexStreamQueueFamily(
+                initialState =
+                    VexStreamQueueState.NonEmpty(
+                        previousAvailable =
+                            true,
+                        nextAvailable =
+                            true,
+                        shuffleAvailable =
+                            true,
+                        clearAvailable =
+                            true,
+                    ),
+            )
+
+        val previous =
+            requireNotNull(
+                family.activate(
+                    VexStreamQueueControl.Previous,
+                ),
+            )
+        val shuffle =
+            requireNotNull(
+                family.activate(
+                    VexStreamQueueControl.Shuffle,
+                ),
+            )
+
+        assertEquals(
+            previous.relationshipId,
+            shuffle.relationshipId,
+        )
+        assertSame(
+            VexExecution.Approach.Queued,
+            requireNotNull(
+                previous.realizationBegin,
+            ).approach,
+        )
+        assertSame(
+            VexExecution.Approach.Queued,
+            requireNotNull(
+                shuffle.realizationBegin,
+            ).approach,
+        )
     }
 
     @Test
