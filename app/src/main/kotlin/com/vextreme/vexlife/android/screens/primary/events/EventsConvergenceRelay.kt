@@ -18,7 +18,7 @@ import com.vextreme.vexlife.android.relay.VexCompoundState
 import com.vextreme.vexlife.android.relay.VexDeepCopyable
 import com.vextreme.vexlife.android.relay.VexInputState
 import com.vextreme.vexlife.android.relay.VexOutputState
-import com.vextreme.vexlife.android.relay.vexDependencies
+import com.vextreme.vexlife.android.relay.vexObserveDependencies
 
 /**
  * Observed profile value.
@@ -273,7 +273,7 @@ class EventsConvergenceRelay internal constructor(
     )
 
     override fun dependencies() =
-        vexDependencies<EventsConvergenceInputState> {
+        vexObserveDependencies<EventsConvergenceInputState> {
             eventsRepository?.let { repository ->
                 observe(
                     dependencyRef = FEED_DEPENDENCY,
