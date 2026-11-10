@@ -81,7 +81,9 @@ abstract class VexExecution protected constructor(
      *
      * RESPONSIBILITY FENCE
      * Execution coordinates this identity; it does not invent it from callable names, argument bags,
-     * arbitrary payload, Logger IDs, dependency IDs, or occurrence tokens. Do not wrap it in another
+     * arbitrary payload, Logger IDs, dependency IDs, occurrence tokens, Job identity, or Job.start()
+     * timing. A Job is one runtime occurrence held under this relationship; starting that Job does not
+     * create, replace, rename, or reconstruct the RelationshipId. Do not wrap it in another
      * RelationshipKey/Coordinate, author a parallel registry, or persist it as a generic trace ID.
      * The smallest rightful owner should derive it from semantic structure that already exists.
      */
@@ -103,6 +105,13 @@ abstract class VexExecution protected constructor(
                 Job
             > =
             linkedSetOf(),
+    )
+
+    private data class RelationshipAdmission(
+        val job:
+            Job,
+        val createdNewOccurrence:
+            Boolean,
     )
 
     private val lock =
@@ -579,6 +588,41 @@ abstract class VexExecution protected constructor(
         return true
     }
 
+    private fun <Result> admit(
+        operation:
+            KSuspendFunction0<Result>,
+        beforeOperation:
+            () -> Unit =
+            {},
+        onResult:
+            (Result) -> Unit =
+            {},
+        onFailure:
+            (Throwable) -> Unit =
+            {},
+    ):
+        Job =
+        synchronized(
+            lock,
+        ) {
+            admitSourceJobLocked(
+                source =
+                    operation,
+            ) {
+                executeOperation(
+                    operation = {
+                        operation()
+                    },
+                    beforeOperation =
+                        beforeOperation,
+                    onResult =
+                        onResult,
+                    onFailure =
+                        onFailure,
+                )
+            }
+        }
+
     protected fun <Result> begin(
         operation:
             KSuspendFunction0<Result>,
@@ -593,22 +637,19 @@ abstract class VexExecution protected constructor(
             {},
     ):
         Job =
-        launchSource(
-            source =
+        admit(
+            operation =
                 operation,
-        ) {
-            executeOperation(
-                operation = {
-                    operation()
-                },
-                beforeOperation =
-                    beforeOperation,
-                onResult =
-                    onResult,
-                onFailure =
-                    onFailure,
-            )
-        }
+            beforeOperation =
+                beforeOperation,
+            onResult =
+                onResult,
+            onFailure =
+                onFailure,
+        )
+            .also { job ->
+                job.start()
+            }
 
     protected fun <Argument, Result> begin(
         operation:
@@ -971,7 +1012,7 @@ abstract class VexExecution protected constructor(
         return job
     }
 
-    private fun <Result> beginRelationship(
+    private fun <Result> admitRelationship(
         approach:
             Approach,
         relationshipId:
@@ -987,15 +1028,11 @@ abstract class VexExecution protected constructor(
         onFailure:
             (Throwable) -> Unit,
     ):
-        Job {
-        var shouldStart =
-            false
-
-        val job =
-            synchronized(
-                lock,
-            ) {
-                val existingLane =
+        RelationshipAdmission =
+        synchronized(
+            lock,
+        ) {
+            val existingLane =
                     relationships[
                         relationshipId
                     ]
@@ -1033,7 +1070,12 @@ abstract class VexExecution protected constructor(
                     Approach.Earliest &&
                     activeJobs.isNotEmpty()
                 ) {
-                    return@synchronized activeJobs.first()
+                    return@synchronized RelationshipAdmission(
+                        job =
+                            activeJobs.first(),
+                        createdNewOccurrence =
+                            false,
+                    )
                 }
 
                 val lane =
@@ -1082,6 +1124,20 @@ abstract class VexExecution protected constructor(
                                 "." +
                                 source.name,
                     ) {
+                        if (
+                            approach ==
+                            Approach.Latest
+                        ) {
+                            predecessors
+                                .forEach { predecessor ->
+                                    predecessor.cancel(
+                                        CancellationException(
+                                            "superseded by latest execution relationship",
+                                        ),
+                                    )
+                                }
+                        }
+
                         predecessors
                             .forEach { predecessor ->
                                 predecessor.join()
@@ -1154,31 +1210,57 @@ abstract class VexExecution protected constructor(
                     }
                 }
 
-                if (
-                    approach ==
-                    Approach.Latest
-                ) {
-                    activeJobs.forEach { predecessor ->
-                        predecessor.cancel(
-                            CancellationException(
-                                "superseded by latest execution relationship",
-                            ),
-                        )
-                    }
-                }
-
-                shouldStart =
-                    true
-                admitted
-            }
-
-        if (
-            shouldStart
-        ) {
-            job.start()
+            RelationshipAdmission(
+                job =
+                    admitted,
+                createdNewOccurrence =
+                    true,
+            )
         }
 
-        return job
+    private fun <Result> beginRelationship(
+        approach:
+            Approach,
+        relationshipId:
+            RelationshipId,
+        source:
+            KCallable<*>,
+        operation:
+            suspend () -> Result,
+        beforeOperation:
+            () -> Unit,
+        onResult:
+            (Result) -> Unit,
+        onFailure:
+            (Throwable) -> Unit,
+    ):
+        Job {
+        val admission =
+            admitRelationship(
+                approach =
+                    approach,
+                relationshipId =
+                    relationshipId,
+                source =
+                    source,
+                operation =
+                    operation,
+                beforeOperation =
+                    beforeOperation,
+                onResult =
+                    onResult,
+                onFailure =
+                    onFailure,
+            )
+
+        /*
+         * begin(...) means the selected custody occurrence must be running. This is intentionally
+         * unconditional: a reused Earliest occurrence may have been admitted lazily by the
+         * foundation handoff and not started yet. Job.start() is harmless when it is already active.
+         */
+        admission.job.start()
+
+        return admission.job
     }
 
     private suspend fun <Value> collectWithRecovery(
@@ -1376,6 +1458,105 @@ abstract class VexExecution protected constructor(
                     onFailure =
                         onFailure,
                 )
+
+        /**
+         * Admit one fully-bound zero-argument operation to execution custody without starting it.
+         *
+         * This is a foundation handoff primitive for an owner that must commit its own accepted
+         * relationship state after Job custody exists but before Method code or completion callbacks
+         * can run. The returned Job is a newly admitted occurrence already registered under the
+         * supplied owner / Approach / RelationshipId and remains lazy until its caller invokes
+         * Job.start(). Job.start() starts that already-related occurrence; it does not become a
+         * relationship key, logging coordinate, or replacement for RelationshipId. Earliest reuse is
+         * intentionally rejected here: whether another realization is required belongs to the
+         * semantic owner before this custody-admission boundary.
+         *
+         * Ordinary product code should use [begin]; admission/start separation does not grant another
+         * semantic decision point.
+         */
+        @RelationshipFoundationApi
+        fun <Result> admit(
+            executionRoot:
+                VexExecutionRoot,
+            owner:
+                Any,
+            approach:
+                Approach,
+            relationshipId:
+                RelationshipId?,
+            operation:
+                KSuspendFunction0<Result>,
+            beforeOperation:
+                () -> Unit =
+                {},
+            onResult:
+                (Result) -> Unit =
+                {},
+            onFailure:
+                (Throwable) -> Unit =
+                {},
+        ):
+            Job {
+            val execution =
+                executionRoot
+                    .directExecution(
+                        owner,
+                    )
+
+            return when (
+                approach
+            ) {
+                Approach.Independent ->
+                    execution.admit(
+                        operation =
+                            operation,
+                        beforeOperation =
+                            beforeOperation,
+                        onResult =
+                            onResult,
+                        onFailure =
+                            onFailure,
+                    )
+
+                Approach.Earliest,
+                Approach.Latest,
+                Approach.Queued,
+                -> {
+                    val admission =
+                        execution.admitRelationship(
+                            approach =
+                                approach,
+                            relationshipId =
+                                requireNotNull(
+                                    relationshipId,
+                                ) {
+                                    approach.name +
+                                        " execution requires RelationshipId"
+                                },
+                            source =
+                                operation,
+                            operation = {
+                                operation()
+                            },
+                            beforeOperation =
+                                beforeOperation,
+                            onResult =
+                                onResult,
+                            onFailure =
+                                onFailure,
+                        )
+
+                    check(
+                        admission.createdNewOccurrence,
+                    ) {
+                        "VexExecution.admit requires a new runtime occurrence; " +
+                            "Earliest relationship already has active custody"
+                    }
+
+                    admission.job
+                }
+            }
+        }
 
         /**
          * Consume an already-authored overlap Approach for one fully-bound zero-argument Method.

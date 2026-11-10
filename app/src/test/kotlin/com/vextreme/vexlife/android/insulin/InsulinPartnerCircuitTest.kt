@@ -34,15 +34,21 @@ class InsulinPartnerCircuitTest {
                     ),
                 )
 
+            val begin =
+                checkNotNull(
+                    act
+                        ?.authored
+                        ?.begin,
+                )
             val effect =
-                act?.effect as
+                begin.effect as
                     InsulinFamily.Effect.RequestPumpDelivery
             val method =
                 InsulinFamily.Act.Method.RequestPumpDelivery(
                     connection =
                         lab.pumpConnection,
-                    parameter =
-                        effect.amount,
+                    effect =
+                        effect,
                 )
 
             assertSame(
@@ -50,12 +56,13 @@ class InsulinPartnerCircuitTest {
                 effect.amount,
             )
             assertSame(
-                amount,
-                method.parameter,
+                effect,
+                method.effect,
             )
             assertEquals(
                 com.vextreme.vexlife.android.execution.VexExecution.Approach.Queued,
-                act.begin
+                act.authored
+                    .begin
                     ?.approach,
             )
             assertNotNull(

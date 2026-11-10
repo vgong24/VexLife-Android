@@ -40,6 +40,24 @@ class VexExecutionTest {
         }
     }
 
+    private class AwaitingBoundOperation(
+        private val value:
+            String,
+        private val started:
+            CompletableDeferred<Unit>,
+        private val release:
+            CompletableDeferred<Unit>,
+    ) {
+        suspend operator fun invoke():
+            String {
+            started.complete(
+                Unit,
+            )
+            release.await()
+            return value
+        }
+    }
+
     private class TestRepository {
         var onceCount = 0
         val collectAttempts = AtomicInteger(0)
@@ -712,6 +730,280 @@ class VexExecutionTest {
                 providerDispatcher.close()
                 workerExecutor.shutdownNow()
                 providerExecutor.shutdownNow()
+            }
+        }
+
+    @Test
+    fun admitRegistersLazyOccurrenceWithoutStartingMethodWork() =
+        runBlocking {
+            val root =
+                VexExecutionRoot()
+            val owner =
+                Any()
+            val relationship =
+                DirectRelationship(
+                    "admit-lazy",
+                )
+            val calls =
+                mutableListOf<String>()
+            val results =
+                mutableListOf<String>()
+            val method =
+                BoundOperation(
+                    value =
+                        "Dark",
+                    calls =
+                        calls,
+                )
+
+            try {
+                val job =
+                    VexExecution.admit(
+                        executionRoot =
+                            root,
+                        owner =
+                            owner,
+                        approach =
+                            VexExecution.Approach.Latest,
+                        relationshipId =
+                            relationship,
+                        operation =
+                            method::invoke,
+                        onResult = { result ->
+                            results +=
+                                result
+                        },
+                    )
+
+                assertTrue(
+                    calls.isEmpty(),
+                )
+                assertTrue(
+                    results.isEmpty(),
+                )
+
+                job.start()
+                job.join()
+
+                assertEquals(
+                    listOf(
+                        "Dark",
+                    ),
+                    calls,
+                )
+                assertEquals(
+                    listOf(
+                        "Dark",
+                    ),
+                    results,
+                )
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
+            }
+        }
+
+    @Test
+    fun beginStartsAnAlreadyAdmittedEarliestOccurrenceWhenItReusesCustody() =
+        runBlocking {
+            val root =
+                VexExecutionRoot()
+            val owner =
+                Any()
+            val relationship =
+                DirectRelationship(
+                    "earliest-admitted-before-begin",
+                )
+            val started =
+                CompletableDeferred<Unit>()
+            val release =
+                CompletableDeferred<Unit>()
+            val firstMethod =
+                AwaitingBoundOperation(
+                    value =
+                        "A",
+                    started =
+                        started,
+                    release =
+                        release,
+                )
+            val secondCalls =
+                mutableListOf<String>()
+            val secondMethod =
+                BoundOperation(
+                    value =
+                        "B",
+                    calls =
+                        secondCalls,
+                )
+
+            try {
+                val admitted =
+                    VexExecution.admit(
+                        executionRoot =
+                            root,
+                        owner =
+                            owner,
+                        approach =
+                            VexExecution.Approach.Earliest,
+                        relationshipId =
+                            relationship,
+                        operation =
+                            firstMethod::invoke,
+                    )
+
+                assertFalse(
+                    started.isCompleted,
+                )
+
+                val reused =
+                    VexExecution.begin(
+                        executionRoot =
+                            root,
+                        owner =
+                            owner,
+                        approach =
+                            VexExecution.Approach.Earliest,
+                        relationshipId =
+                            relationship,
+                        operation =
+                            secondMethod::invoke,
+                    )
+
+                assertSame(
+                    admitted,
+                    reused,
+                )
+
+                withTimeout(
+                    2_000,
+                ) {
+                    started.await()
+                }
+
+                assertTrue(
+                    secondCalls.isEmpty(),
+                )
+
+                release.complete(
+                    Unit,
+                )
+                admitted.join()
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
+            }
+        }
+
+    @Test
+    fun admitEarliestRequiresNewOccurrenceWhileBeginKeepsExistingReuseLaw() =
+        runBlocking {
+            val root =
+                VexExecutionRoot()
+            val owner =
+                Any()
+            val relationship =
+                DirectRelationship(
+                    "earliest-admission",
+                )
+            val started =
+                CompletableDeferred<Unit>()
+            val release =
+                CompletableDeferred<Unit>()
+            val firstMethod =
+                AwaitingBoundOperation(
+                    value =
+                        "A",
+                    started =
+                        started,
+                    release =
+                        release,
+                )
+            val secondCalls =
+                mutableListOf<String>()
+            val secondMethod =
+                BoundOperation(
+                    value =
+                        "B",
+                    calls =
+                        secondCalls,
+                )
+
+            try {
+                val first =
+                    VexExecution.begin(
+                        executionRoot =
+                            root,
+                        owner =
+                            owner,
+                        approach =
+                            VexExecution.Approach.Earliest,
+                        relationshipId =
+                            relationship,
+                        operation =
+                            firstMethod::invoke,
+                    )
+
+                withTimeout(
+                    2_000,
+                ) {
+                    started.await()
+                }
+
+                val reused =
+                    VexExecution.begin(
+                        executionRoot =
+                            root,
+                        owner =
+                            owner,
+                        approach =
+                            VexExecution.Approach.Earliest,
+                        relationshipId =
+                            relationship,
+                        operation =
+                            secondMethod::invoke,
+                    )
+
+                assertSame(
+                    first,
+                    reused,
+                )
+
+                val failure =
+                    runCatching {
+                        VexExecution.admit(
+                            executionRoot =
+                                root,
+                            owner =
+                                owner,
+                            approach =
+                                VexExecution.Approach.Earliest,
+                            relationshipId =
+                                relationship,
+                            operation =
+                                secondMethod::invoke,
+                        )
+                    }
+                        .exceptionOrNull()
+
+                assertTrue(
+                    failure is
+                        IllegalStateException,
+                )
+                assertTrue(
+                    secondCalls.isEmpty(),
+                )
+
+                release.complete(
+                    Unit,
+                )
+                first.join()
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
             }
         }
 

@@ -30,12 +30,17 @@ class ThemeModePersistenceTest {
                 mode =
                     ThemeMode.Dark,
             )
+        val effect =
+            ThemeModeFamily.Effect.Save(
+                mode =
+                    parameter,
+            )
         val method =
             ThemeModeFamily.Act.Method.Save(
                 store =
                     store,
-                parameter =
-                    parameter,
+                effect =
+                    effect,
             )
 
         val result =
@@ -61,8 +66,8 @@ class ThemeModePersistenceTest {
             store.savedStates,
         )
         assertTrue(
-            method.parameter ===
-                parameter,
+            method.effect ===
+                effect,
         )
     }
 
@@ -100,10 +105,13 @@ class ThemeModePersistenceTest {
             ThemeModeFamily.Act.Method.Save(
                 store =
                     store,
-                parameter =
-                    ThemeModeFamily.Parameter.Mode(
+                effect =
+                    ThemeModeFamily.Effect.Save(
                         mode =
-                            ThemeMode.Light,
+                            ThemeModeFamily.Parameter.Mode(
+                                mode =
+                                    ThemeMode.Light,
+                            ),
                     ),
             )
 

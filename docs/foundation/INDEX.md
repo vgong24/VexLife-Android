@@ -49,10 +49,13 @@ Family.activate(Control)
       -> Effect
       -> Independent / Earliest / Latest / Queued
 -> immediate semantic State admission
--> Act returned
+-> Act.Accepted returned
+   -> authored Act
+   -> relationshipId when required
+   -> realizationBegin? while a new occurrence remains owed
 
 realization boundary
--> Act.relationshipId + bound Act.Method
+-> Act.Accepted.relationshipId + Act.Accepted.realizationBegin + bound Act.Method
    -> specializes VexMethod
 -> VexExecution custody
 -> concrete realization
@@ -109,9 +112,10 @@ ThemeMode is the PR #209 patient zero:
 Parameter.Mode(mode)
 -> Control.Select(the same Parameter.Mode)
 -> beginLatest(Effect.Save(the same Parameter.Mode))
--> Act.Method.Save(ThemeModeStore, the same Parameter.Mode)
--> Act.launchWith(VexExecutionRoot).method(Method.Save)
-   consumes live Family owner + Approach + RelationshipId from the accepted Act
+-> Act.Method.Save(ThemeModeStore, the exact accepted Effect.Save)
+-> Act.Accepted.launch(VexExecutionRoot, Method.Save)
+   verifies the exact realization Begin Effect and consumes live Family owner + Approach +
+   RelationshipId from the accepted boundary
 -> VexExecution Job custody
 -> ThemeModeStore.save(mode)
    -> Boolean provider commit fact
@@ -123,10 +127,10 @@ Parameter.Mode(mode)
 -> VexLogger chronology
 ~~~
 
-The Family-owned Parameter is carried rather than reconstructed. The accepted Act's live Family
-owner, Act-authored Approach, and Family-authored RelationshipId are consumed through launchWith(...)
-by the reusable execution foundation; execution adds custody rather than another feature/domain
-decision.
+The Family-owned Parameter is carried through the exact accepted Effect rather than reconstructed.
+The Method carries that Effect object, and Act.Accepted.launch(...) verifies it before the accepted
+boundary's live Family owner, Act-authored Approach, and Family-authored RelationshipId enter the
+reusable execution foundation. Execution adds custody rather than another feature/domain decision.
 
 SourceOwner A004 reached the real repository-owned Gradle/JVM proof on #209 and exposed only stale
 tests that still depended on removed Logger/execution surfaces. The current candidate corrects those

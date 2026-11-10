@@ -52,8 +52,14 @@ class ThemeModeTest {
                 ),
             )
 
+        val begin =
+            checkNotNull(
+                act
+                    ?.authored
+                    ?.begin,
+            )
         val effect =
-            act?.effect as
+            begin.effect as
                 ThemeModeFamily.Effect.Save
 
         assertSame(
@@ -130,11 +136,16 @@ class ThemeModeTest {
                         ThemeMode.Dark,
                 ),
             ),
-            darkAct?.effect,
+            darkAct
+                ?.authored
+                ?.begin
+                ?.effect,
         )
         assertEquals(
             VexExecution.Approach.Latest,
-            darkAct?.begin
+            darkAct
+                ?.authored
+                ?.begin
                 ?.approach,
         )
 
@@ -159,7 +170,10 @@ class ThemeModeTest {
                         ThemeMode.Dark,
                 ),
             ),
-            sameAct?.effect,
+            sameAct
+                ?.authored
+                ?.begin
+                ?.effect,
         )
     }
 

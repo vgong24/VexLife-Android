@@ -193,8 +193,9 @@ Family consequence
     -> Method Job(s)
 ~~~
 
-Pump requests use Begin(Queued · Effect.RequestPumpDelivery): sequencing is authored by Family and
-consumed by launchWith()/VexExecution rather than re-decided by Method.
+Pump requests use Begin(Queued · Effect.RequestPumpDelivery): sequencing is authored by Family.
+The exact Effect-bound Method is then consumed by Act.Accepted.launch(...)/VexExecution rather than
+re-deciding Queued or reconstructing the accepted Effect downstream.
 
 ### Room / restart
 

@@ -82,7 +82,7 @@ internal class ThemeModeFamily(
         control:
             Control.Select,
     ):
-        VexFamily.Act<
+        VexFamily.Act.Accepted<
             ThemeModeFamily,
             ThemeMode,
             Effect
@@ -178,8 +178,8 @@ internal class ThemeModeFamily(
             class Save(
                 private val store:
                     ThemeModeStore,
-                val parameter:
-                    Parameter.Mode,
+                override val effect:
+                    Effect.Save,
             ) :
                 Method<
                     ThemeMode,
@@ -192,12 +192,12 @@ internal class ThemeModeFamily(
                     > =
                     if (
                         store.save(
-                            parameter.mode,
+                            effect.mode.mode,
                         )
                     ) {
                         VexMethod.Result.Success(
                             output =
-                                parameter.mode,
+                                effect.mode.mode,
                         )
                     } else {
                         VexMethod.Result.Failure(
@@ -393,8 +393,8 @@ internal class ThemeModeFamily(
  * Realize one accepted ThemeMode Act from its already-authored relationship.
  *
  * ThemeModeFamily already authored the semantic Effect and its execution Approach. This boundary
- * hands that exact relationship to VexExecution, reports facts that become true, and returns
- * observed Store truth to the same Family.
+ * binds the exact Effect to the concrete Store Method and entrusts that accepted relationship to
+ * VexExecution custody. Result interpretation remains ThemeMode-owned.
  */
 internal fun activateThemeMode(
     family:
@@ -457,33 +457,29 @@ internal fun activateThemeMode(
         )
     }
 
+    val begin =
+        act.realizationBegin
+            ?: return true
+
     when (
         val effect =
-            act.effect
+            begin.effect
     ) {
-        null ->
-            Unit
-
         is ThemeModeFamily.Effect.Save -> {
             val method =
                 ThemeModeFamily.Act.Method.Save(
                     store =
                         store,
-                    parameter =
-                        effect.mode,
+                    effect =
+                        effect,
                 )
 
-            checkNotNull(
-                act.launchWith(
+            act.launch(
+                executionRoot =
                     executionRoot,
-                ),
-            ) {
-                "ThemeMode Save Effect requires an executable Act Begin"
-            }
-                .method(
-                    method =
-                        method,
-                    beforeOperation = {
+                method =
+                    method,
+                beforeOperation = {
                         recordThemeModeFact(
                             logger =
                                 logger,
@@ -579,8 +575,8 @@ internal fun activateThemeMode(
                                 )
                             }
                         }
-                    },
-                )
+                },
+            )
         }
     }
 

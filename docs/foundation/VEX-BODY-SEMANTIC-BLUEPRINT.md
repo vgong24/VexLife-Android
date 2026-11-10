@@ -1030,10 +1030,9 @@ VexFamily
    ├─ Begin<Family, Effect>
    │  ├─ Effect
    │  └─ Approach
-   ├─ Method<Family, SuccessOutput, FailureOutput>
-   │  └─ specializes VexMethod<SuccessOutput, FailureOutput>
-   └─ MethodFollowUp<Family>
-      compile-time continuation only
+   └─ Method<Family, SuccessOutput, FailureOutput>
+      ├─ specializes VexMethod<SuccessOutput, FailureOutput>
+      └─ carries the exact accepted Begin Effect
 
 VexExecution
     Job / overlap / cancellation / observation mechanics
@@ -1260,51 +1259,54 @@ custody law.
 
 This does not create a new execution root or execution vocabulary.
 
-### launchWith consumes decisions already authored
+### Act.Accepted.launch consumes decisions already authored
 
-Before this checkpoint ThemeMode realization manually repeated:
+An earlier checkpoint removed manual re-supply of:
 
 ~~~text
 owner = family
 approach = act.begin.approach
 relationshipId = act.relationshipId
-operation = ...
-argument = ...
 ~~~
 
-Current accepted Act binds the live Family execution owner during `activate(...)` without putting
-that owner into Act equality/copy semantics.
-
-Then:
-
-~~~kotlin
-checkNotNull(
-    act.launchWith(
-        executionRoot,
-    ),
-) {
-    "Effect requires an executable Act Begin"
-}
-    .method(
-        boundMethod,
-    )
-~~~
-
-consumes:
+but implemented that continuation as:
 
 ~~~text
-accepted Act
+Act.launchWith(root)
+-> MethodFollowUp<Family>
+-> method(boundMethod)
+~~~
+
+That intermediate type owned no semantic meaning and dropped the Effect coordinate from the visible
+continuation. Current source removes it rather than promoting it.
+
+`activate(...)` preserves the authored Act inside `Act.Accepted`, binds the live Family execution
+owner and maintained RelationshipId there, and exposes `realizationBegin` only while that authored
+consequence still requires a new occurrence. A concrete Method carries that exact realization Effect,
+then:
+
+~~~kotlin
+accepted.launch(
+    executionRoot = executionRoot,
+    method = boundMethod,
+)
+~~~
+
+consumes and verifies:
+
+~~~text
+Act.Accepted
+├─ authored Act
+│  └─ Begin
+│     ├─ exact Effect
+│     └─ Approach
+├─ realizationBegin?
+│  └─ exact Effect === Method.effect
 ├─ live Family execution owner
-├─ Begin.Approach
 └─ RelationshipId
 ~~~
 
-The caller does not choose those values again.
-
-`MethodFollowUp` exists only because Kotlin must return some type from `launchWith(...)` before
-`.method(...)` can be the next legal operation. It owns no semantic truth, no execution lifetime,
-no relationship identity, and no provider behavior. Do not promote it into a Runtime/Scope/Manager
-concept.
+The caller does not choose those values again and no follow-up wrapper sits between Begin and Method.
 
 ### Effect, Method Output, and State remain different
 
@@ -1537,9 +1539,9 @@ Act.Method.Save(
 )
 ~~~
 
-#### Caller re-selects execution relationship
+#### Caller does not re-select execution relationship
 
-Replaced:
+Historical manual form:
 
 ~~~text
 VexExecution.begin(
@@ -1550,10 +1552,15 @@ VexExecution.begin(
 )
 ~~~
 
-with:
+An intermediate checkpoint replaced that with `launchWith(...).method(...)`; current source removes
+the non-semantic follow-up object and keeps the completed relationship visible:
 
 ~~~text
-act.launchWith(executionRoot).method(boundMethod)
+Act.Begin
+-> Act.Accepted.realizationBegin
+-> exact Effect-bound Method
+-> accepted.launch(executionRoot, boundMethod)
+-> VexExecution
 ~~~
 
 #### Generic result-to-State grammar
@@ -1585,20 +1592,30 @@ Family.activate(...)
         +-> bind live Family execution owner
         |
         v
-accepted Act
+Act.Accepted
+        |
+        +-> authored Act -> Begin(Effect.Save + Latest)
+        |
+        v
+realizationBegin
+        |
+        +-> exact Effect.Save
+        +-> Latest
         |
         v
 Act.Method.Save(
     ThemeModeStore,
-    same Mode
+    that exact Effect.Save
 )
         |
         v
-Act.launchWith(VexExecutionRoot)
+Act.Accepted.launch(
+    VexExecutionRoot,
+    Method.Save
+)
         |
-        v
-MethodFollowUp.method(Method.Save)
-        |
+        +-> fails closed unless Method.effect === Begin.effect
+            (same in-memory consequence provenance, not semantic identity)
         +-> consumes owner
         +-> consumes Latest
         +-> consumes RelationshipId

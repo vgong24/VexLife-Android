@@ -32,6 +32,9 @@ internal class InsulinPartnerLab(
     private object InboundAdmission :
         VexExecution.RelationshipId
 
+    private val pumpRequestRealizationLock =
+        Any()
+
     sealed interface PumpRequestStatus {
         data object Idle :
             PumpRequestStatus
@@ -193,94 +196,107 @@ internal class InsulinPartnerLab(
     }
 
     /**
-     * Human/Synthetic Surface -> Family Control -> Effect -> bound Act.Method -> Pump Partner.
+     * Human/Synthetic Surface -> Family Control -> accepted Act -> Begin -> exact Effect ->
+     * bound Act.Method -> Act.Accepted.launch(...) -> Pump Partner.
      *
-     * Provider acknowledgement updates only the lab diagnostic status. Store and Family State do not
-     * change until a later Pump Signal is received and admitted.
+     * Begin preserves the authored Queued relationship before the concrete Pump Connection is added
+     * as the Method's realization capability. Provider acknowledgement updates only the lab
+     * diagnostic status. Store and Family State do not change until a later Pump Signal is received
+     * and admitted.
      */
     fun requestSyntheticPumpDelivery(
         unitsHundredths:
             Int =
             100,
     ):
-        Job {
-        val parameter =
-            InsulinFamily.Parameter.InsulinAmount(
-                unitsHundredths =
-                    unitsHundredths,
-            )
-        val act =
-            checkNotNull(
-                family.activate(
-                    InsulinFamily.Control.RequestPumpDelivery(
-                        amount =
-                            parameter,
-                    ),
-                ),
-            )
-        val effect =
-            checkNotNull(
-                act.effect as?
-                    InsulinFamily.Effect.RequestPumpDelivery,
-            )
-        val method =
-            InsulinFamily.Act.Method.RequestPumpDelivery(
-                connection =
-                    pumpConnection,
-                parameter =
-                    effect.amount,
-            )
-
-        return checkNotNull(
-            act.launchWith(
-                executionRoot,
-            ),
+        Job =
+        synchronized(
+            pumpRequestRealizationLock,
         ) {
-            "Pump request Effect requires an executable Family Act"
+            val parameter =
+                InsulinFamily.Parameter.InsulinAmount(
+                    unitsHundredths =
+                        unitsHundredths,
+                )
+            val act =
+                checkNotNull(
+                    family.activate(
+                        InsulinFamily.Control.RequestPumpDelivery(
+                            amount =
+                                parameter,
+                        ),
+                    ),
+                )
+            val begin =
+                checkNotNull(
+                    act.realizationBegin,
+                ) {
+                    "Pump request accepted Act must carry realization Begin"
+                }
+            val effect =
+                checkNotNull(
+                    begin.effect as?
+                        InsulinFamily.Effect.RequestPumpDelivery,
+                ) {
+                    "Pump request Begin must carry Effect.RequestPumpDelivery"
+                }
+            val method =
+                InsulinFamily.Act.Method.RequestPumpDelivery(
+                    connection =
+                        pumpConnection,
+                    effect =
+                        effect,
+                )
+
+            checkNotNull(
+                act.launch(
+                    executionRoot =
+                        executionRoot,
+                    method =
+                        method,
+                    onResult = { result ->
+                            mutablePumpRequestStatus.value =
+                                when (
+                                    result
+                                ) {
+                                    is VexMethod.Result.Success ->
+                                        PumpRequestStatus.Acknowledged(
+                                            requestRef =
+                                                result
+                                                    .output
+                                                    .requestRef,
+                                            unitsHundredths =
+                                                result
+                                                    .output
+                                                    .unitsHundredths,
+                                        )
+
+                                    is VexMethod.Result.Failure ->
+                                        PumpRequestStatus.Rejected(
+                                            reason =
+                                                result
+                                                    .output
+                                                    .reason,
+                                        )
+
+                                    is VexMethod.Result.Error ->
+                                        PumpRequestStatus.Errored(
+                                            message =
+                                                result
+                                                    .cause
+                                                    .message
+                                                    ?: result
+                                                        .cause
+                                                        .javaClass
+                                                        .simpleName,
+                                        )
+                                }
+                    },
+                ),
+            ) {
+                "Queued pump request accepted Act must enter execution custody"
+            }
         }
-            .method(
-                method =
-                    method,
-                onResult = { result ->
-                    mutablePumpRequestStatus.value =
-                        when (
-                            result
-                        ) {
-                            is VexMethod.Result.Success ->
-                                PumpRequestStatus.Acknowledged(
-                                    requestRef =
-                                        result
-                                            .output
-                                            .requestRef,
-                                    unitsHundredths =
-                                        result
-                                            .output
-                                            .unitsHundredths,
-                                )
-
-                            is VexMethod.Result.Failure ->
-                                PumpRequestStatus.Rejected(
-                                    reason =
-                                        result
-                                            .output
-                                            .reason,
-                                )
-
-                            is VexMethod.Result.Error ->
-                                PumpRequestStatus.Errored(
-                                    message =
-                                        result
-                                            .cause
-                                            .message
-                                            ?: result
-                                                .cause
-                                                .javaClass
-                                                .simpleName,
-                                )
-                        }
-                },
-            )
-    }
 
     /**
      * Simulate later physical/provider evidence after an acknowledged request.

@@ -21,10 +21,13 @@ caller
       -> Effect
       -> Independent / Earliest / Latest / Queued
 -> immediate State admission
--> Act returned
+-> Act.Accepted returned
+   -> authored Act preserved
+   -> maintained RelationshipId when required
+   -> realizationBegin? while a new occurrence remains owed
 
 later realization boundary
--> Act.Begin + Act.relationshipId
+-> Act.Accepted.realizationBegin + Act.Accepted.relationshipId
 -> bound Act.Method
    -> specializes VexMethod
 -> VexExecution
@@ -213,12 +216,19 @@ Parameter.Mode(Dark)
 -> beginLatest(Effect.Save(the same Parameter.Mode))
 
 realization boundary
+-> Act.Accepted.realizationBegin
+   -> exact Effect.Save
+   -> authored Approach.Latest
 -> Act.Method.Save(
        ThemeModeStore,
-       the same Parameter.Mode
+       that exact Effect.Save
    )
--> accepted Act.launchWith(VexExecutionRoot)
--> MethodFollowUp.method(Method.Save)
+-> Act.Accepted.launch(
+       VexExecutionRoot,
+       Method.Save
+   )
+   fails closed unless Method carries that same in-memory Effect instance
+   (object identity here proves provenance; it is not a new semantic identity system)
    consumes the Act's live Family owner + authored Approach + RelationshipId
 -> VexExecution Job custody
 -> ThemeModeStore.save(Dark)
@@ -503,11 +513,14 @@ VexLifeViewModel/session lifetime
 Debug Menu action
 -> ThemeModeFamily.Parameter.Mode
 -> ThemeModeFamily.activate(Control.Select(the same Mode))
--> Act
-   -> immediate State?
-   -> beginLatest(Effect.Save(the same Mode))
--> Act.Method.Save(ThemeModeStore, the same Mode)
--> Act.launchWith(VexExecutionRoot).method(Method.Save)
+-> Act.Accepted
+   -> authored Act
+      -> immediate State?
+      -> beginLatest(Effect.Save(the same Mode))
+   -> realizationBegin?
+-> Act.Method.Save(ThemeModeStore, the exact accepted Effect.Save)
+-> Act.Accepted.launch(VexExecutionRoot, Method.Save)
+   -> verifies the exact accepted Begin Effect
    -> returns one VexMethod Result form: Success / Failure / Error
    -> consumes already-bound live Family owner
    -> consumes already-authored Approach
