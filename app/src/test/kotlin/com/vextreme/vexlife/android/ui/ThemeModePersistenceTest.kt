@@ -231,6 +231,152 @@ class ThemeModePersistenceTest {
     }
 
     @Test
+    fun synchronousLaunchAdmissionFailureReleasesThemeCurrentnessFence() {
+        val root =
+            VexExecutionRoot()
+        val store =
+            RecordingThemeModeStore(
+                ThemeMode.NotSet,
+            )
+        val family =
+            ThemeModeFamily(
+                initialState =
+                    ThemeMode.Light,
+            )
+        val logger =
+            VexLogger()
+
+        root.forceStopAll(
+            "synthetic launch admission failure",
+        )
+
+        val failure =
+            runCatching {
+                activateThemeMode(
+                    family =
+                        family,
+                    control =
+                        ThemeModeFamily.Control.Select(
+                            ThemeModeFamily.Parameter.Mode(
+                                mode =
+                                    ThemeMode.Dark,
+                            ),
+                        ),
+                    store =
+                        store,
+                    executionRoot =
+                        root,
+                    logger =
+                        logger,
+                )
+            }
+                .exceptionOrNull()
+
+        assertTrue(
+            failure is
+                IllegalStateException,
+        )
+        assertEquals(
+            ThemeMode.Dark,
+            family.currentState,
+        )
+
+        observeThemeModeState(
+            family =
+                family,
+            observed =
+                ThemeMode.Light,
+            logger =
+                logger,
+        )
+
+        assertEquals(
+            ThemeMode.Light,
+            family.currentState,
+        )
+    }
+
+    @Test
+    fun cancelledSaveReleasesThemeCurrentnessFenceWithoutInventingMethodResult() =
+        runBlocking {
+            val root =
+                VexExecutionRoot()
+            val store =
+                LatestThemeModeStore()
+            val family =
+                ThemeModeFamily(
+                    initialState =
+                        ThemeMode.Light,
+                )
+            val logger =
+                VexLogger()
+
+            assertTrue(
+                activateThemeMode(
+                    family =
+                        family,
+                    control =
+                        ThemeModeFamily.Control.Select(
+                            ThemeModeFamily.Parameter.Mode(
+                                mode =
+                                    ThemeMode.Dark,
+                            ),
+                        ),
+                    store =
+                        store,
+                    executionRoot =
+                        root,
+                    logger =
+                        logger,
+                ),
+            )
+            assertEquals(
+                ThemeMode.Dark,
+                family.currentState,
+            )
+
+            withTimeout(
+                5_000,
+            ) {
+                store.firstSaveStarted.await()
+            }
+
+            root.joinStopAll(
+                "synthetic ThemeMode cancellation",
+            )
+
+            assertTrue(
+                store.firstSaveCancelled.isCompleted,
+            )
+            assertEquals(
+                0,
+                logger.history.value
+                    .count { record ->
+                        record.action ==
+                            "EffectSucceeded" ||
+                            record.action ==
+                            "EffectFailed" ||
+                            record.action ==
+                            "EffectErrored"
+                    },
+            )
+
+            observeThemeModeState(
+                family =
+                    family,
+                observed =
+                    ThemeMode.Light,
+                logger =
+                    logger,
+            )
+
+            assertEquals(
+                ThemeMode.Light,
+                family.currentState,
+            )
+        }
+
+    @Test
     fun explicitSelectionPersistsEvenWhenTheSelectedModeIsAlreadyCurrent() {
         val root =
             VexExecutionRoot()
