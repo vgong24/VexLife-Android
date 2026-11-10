@@ -106,11 +106,10 @@ and does it need source-addressed uniqueness/replacement/cancellation or bounded
 Does an existing Session/service/domain owner already own the operation and its lifetime?
 
     Does that work need VexExecution custody semantics such as:
-      maintained overlap,
-      exact-source uniqueness/replacement/cancellation,
-      bounded source recovery,
-      active custody coordination/inspection,
-      or one distinct sustained execution work set?
+      maintained RelationshipId overlap,
+      exact-source duplicate/replacement/cancellation,
+      bounded source/subscription recovery,
+      or owner-isolated stop/join when shared custody is actually required?
 
         yes
         -> keep semantic/runtime meaning on the existing owner;
@@ -120,8 +119,9 @@ Does an existing Session/service/domain owner already own the operation and its 
         -> keep ordinary owner-local coroutine lifetime local;
            do not introduce VexExecution solely for implementation uniformity
 
-Is there a genuinely distinct sustained execution responsibility with its own lifetime/work set?
-    -> a concrete VexExecution owner may be earned
+After a custody requirement is already earned, is there a genuinely distinct sustained execution
+responsibility with its own lifetime/work set?
+    -> a concrete VexExecution owner may be earned; otherwise direct entry may be sufficient
 ~~~
 
 The permanent law is truthful ownership at each boundary, not one mandatory coroutine implementation
@@ -427,7 +427,7 @@ The focused execution tests pressure:
 - provider handoff;
 - root terminal shutdown.
 
-Repository-owned Gradle/JVM proof remains required on the exact candidate head before this PR may
-claim the refinement proved.
+PR #209 is accepted/merged provenance for this refinement. Current repository source and tests own
+present execution behavior; any future execution candidate must earn its own exact-head evidence.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][ARCHITECTURE][EXECUTION] -->
