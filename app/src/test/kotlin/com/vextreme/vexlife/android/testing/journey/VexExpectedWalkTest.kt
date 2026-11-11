@@ -43,6 +43,13 @@ class VexExpectedWalkTest {
                     subjectRef = AppShell.Elements.DebugMenu.elementId,
                     action = "Clicked",
                     screenBeforeId = HomeScreen.screenId,
+                    screenAfterId = null,
+                ),
+                VexExpectedRecord(
+                    kind = VexLogKind.Navigation,
+                    subjectRef = DebugMenuScreen.screenId,
+                    action = "CurrentScreen",
+                    screenBeforeId = null,
                     screenAfterId = DebugMenuScreen.screenId,
                 ),
             ),
@@ -114,7 +121,7 @@ class VexExpectedWalkTest {
         assertEquals(VexLogKind.AppOpened, walk.records.first().kind)
         assertEquals(
             VexExpectedRecord(
-                kind = VexLogKind.Interaction,
+                kind = VexLogKind.DynamicInteraction,
                 subjectRef = dynamic.elementId,
                 action = "Clicked",
                 screenBeforeId = HomeScreen.screenId,
@@ -190,12 +197,69 @@ class VexExpectedWalkTest {
             walk.currentScreen.screenId,
         )
         assertEquals(
-            dynamicRef,
-            walk.records.last().subjectRef,
+            3,
+            walk.records.size,
         )
         assertEquals(
-            DebugMenuScreen.screenId,
-            walk.records.last().screenAfterId,
+            VexLogKind.DynamicInteraction,
+            walk.records[1].kind,
+        )
+        assertEquals(
+            dynamicRef,
+            walk.records[1].subjectRef,
+        )
+        assertEquals(
+            null,
+            walk.records[1].screenAfterId,
+        )
+        assertEquals(
+            VexExpectedRecord(
+                kind = VexLogKind.Navigation,
+                subjectRef = DebugMenuScreen.screenId,
+                action = "CurrentScreen",
+                screenBeforeId = null,
+                screenAfterId = DebugMenuScreen.screenId,
+            ),
+            walk.records.last(),
+        )
+    }
+
+    @Test
+    fun backRecordsGestureThenCurrentScreenNavigation() {
+        val walk =
+            VexExpectedWalk()
+
+        walk.start(
+            HomeScreen,
+        )
+        walk.tap(
+            AppShell.Elements.DebugMenu,
+        )
+        walk.back()
+
+        assertEquals(
+            HomeScreen.screenId,
+            walk.currentScreen.screenId,
+        )
+        assertEquals(
+            VexExpectedRecord(
+                kind = VexLogKind.Gesture,
+                subjectRef = "system.back",
+                action = "Back",
+                screenBeforeId = DebugMenuScreen.screenId,
+                screenAfterId = null,
+            ),
+            walk.records[3],
+        )
+        assertEquals(
+            VexExpectedRecord(
+                kind = VexLogKind.Navigation,
+                subjectRef = HomeScreen.screenId,
+                action = "CurrentScreen",
+                screenBeforeId = null,
+                screenAfterId = HomeScreen.screenId,
+            ),
+            walk.records[4],
         )
     }
 
