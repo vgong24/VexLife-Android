@@ -4,6 +4,9 @@ import android.app.KeyguardManager
 import android.os.PowerManager
 import android.util.Log
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.DeviceConfigurationOverride
 import androidx.compose.ui.test.FontScale
 import androidx.compose.ui.test.Locales
@@ -18,7 +21,6 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.printToString
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.text.intl.LocaleList
 import com.vextreme.vexlife.android.data.AppRepositories
@@ -512,17 +514,49 @@ class VexTestEngine(
                         matcher = isRoot(),
                         useUnmergedTree = true,
                     )
-                val rootCount =
-                    roots.fetchSemanticsNodes()
-                        .size
+                        .fetchSemanticsNodes()
 
-                "rootCount=" +
-                    rootCount +
-                    "\n" +
-                    roots.printToString(
-                        maxDepth =
-                            JOURNEY_SEMANTICS_SNAPSHOT_MAX_DEPTH,
+                buildString {
+                    appendLine(
+                        "rootCount=${roots.size}",
                     )
+                    roots.forEachIndexed { index, root ->
+                        val tags =
+                            mutableListOf<String>()
+                        collectTestTags(
+                            node = root,
+                            tags = tags,
+                        )
+                        val distinctTags =
+                            tags.distinct()
+
+                        appendLine(
+                            "root[$index].nodeId=${root.id} " +
+                                "tagCount=${distinctTags.size}",
+                        )
+                        distinctTags
+                            .take(
+                                JOURNEY_SEMANTICS_SNAPSHOT_MAX_TAGS_PER_ROOT,
+                            )
+                            .forEach { tag ->
+                                appendLine(
+                                    "root[$index].tag=$tag",
+                                )
+                            }
+                        if (
+                            distinctTags.size >
+                            JOURNEY_SEMANTICS_SNAPSHOT_MAX_TAGS_PER_ROOT
+                        ) {
+                            appendLine(
+                                "root[$index].tagsTruncated=" +
+                                    (
+                                        distinctTags.size -
+                                            JOURNEY_SEMANTICS_SNAPSHOT_MAX_TAGS_PER_ROOT
+                                    ),
+                            )
+                        }
+                    }
+                }.trimEnd()
             }.getOrElse { failure ->
                 return "<unavailable: " +
                     "${failure::class.simpleName}: " +
@@ -542,6 +576,26 @@ class VexTestEngine(
             "\n<truncated at " +
             JOURNEY_SEMANTICS_SNAPSHOT_MAX_CHARS +
             " characters>"
+    }
+
+    private fun collectTestTags(
+        node: SemanticsNode,
+        tags: MutableList<String>,
+    ) {
+        node.config
+            .getOrNull(
+                SemanticsProperties.TestTag,
+            )
+            ?.let(
+                tags::add,
+            )
+
+        node.children.forEach { child ->
+            collectTestTags(
+                node = child,
+                tags = tags,
+            )
+        }
     }
 
     private fun node(element: ActionElement): SemanticsNodeInteraction {
@@ -643,8 +697,8 @@ private const val JOURNEY_WAIT_LOG_TAG =
 private const val JOURNEY_TRACE_LOG_TAG =
     "VexJourneyTrace"
 
-private const val JOURNEY_SEMANTICS_SNAPSHOT_MAX_DEPTH =
-    16
+private const val JOURNEY_SEMANTICS_SNAPSHOT_MAX_TAGS_PER_ROOT =
+    256
 
 private const val JOURNEY_SEMANTICS_SNAPSHOT_MAX_CHARS =
-    64_000
+    32_000
