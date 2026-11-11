@@ -504,10 +504,10 @@ internal fun VexStreamFullPlayerSheet(
                                         if (
                                             control != null &&
                                             queueProjection
-                                                ?.get(
+                                                ?.displayState
+                                                ?.isAvailable(
                                                     control,
-                                                )
-                                                ?.isAvailable == true
+                                                ) == true
                                         ) {
                                             runtime
                                                 .recordDynamicInteraction(
