@@ -896,11 +896,10 @@ class VexStreamPlaybackWidgetActionCallback :
             withVexStreamPlayerRequestConnection(
                 context,
             ) { connection ->
-                val snapshot =
-                    awaitVexStreamWidgetPlayerSnapshot(
-                        playerStore,
-                    )
-                        ?: return@withVexStreamPlayerRequestConnection false
+                awaitVexStreamWidgetPlayerSnapshot(
+                    playerStore,
+                )
+                    ?: return@withVexStreamPlayerRequestConnection false
 
                 when (
                     command
@@ -914,9 +913,6 @@ class VexStreamPlaybackWidgetActionCallback :
                                         .dependencyModule
                                         .playbackFamily,
                                 )
-                        family.observePlayer(
-                            snapshot.playback,
-                        )
                         val job =
                             activateVexStreamPlayback(
                                 family =
@@ -945,9 +941,6 @@ class VexStreamPlaybackWidgetActionCallback :
                                         .dependencyModule
                                         .queueFamily,
                                 )
-                        family.observeStore(
-                            snapshot.queue,
-                        )
                         val job =
                             activateVexStreamQueue(
                                 family =
