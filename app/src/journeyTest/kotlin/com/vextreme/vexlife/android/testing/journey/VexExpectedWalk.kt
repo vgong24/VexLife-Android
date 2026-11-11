@@ -79,20 +79,13 @@ class VexExpectedWalk : VexJourneyScope {
         val intent =
             element.actionTemplate
                 ?.intent
-        val target =
-            intent
-                ?.let(::navigationTarget)
-                ?.takeIf { screen ->
-                    screen.screenId !=
-                        before.screenId
-                }
 
         expected += VexExpectedRecord(
-            kind = VexLogKind.Interaction,
+            kind = VexLogKind.DynamicInteraction,
             subjectRef = element.elementId,
             action = "Clicked",
             screenBeforeId = before.screenId,
-            screenAfterId = target?.screenId,
+            screenAfterId = null,
         )
 
         if (intent != null) {
@@ -125,15 +118,13 @@ class VexExpectedWalk : VexJourneyScope {
             ?: error("ActionElement must also be a UIElement")
 
         val before = currentScreen
-        val target = navigationTarget(element.intent)
-            ?.takeIf { it.screenId != before.screenId }
 
         expected += VexExpectedRecord(
             kind = VexLogKind.Interaction,
             subjectRef = source.elementId,
             action = "Clicked",
             screenBeforeId = before.screenId,
-            screenAfterId = target?.screenId,
+            screenAfterId = null,
         )
 
         applyIntent(element.intent)
@@ -175,9 +166,7 @@ class VexExpectedWalk : VexJourneyScope {
             subjectRef = source.elementId,
             action = "Submitted",
             screenBeforeId = before.screenId,
-            screenAfterId = navigationTarget(element.intent)
-                ?.takeIf { it.screenId != before.screenId }
-                ?.screenId,
+            screenAfterId = null,
             detailsJson = submitted.toDiagnosticJson(),
         )
 
@@ -203,32 +192,33 @@ class VexExpectedWalk : VexJourneyScope {
     override fun back() {
         requireStarted()
         val before = currentScreen
-        val after = nextBackScreen()
 
         expected += VexExpectedRecord(
             kind = VexLogKind.Gesture,
             subjectRef = "system.back",
             action = "Back",
             screenBeforeId = before.screenId,
-            screenAfterId = after?.screenId,
+            screenAfterId = null,
         )
 
         applyBack()
     }
 
-    private fun navigationTarget(intent: ElementIntent): ScreenElement? =
-        when (intent) {
-            is ElementIntent.NavigateTo -> intent.screen
-            ElementIntent.NavigateBack -> nextBackScreen()
-            is ElementIntent.Sequence ->
-                intent.intents.mapNotNull(::navigationTarget).lastOrNull()
-            else -> null
-        }
-
     private fun applyIntent(intent: ElementIntent) {
         when (intent) {
-            is ElementIntent.NavigateTo -> navigateTo(intent.screen)
-            ElementIntent.NavigateBack -> applyBack()
+            is ElementIntent.NavigateTo -> {
+                val before =
+                    currentScreen
+                navigateTo(
+                    intent.screen,
+                )
+                recordNavigationIfChanged(
+                    before,
+                )
+            }
+
+            ElementIntent.NavigateBack ->
+                applyBack()
             is ElementIntent.Open -> open(intent.element)
             is ElementIntent.Close ->
                 openPresentation.removeAll { it.elementId == intent.element.elementId }
@@ -273,6 +263,9 @@ class VexExpectedWalk : VexJourneyScope {
         }
 
     private fun applyBack() {
+        val before =
+            currentScreen
+
         when {
             openPresentation.isNotEmpty() ->
                 openPresentation.removeAt(openPresentation.lastIndex)
@@ -288,6 +281,31 @@ class VexExpectedWalk : VexJourneyScope {
             else ->
                 error("journey attempted Android Back at app root")
         }
+
+        recordNavigationIfChanged(
+            before,
+        )
+    }
+
+    private fun recordNavigationIfChanged(
+        before: ScreenElement,
+    ) {
+        val after =
+            currentScreen
+        if (
+            after.screenId ==
+            before.screenId
+        ) {
+            return
+        }
+
+        expected += VexExpectedRecord(
+            kind = VexLogKind.Navigation,
+            subjectRef = after.screenId,
+            action = "CurrentScreen",
+            screenBeforeId = null,
+            screenAfterId = after.screenId,
+        )
     }
 
     private fun requireStarted() {
