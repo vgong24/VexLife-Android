@@ -1,10 +1,10 @@
 package com.vextreme.vexlife.android.vexstream.repeat
 
-import com.vextreme.vexlife.android.behavior.VexBehaviorFamily
+import com.vextreme.vexlife.android.behavior.VexFamily
 
 /** Media3 repeat requests selected by semantic Acts. */
-sealed interface VexStreamRepeatEffect :
-    VexBehaviorFamily.Effect<
+internal sealed interface VexStreamRepeatEffect :
+    VexFamily.Effect<
         VexStreamRepeatFamily
     > {
     data object RequestEnableAll :

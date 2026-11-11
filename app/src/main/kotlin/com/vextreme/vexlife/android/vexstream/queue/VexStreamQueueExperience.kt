@@ -1,21 +1,15 @@
 package com.vextreme.vexlife.android.vexstream.queue
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.media3.common.Player
-import androidx.media3.session.MediaController
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import com.vextreme.vexlife.android.vexstream.VexStreamMusicViewModel
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 
-/**
- * Compose-facing membrane for the VexStream neighboring-item Queue behavior.
- *
- * Queue does not currently need an additional DisplayState classification: the Behavior Projection
- * already answers the view question used by Mini Player and Context Dock. This boundary owns no
- * Queue truth; it observes the current projection and carries Controls back to the Connection.
- */
+/** Compose-facing membrane over the one process-shared Queue Family. */
 internal interface VexStreamQueueExperience {
     val projection:
         VexStreamQueueProjection?
@@ -29,97 +23,86 @@ internal interface VexStreamQueueExperience {
 private class CurrentVexStreamQueueExperience(
     override val projection:
         VexStreamQueueProjection?,
+    private val family:
+        VexStreamQueueFamily,
     private val connection:
-        VexStreamQueueConnection?,
+        VexStreamPlayerPartner.Connection.Request?,
+    private val executionRoot:
+        VexExecutionRoot,
 ) :
     VexStreamQueueExperience {
     override fun activate(
         control:
             VexStreamQueueControl,
     ) {
-        connection?.activate(
-            control,
+        val requestConnection =
+            connection
+                ?: return
+
+        activateVexStreamQueue(
+            family =
+                family,
+            control =
+                control,
+            connection =
+                requestConnection,
+            executionRoot =
+                executionRoot,
         )
     }
 }
 
 @Composable
-internal fun rememberVexStreamQueueExperience(
-    controller:
-        MediaController?,
-): VexStreamQueueExperience {
+internal fun rememberVexStreamQueueExperience():
+    VexStreamQueueExperience {
+    val owner:
+        VexStreamMusicViewModel =
+        viewModel()
+    val family =
+        owner.queueFamily
+    val state by
+        family
+            .states
+            .collectAsStateWithLifecycle(
+                initialValue =
+                    family.currentState,
+            )
     val connection =
+        owner.playerRequestConnection
+    val projection =
         remember(
-            controller,
+            state,
+            connection,
         ) {
-            controller?.let {
-                Media3VexStreamQueueConnection(
-                    it,
+            if (
+                connection ==
+                null
+            ) {
+                null
+            } else {
+                family.projectionFor(
+                    state,
                 )
             }
         }
 
-    var projection by
-        remember(
-            connection,
-        ) {
-            mutableStateOf(
-                connection
-                    ?.currentProjection,
-            )
-        }
-
-    DisposableEffect(
-        controller,
-        connection,
-    ) {
-        if (
-            controller == null ||
-            connection == null
-        ) {
-            projection = null
-            return@DisposableEffect onDispose {}
-        }
-
-        val listener =
-            object :
-                Player.Listener {
-                override fun onEvents(
-                    player: Player,
-                    events:
-                        Player.Events,
-                ) {
-                    projection =
-                        connection
-                            .currentProjection
-                }
-            }
-
-        controller.addListener(
-            listener,
-        )
-        projection =
-            connection
-                .currentProjection
-
-        onDispose {
-            controller.removeListener(
-                listener,
-            )
-        }
-    }
-
     return remember(
-        connection,
         projection,
+        family,
+        connection,
+        owner.executionRoot,
     ) {
         CurrentVexStreamQueueExperience(
             projection =
                 projection,
+            family =
+                family,
             connection =
                 connection,
+            executionRoot =
+                owner.executionRoot,
         )
     }
 }
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][QUEUE][DIRECT-FAMILY]

@@ -5,17 +5,13 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrack
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
-import androidx.media3.common.Player
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamCurrentPlaybackObservation
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackReadState
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackTelemetry
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackTrace
-import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackBehavior
-import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackControls
-import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackState
+import com.vextreme.vexlife.android.vexstream.playback.toVexStreamPlaybackReadState
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
-import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueBehavior
-import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueControls
-import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertSame
@@ -55,6 +51,110 @@ class VexStreamPlaybackReadStateTest {
     }
 
     @Test
+    fun playerStoreOwnsCurrentMediaAndQueueWhileTelemetryIsFreshnessGated() {
+        val snapshot =
+            VexStreamPlayerStore.Snapshot.Available(
+                playback =
+                    VexStreamPlayerPartner.Signal.Playback(
+                        hasMedia = true,
+                        playRequested = true,
+                        phase =
+                            VexStreamPlayerPartner.PlaybackPhase.Ready,
+                        playPauseAvailable = true,
+                        restartAvailable = true,
+                    ),
+                queueItems =
+                    VexStreamPlayerPartner.Signal.QueueItems(
+                        items =
+                            listOf(
+                                VexStreamPlayerPartner.Signal.QueueItems.Item(
+                                    mediaId = "store.track",
+                                    title = "Store title",
+                                    artist = "Store artist",
+                                ),
+                            ),
+                    ),
+                queueNavigation =
+                    VexStreamPlayerPartner.Signal.QueueNavigation(
+                        currentIndex = 0,
+                        previousAvailable = false,
+                        nextAvailable = false,
+                        changeMediaItemsAvailable = true,
+                    ),
+                repeat =
+                    VexStreamPlayerPartner.Signal.Repeat(
+                        enabled = false,
+                        toggleAvailable = true,
+                    ),
+                currentMedia =
+                    VexStreamPlayerPartner.Signal.CurrentMedia(
+                        mediaId = "store.track",
+                        title = "Store title",
+                        artist = "Store artist",
+                        artworkUri = "https://example.invalid/art.jpg",
+                    ),
+            )
+
+        val staleTelemetry =
+            snapshot.toVexStreamPlaybackReadState(
+                VexStreamPlaybackTelemetry(
+                    observedMediaId = "older.track",
+                    observedMediaItemIndex = 0,
+                    currentPositionMs = 9_000L,
+                    durationMs = 10_000L,
+                    bufferedPositionMs = 9_500L,
+                ),
+            )
+
+        assertEquals(
+            "store.track",
+            staleTelemetry.currentMediaId,
+        )
+        assertEquals(
+            "Store title",
+            staleTelemetry.currentTitle,
+        )
+        assertEquals(
+            listOf(
+                "store.track",
+            ),
+            staleTelemetry.queueMediaIds,
+        )
+        assertEquals(
+            0,
+            staleTelemetry.currentIndex,
+        )
+        assertEquals(
+            0L,
+            staleTelemetry.currentPositionMs,
+        )
+
+        val currentTelemetry =
+            snapshot.toVexStreamPlaybackReadState(
+                VexStreamPlaybackTelemetry(
+                    observedMediaId = "store.track",
+                    observedMediaItemIndex = 0,
+                    currentPositionMs = 9_000L,
+                    durationMs = 10_000L,
+                    bufferedPositionMs = 9_500L,
+                ),
+            )
+
+        assertEquals(
+            9_000L,
+            currentTelemetry.currentPositionMs,
+        )
+        assertEquals(
+            10_000L,
+            currentTelemetry.durationMs,
+        )
+        assertEquals(
+            9_500L,
+            currentTelemetry.bufferedPositionMs,
+        )
+    }
+
+    @Test
     fun playbackTraceMessageKeepsProjectionBreadcrumbsCompactAndSingleLine() {
         assertEquals(
             "seq=7 stage=widget.state.persisted " +
@@ -80,69 +180,6 @@ class VexStreamPlaybackReadStateTest {
                 detail =
                     "shouldRender=true\nnext line",
             ),
-        )
-    }
-
-    @Test
-    fun currentPlaybackObservationCarriesProviderReadAndExistingSemanticProjectionsTogether() {
-        val readState =
-            VexStreamPlaybackReadState(
-                currentMediaId =
-                    "track.current",
-                currentTitle =
-                    "Current",
-                currentArtist =
-                    "Artist",
-                currentIndex = 0,
-            )
-        val observation =
-            VexStreamCurrentPlaybackObservation(
-                readState =
-                    readState,
-                playbackProjection =
-                    vexStreamPlaybackBehavior()
-                        .vexStreamPlaybackControls()
-                        .projection(
-                            vexStreamPlaybackState(
-                                mediaItemCount = 1,
-                                playWhenReady = false,
-                                playbackState =
-                                    Player.STATE_READY,
-                                playPauseAvailable = true,
-                                restartAvailable = true,
-                            ),
-                        ),
-                queueProjection =
-                    vexStreamQueueBehavior()
-                        .vexStreamQueueControls()
-                        .projection(
-                            vexStreamQueueState(
-                                mediaItemCount = 1,
-                                previousAvailable = false,
-                                nextAvailable = false,
-                                shuffleAvailable = false,
-                                clearAvailable = true,
-                            ),
-                        ),
-            )
-
-        assertSame(
-            readState,
-            observation.readState,
-        )
-        assertTrue(
-            observation
-                .playbackProjection[
-                    com.vextreme.vexlife.android.vexstream.playback
-                        .VexStreamPlaybackControl.PlayPause
-                ].isAvailable,
-        )
-        assertEquals(
-            false,
-            observation
-                .queueProjection[
-                    VexStreamQueueControl.Next
-                ].isAvailable,
         )
     }
 

@@ -1,23 +1,17 @@
 package com.vextreme.vexlife.android.vexstream.repeat
 
-import com.vextreme.vexlife.android.behavior.VexBehaviorProjection
-import com.vextreme.vexlife.android.behavior.VexPort
+import com.vextreme.vexlife.android.behavior.VexFamily
 
-/** Feature-local names keep foundation generic weight out of ordinary Repeat callers. */
-internal typealias VexStreamRepeatConnection =
-    VexPort<
-        VexStreamRepeatFamily,
-        VexStreamRepeatState,
-        VexStreamRepeatControl,
-        VexStreamRepeatAct
-    >
-
+/**
+ * Feature-facing name for the canonical Family projection.
+ *
+ * Projection identity stays with VexFamily; Repeat contributes only its concrete DisplayState.
+ */
 internal typealias VexStreamRepeatProjection =
-    VexBehaviorProjection<
+    VexFamily.Projection<
         VexStreamRepeatFamily,
         VexStreamRepeatState,
-        VexStreamRepeatControl,
-        VexStreamRepeatAct
+        VexStreamRepeatFamily.DisplayState
     >
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][REPEAT][DIRECT-FAMILY]

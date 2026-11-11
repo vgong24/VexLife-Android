@@ -3,37 +3,57 @@ package com.vextreme.vexlife.android.vexstream.playback
 import com.vextreme.vexlife.android.elements.ElementIcon
 
 internal data class VexStreamPlaybackControlPresentation(
-    val icon: ElementIcon,
-    val enabled: Boolean,
+    val icon:
+        ElementIcon,
+    val enabled:
+        Boolean,
 )
 
 internal fun VexStreamPlaybackProjection.present(
-    control: VexStreamPlaybackControl,
-): VexStreamPlaybackControlPresentation {
-    val projected =
-        this[control]
+    control:
+        VexStreamPlaybackControl,
+):
+    VexStreamPlaybackControlPresentation {
+    check(
+        control ==
+            VexStreamPlaybackControl.PlayPause,
+    ) {
+        "Unknown VexStream Playback Control: $control"
+    }
 
     val icon =
-        projected.meaning.fold(
-            onAvailable = { act ->
-                when (act) {
-                    VexStreamPlaybackAct.Play ->
-                        ElementIcon.Play
+        if (
+            !displayState.playPauseAvailable
+        ) {
+            ElementIcon.PlayPause
+        } else {
+            when (
+                val current =
+                    state
+            ) {
+                VexStreamPlaybackState.NoMedia ->
+                    ElementIcon.PlayPause
 
-                    VexStreamPlaybackAct.Pause ->
+                is VexStreamPlaybackState.Media ->
+                    if (
+                        current.playRequested
+                    ) {
                         ElementIcon.Pause
-                }
-            },
-            onUnavailable = {
-                ElementIcon.PlayPause
-            },
-        )
+                    } else {
+                        ElementIcon.Play
+                    }
+
+                is VexStreamPlaybackState.Ended ->
+                    ElementIcon.Play
+            }
+        }
 
     return VexStreamPlaybackControlPresentation(
-        icon = icon,
+        icon =
+            icon,
         enabled =
-            projected.isAvailable,
+            displayState.playPauseAvailable,
     )
 }
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][PLAYBACK][DIRECT-FAMILY]

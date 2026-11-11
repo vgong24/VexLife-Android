@@ -41,10 +41,12 @@ WHERE CAN MEDIA COME FROM?
 
 WHAT IS PLAYBACK DOING?
     vexstream/playback
-    -> Play / Pause through Playback State / Control / Act / Effect
-    -> Seek through typed mediaId + position request
-    -> Media3 playback / seek Connections
-    -> provider read projection carries current optional artwork URI beside title/artist/progress
+    -> one process-shared Playback Direct Family owns finite Play / Pause / Restart meaning
+    -> shared Player Store supplies outside playback truth
+    -> finite Effects realize through the bounded Player request connection
+    -> Seek remains a typed mediaId + position request
+    -> Player Store supplies current media/queue identity + metadata
+    -> bounded controller telemetry supplies position/duration/buffer only
 
 HOW SHOULD THIS RENDERED COLLECTION START?
     vexstream/collection
@@ -54,15 +56,17 @@ HOW SHOULD THIS RENDERED COLLECTION START?
 
 WHAT CAN I DO WITH THE CURRENT QUEUE?
     vexstream/queue
-    -> Previous / Next / Shuffle / Clear through Queue State / Control / Act / Effect
+    -> one process-shared Queue Direct Family owns Previous / Next / Shuffle / Clear
+    -> shared Player Store supplies outside queue truth
     -> Play one current occurrence through typed occurrence request
     -> Reorder one current occurrence by adjacent typed request
-    -> Media3 Queue / Queue Play / Queue Reorder Connections
+    -> finite Controls and payload workflows keep separate realization boundaries
 
 IS REPEAT ACTIVE FOR THIS PLAYBACK CONTEXT?
     vexstream/repeat
-    -> Repeat State / Control / Act / Effect
-    -> Media3VexStreamRepeatConnection
+    -> one process-shared Repeat Direct Family owns finite Toggle meaning
+    -> shared Player Store supplies outside repeat truth
+    -> finite Effect realizes through the bounded Player request connection
 
 HOW MUCH OF THIS COLLECTION OR SONGS LIBRARY IS ON THIS PHONE?
     vexstream/offline
@@ -79,6 +83,8 @@ WHAT DOES THE LISTENER SEE?
 WHO OWNS PLAYER LIFETIME?
     media/vexstream/VexStreamPlaybackService
     -> MediaSession / ExoPlayer lifetime
+    -> one Media3 Player observation connection publishes outside truth to Player Store
+    -> Service-owned Widget publication keeps its own Android lifetime
 
 WHAT PROVES THE HUMAN WALK?
     journeyTest/.../VexStreamJourneys.kt
@@ -93,19 +99,19 @@ data/vexstream/
     README.md preserves producer/consumer, storage and security boundaries
 
 vexstream/playback/
-    human questions: Play / Pause + where should current media continue from?
-    Behavior family for finite Play/Pause meaning
-    typed Seek request + current-media/provider-capability Connection
+    human questions: Play / Pause / Restart + where should current media continue from?
+    Direct Family for finite semantic meaning and pending-intent currentness
+    typed Seek request remains its current-media/provider-capability payload boundary
 
 vexstream/queue/
     human questions: finite Queue Controls + play/reorder one current occurrence
-    Behavior family for finite Queue Controls
-    typed current-occurrence Queue Play + adjacent Reorder requests
+    Direct Family for Previous / Next / Shuffle / Clear
+    typed current-occurrence Queue Play + adjacent Reorder requests remain separate payload boundaries
 
 vexstream/track/
     human questions: play this rendered track context / place this rendered track next or at queue end
     typed Track requests + source-resolution / Media3 provider-capability Connection
-    composition boundary only; not another finite Behavior family
+    composition boundary only; not another finite semantic Family
 
 vexstream/collection/
     human question: play this rendered collection naturally or as one shuffled start order
@@ -124,7 +130,7 @@ vexstream/offline/
 
 vexstream/repeat/
     human question: Is Repeat active for the current playback context?
-    Behavior family + concrete Media3 Connection + UI Experience membrane
+    Direct Family + shared Player outside truth + UI Experience membrane
 
 media/vexstream/
     Android MediaSession/player/network realization
@@ -406,6 +412,35 @@ FULL_PLAYER_SHEET != REPEAT_OWNER
 GESTURE != EFFECT
 ~~~
 
+## Shared Player outside-truth boundary
+
+Finite Playback / Queue / Repeat semantics now share one outside Player relationship without becoming
+one giant Player State:
+
+~~~text
+VexStreamPlaybackService
+-> Media3PlayerConnection
+-> VexStreamPlayerPartner Signals
+-> VexStreamPlayerStore
+-> Playback / Queue / Repeat Direct Families
+
+configuration UI / Widget callback
+-> one bounded MediaController request connection
+-> exact already-authored finite Family Effect
+-> Media3 provider
+-> later Service observation
+-> Player Store
+~~~
+
+The Store owns retained outside-Player currentness and connection-occurrence fencing; each Family owns
+its own semantic State. UI timeline telemetry may read the MediaController for position/duration/buffer,
+but it does not reconstruct current-media or queue identity. The Service owns Player/MediaSession and
+Widget-publication lifetime. The Application is only the process composition surface for earned
+process-lifetime dependencies.
+
+Track / Collection submission, Seek, Queue-row Play and Reorder deliberately keep their existing typed
+payload/currentness boundaries. Sharing Media3 does not make the Player Partner their semantic owner.
+
 ## Playback and Queue are siblings, not one giant player State
 
 Playback asks:
@@ -419,7 +454,7 @@ Queue currently asks:
 Current admitted answers are Previous, Next, Shuffle, and Clear. Clear requests the provider mutation
 but does not claim Empty until Media3 observation reports that truth.
 
-They are near each other in the UI but remain independent Behavior families. Do not cross-multiply
+They are near each other in the UI but remain independent Direct Families. Do not cross-multiply
 their States simply because Mini Player displays both.
 
 ## Current Queue boundary
@@ -429,7 +464,7 @@ Shuffle is the same Queue family question and is consumed as a one-shot action b
 Queue presentation; it has no persistent selected state.
 Clear is consumed by Queue presentation through the same current-truth Connection.
 
-Queue-row Play remains outside the finite-Control Behavior family but now has a feature-local typed
+Queue-row Play remains outside the finite Queue Direct Family but has its feature-local typed
 request boundary:
 
 ~~~text
@@ -461,9 +496,9 @@ rejected until the provider actually observes that occurrence at the expected in
 adjacent identical media IDs still fails closed because the provider projection cannot distinguish
 which duplicate moved without a stronger durable item identity.
 
-Repeat remains its independent sibling Behavior family. The accepted Behavior foundation does not
-carry arbitrary runtime request payloads through finite Controls, so Queue Play/Reorder remain
-feature-local request boundaries rather than a generic payload framework.
+Repeat remains its independent sibling Direct Family. Finite Family Controls do not absorb arbitrary
+runtime request payloads, so Queue Play/Reorder remain feature-local request boundaries rather than a
+generic payload framework.
 
 ## Dynamic Android presentation identity
 
@@ -523,9 +558,9 @@ deciding fact.
 
 ## Current proof shape
 
-Use focused JVM tests for Behavior meaning, repository-owned aggregate verification for source
-integration, connected-device/Journey proof for Media3/Android interaction, and lived review for
-product feel.
+Use focused JVM tests for Direct Family / Player Store meaning, repository-owned aggregate
+verification for source integration, connected-device/Journey proof for Media3/Android interaction,
+and lived review for product feel.
 
 Current canonical Journey:
 

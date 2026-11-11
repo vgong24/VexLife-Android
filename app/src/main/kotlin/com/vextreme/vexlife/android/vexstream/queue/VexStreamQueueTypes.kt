@@ -1,23 +1,17 @@
 package com.vextreme.vexlife.android.vexstream.queue
 
-import com.vextreme.vexlife.android.behavior.VexBehaviorProjection
-import com.vextreme.vexlife.android.behavior.VexPort
+import com.vextreme.vexlife.android.behavior.VexFamily
 
-/** Feature-local names keep foundation generic weight out of ordinary Queue callers. */
-internal typealias VexStreamQueueConnection =
-    VexPort<
-        VexStreamQueueFamily,
-        VexStreamQueueState,
-        VexStreamQueueControl,
-        VexStreamQueueAct
-    >
-
+/**
+ * Feature-facing name for the canonical Family projection.
+ *
+ * Projection identity stays with VexFamily; Queue contributes only its concrete DisplayState.
+ */
 internal typealias VexStreamQueueProjection =
-    VexBehaviorProjection<
+    VexFamily.Projection<
         VexStreamQueueFamily,
         VexStreamQueueState,
-        VexStreamQueueControl,
-        VexStreamQueueAct
+        VexStreamQueueFamily.DisplayState
     >
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][QUEUE][DIRECT-FAMILY]

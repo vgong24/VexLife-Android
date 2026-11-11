@@ -103,9 +103,7 @@ private fun VexStreamContextDockContent(
             .displayState
             .playback
     val queueExperience =
-        rememberVexStreamQueueExperience(
-            controller,
-        )
+        rememberVexStreamQueueExperience()
     val queueProjection =
         queueExperience.projection
     val queuePlayConnection =
@@ -208,10 +206,10 @@ private fun VexStreamContextDockContent(
                     ),
                 enabled =
                     queueProjection
-                        ?.get(
+                        ?.displayState
+                        ?.isAvailable(
                             VexStreamQueueControl.Previous,
-                        )
-                        ?.isAvailable == true,
+                        ) == true,
             ) {
                 runtime.recordDynamicInteraction(
                     subjectRef =
@@ -250,10 +248,10 @@ private fun VexStreamContextDockContent(
                     ),
                 enabled =
                     queueProjection
-                        ?.get(
+                        ?.displayState
+                        ?.isAvailable(
                             VexStreamQueueControl.Next,
-                        )
-                        ?.isAvailable == true,
+                        ) == true,
             ) {
                 runtime.recordDynamicInteraction(
                     subjectRef =

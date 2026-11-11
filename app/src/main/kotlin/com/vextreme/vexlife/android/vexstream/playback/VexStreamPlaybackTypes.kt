@@ -1,35 +1,18 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
-import com.vextreme.vexlife.android.behavior.VexBehaviorProjection
-import com.vextreme.vexlife.android.behavior.VexPort
-import com.vextreme.vexlife.android.behavior.VexPortFlow
+import com.vextreme.vexlife.android.behavior.VexFamily
 
 /**
- * Feature-local names hide foundation generic weight from ordinary VexStream callers while keeping
- * the full family-bound compiler contract underneath.
+ * Feature-facing name for the canonical Family projection.
+ *
+ * This is a type alias, not another projection owner. VexFamily owns the projection relationship;
+ * VexStreamPlaybackFamily owns the concrete DisplayState.
  */
-internal typealias VexStreamPlaybackConnection =
-    VexPort<
-        VexStreamPlaybackFamily,
-        VexStreamPlaybackState,
-        VexStreamPlaybackControl,
-        VexStreamPlaybackAct
-    >
-
-internal typealias VexStreamPlaybackConnectionFlow =
-    VexPortFlow<
-        VexStreamPlaybackFamily,
-        VexStreamPlaybackState,
-        VexStreamPlaybackControl,
-        VexStreamPlaybackAct
-    >
-
 internal typealias VexStreamPlaybackProjection =
-    VexBehaviorProjection<
+    VexFamily.Projection<
         VexStreamPlaybackFamily,
         VexStreamPlaybackState,
-        VexStreamPlaybackControl,
-        VexStreamPlaybackAct
+        VexStreamPlaybackFamily.DisplayState
     >
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][PLAYBACK][DIRECT-FAMILY]

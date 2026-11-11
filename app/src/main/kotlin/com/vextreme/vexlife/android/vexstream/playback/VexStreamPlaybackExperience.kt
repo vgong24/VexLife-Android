@@ -5,16 +5,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import com.vextreme.vexlife.android.vexstream.VexStreamMusicViewModel
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
 
-/**
- * UI-facing membrane for the VexStream Playback Behavior experience.
- *
- * Compose should depend on this boundary instead of assembling Connection + VexPortFlow +
- * Projection + DisplayState itself.
- *
- * This interface owns no semantic truth. It exposes the final derived display classification and
- * carries Controls back into the existing VexPort boundary.
- */
+/** UI-facing membrane for the process-shared VexStream Playback Family. */
 internal interface VexStreamPlaybackExperience {
     val displayState:
         VexStreamPlaybackDisplayState
@@ -28,52 +24,96 @@ internal interface VexStreamPlaybackExperience {
 private class CurrentVexStreamPlaybackExperience(
     override val displayState:
         VexStreamPlaybackDisplayState,
+    private val family:
+        VexStreamPlaybackFamily,
     private val connection:
-        VexStreamPlaybackConnection?,
+        VexStreamPlayerPartner.Connection.Request?,
+    private val playerStore:
+        VexStreamPlayerStore,
+    private val executionRoot:
+        VexExecutionRoot,
 ) :
     VexStreamPlaybackExperience {
     override fun activate(
         control:
             VexStreamPlaybackControl,
     ) {
-        connection?.activate(
-            control,
+        val requestConnection =
+            connection
+                ?: return
+
+        activateVexStreamPlayback(
+            family =
+                family,
+            control =
+                control,
+            connection =
+                requestConnection,
+            playerStore =
+                playerStore,
+            executionRoot =
+                executionRoot,
         )
     }
 }
 
-/**
- * Observe the internal Playback Port and expose one feature membrane to Compose.
- */
 @Composable
 internal fun rememberVexStreamPlaybackExperience():
     VexStreamPlaybackExperience {
     val owner:
-        VexStreamPlaybackConnectionViewModel =
+        VexStreamMusicViewModel =
         viewModel()
-
+    val family =
+        owner.playbackFamily
     val connection =
-        owner.connection
+        owner.playerRequestConnection
 
-    val playback by
-        rememberVexStreamPlaybackReadState(
+    val playerSnapshot by
+        owner
+            .playerStore
+            .states
+            .collectAsStateWithLifecycle(
+                initialValue =
+                    owner.playerStore.current,
+            )
+    val telemetry by
+        rememberVexStreamPlaybackTelemetry(
             owner.controller,
         )
-
-    val projections =
-        connection?.projections
-
-    val projection:
-        VexStreamPlaybackProjection? =
-        if (
-            projections == null
+    val playback =
+        remember(
+            playerSnapshot,
+            telemetry,
         ) {
-            null
-        } else {
-            val current by
-                projections
-                    .collectAsStateWithLifecycle()
-            current
+            playerSnapshot
+                .toVexStreamPlaybackReadState(
+                    telemetry,
+                )
+        }
+
+    val semanticState by
+        family
+            .states
+            .collectAsStateWithLifecycle(
+                initialValue =
+                    family.currentState,
+            )
+
+    val projection =
+        remember(
+            semanticState,
+            connection,
+        ) {
+            if (
+                connection ==
+                null
+            ) {
+                null
+            } else {
+                family.projectionFor(
+                    semanticState,
+                )
+            }
         }
 
     val displayState =
@@ -84,16 +124,25 @@ internal fun rememberVexStreamPlaybackExperience():
             )
 
     return remember(
-        connection,
         displayState,
+        family,
+        connection,
+        owner.playerStore,
+        owner.executionRoot,
     ) {
         CurrentVexStreamPlaybackExperience(
             displayState =
                 displayState,
+            family =
+                family,
             connection =
                 connection,
+            playerStore =
+                owner.playerStore,
+            executionRoot =
+                owner.executionRoot,
         )
     }
 }
 
-// [VXG RealForever]
+// [VXG RealForever][VEXSTREAM][PLAYBACK][DIRECT-FAMILY]

@@ -1,6 +1,6 @@
 package com.vextreme.vexlife.android.vexstream.queue
 
-import com.vextreme.vexlife.android.behavior.VexBehaviorFamily
+import com.vextreme.vexlife.android.behavior.VexFamily
 
 /**
  * Current Queue truth needed by the admitted Queue controls.
@@ -8,8 +8,8 @@ import com.vextreme.vexlife.android.behavior.VexBehaviorFamily
  * Item identity, queue-row selection payloads, reorder state and repeat remain with their current
  * owners. This family carries only provider truth required by Previous / Next / Shuffle / Clear.
  */
-sealed interface VexStreamQueueState :
-    VexBehaviorFamily.State<
+internal sealed interface VexStreamQueueState :
+    VexFamily.State<
         VexStreamQueueFamily
     > {
     /** There is no current ordered media context to navigate, reshuffle or clear. */
@@ -27,3 +27,43 @@ sealed interface VexStreamQueueState :
 }
 
 // [VXG RealForever]
+
+
+internal fun vexStreamQueueState(
+    mediaItemCount:
+        Int,
+    previousAvailable:
+        Boolean,
+    nextAvailable:
+        Boolean,
+    shuffleAvailable:
+        Boolean,
+    clearAvailable:
+        Boolean,
+):
+    VexStreamQueueState {
+    require(
+        mediaItemCount >=
+            0,
+    ) {
+        "mediaItemCount must not be negative"
+    }
+
+    if (
+        mediaItemCount ==
+        0
+    ) {
+        return VexStreamQueueState.Empty
+    }
+
+    return VexStreamQueueState.NonEmpty(
+        previousAvailable =
+            previousAvailable,
+        nextAvailable =
+            nextAvailable,
+        shuffleAvailable =
+            shuffleAvailable,
+        clearAvailable =
+            clearAvailable,
+    )
+}

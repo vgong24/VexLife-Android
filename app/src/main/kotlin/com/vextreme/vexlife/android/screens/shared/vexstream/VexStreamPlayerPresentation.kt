@@ -78,9 +78,7 @@ internal fun VexStreamMiniPlayer(
             .displayState
             .playback
     val queueExperience =
-        rememberVexStreamQueueExperience(
-            controller,
-        )
+        rememberVexStreamQueueExperience()
     val queueProjection =
         queueExperience.projection
     val seekConnection =
@@ -228,10 +226,10 @@ internal fun VexStreamMiniPlayer(
                 handler = handler,
                 enabled =
                     queueProjection
-                        ?.get(
+                        ?.displayState
+                        ?.isAvailable(
                             VexStreamQueueControl.Previous,
-                        )
-                        ?.isAvailable == true,
+                        ) == true,
             )
             VexIconButton(
                 element = VexStreamMusicScreen.TogglePlayback,
@@ -244,20 +242,20 @@ internal fun VexStreamMiniPlayer(
                 handler = handler,
                 enabled =
                     queueProjection
-                        ?.get(
+                        ?.displayState
+                        ?.isAvailable(
                             VexStreamQueueControl.Next,
-                        )
-                        ?.isAvailable == true,
+                        ) == true,
             )
             VexIconButton(
                 element = VexStreamMusicScreen.ShuffleQueue,
                 handler = handler,
                 enabled =
                     queueProjection
-                        ?.get(
+                        ?.displayState
+                        ?.isAvailable(
                             VexStreamQueueControl.Shuffle,
-                        )
-                        ?.isAvailable == true,
+                        ) == true,
             )
             VexIconButton(
                 element = VexStreamMusicScreen.ShowQueue,
@@ -325,15 +323,11 @@ internal fun VexStreamFullPlayerSheet(
             VexStreamPlaybackControl.PlayPause,
         )
     val queueExperience =
-        rememberVexStreamQueueExperience(
-            controller,
-        )
+        rememberVexStreamQueueExperience()
     val queueProjection =
         queueExperience.projection
     val repeatExperience =
-        rememberVexStreamRepeatExperience(
-            controller,
-        )
+        rememberVexStreamRepeatExperience()
     val repeatProjection =
         repeatExperience.projection
     val seekConnection =
@@ -510,10 +504,10 @@ internal fun VexStreamFullPlayerSheet(
                                         if (
                                             control != null &&
                                             queueProjection
-                                                ?.get(
+                                                ?.displayState
+                                                ?.isAvailable(
                                                     control,
-                                                )
-                                                ?.isAvailable == true
+                                                ) == true
                                         ) {
                                             runtime
                                                 .recordDynamicInteraction(
@@ -673,11 +667,11 @@ internal fun VexStreamFullPlayerSheet(
                         handler = handler,
                         enabled =
                             queueProjection
-                                ?.get(
+                                ?.displayState
+                                ?.isAvailable(
                                     VexStreamQueueControl
                                         .Previous,
-                                )
-                                ?.isAvailable == true,
+                                ) == true,
                         semanticRef =
                             VexStreamPresentationRefs
                                 .fullPlayerAction(
@@ -709,10 +703,10 @@ internal fun VexStreamFullPlayerSheet(
                         handler = handler,
                         enabled =
                             queueProjection
-                                ?.get(
+                                ?.displayState
+                                ?.isAvailable(
                                     VexStreamQueueControl.Next,
-                                )
-                                ?.isAvailable == true,
+                                ) == true,
                         semanticRef =
                             VexStreamPresentationRefs
                                 .fullPlayerAction(
@@ -737,10 +731,10 @@ internal fun VexStreamFullPlayerSheet(
                         handler = handler,
                         enabled =
                             queueProjection
-                                ?.get(
+                                ?.displayState
+                                ?.isAvailable(
                                     VexStreamQueueControl.Shuffle,
-                                )
-                                ?.isAvailable == true,
+                                ) == true,
                         semanticRef =
                             VexStreamPresentationRefs
                                 .fullPlayerAction(
@@ -755,10 +749,10 @@ internal fun VexStreamFullPlayerSheet(
                         handler = handler,
                         enabled =
                             repeatProjection
-                                ?.get(
+                                ?.displayState
+                                ?.isAvailable(
                                     VexStreamRepeatControl.Toggle,
-                                )
-                                ?.isAvailable == true,
+                                ) == true,
                         selected =
                             repeatProjection
                                 ?.state is

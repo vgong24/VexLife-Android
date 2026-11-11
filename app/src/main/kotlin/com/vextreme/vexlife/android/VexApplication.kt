@@ -8,6 +8,14 @@ import com.vextreme.vexlife.android.dependency.VexDependencyFactory
 import com.vextreme.vexlife.android.dependency.VexDependencyModule
 import com.vextreme.vexlife.android.dependency.VexDependencyProvider
 import com.vextreme.vexlife.android.elements.UIBlueprintRegistry
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
+import com.vextreme.vexlife.android.vexstream.playback.observeVexStreamPlaybackPlayerStore
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueFamily
+import com.vextreme.vexlife.android.vexstream.queue.observeVexStreamQueuePlayerStore
+import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatFamily
+import com.vextreme.vexlife.android.vexstream.repeat.observeVexStreamRepeatPlayerStore
 import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.ui.SharedPreferencesThemeModeStore
 import com.vextreme.vexlife.android.ui.ThemeModeStore
@@ -30,9 +38,11 @@ import com.vextreme.vexlife.android.ui.ThemeModeStore
  * feature/UI code to construct process dependencies itself.
  *
  * RESPONSIBILITY FENCE
- * VexApplication is not a service locator, Family/runtime owner, VexExecutionRoot, Logger/history
- * owner, or feature semantic registry. Ordinary feature/UI consumers must not reach into it to
- * resolve dependencies; narrower composition roots receive concrete dependencies explicitly.
+ * VexApplication is not a service locator, semantic Family owner, Logger/history owner, or feature
+ * registry. Hosting an earned process-lifetime dependency does not transfer that dependency's
+ * meaning here. Ordinary feature/UI consumers must not reach into it; narrower composition roots
+ * such as VexStream's Service/ViewModel/platform callback resolve the exact process dependencies
+ * their Android lifetime boundary requires.
  */
 class VexApplication :
     Application() {
@@ -100,6 +110,103 @@ internal class VexApplicationDependencyModule(
             androidApplication,
         )
 
+    val processExecutionRoot =
+        VexDependencyProvider.named(
+            readableName =
+                "VexStream process execution root",
+        ) {
+            VexExecutionRoot()
+        }
+
+    val playerStore =
+        VexDependencyProvider.named(
+            readableName =
+                "VexStream Player Store",
+        ) {
+            VexStreamPlayerStore()
+        }
+
+    val playbackFamily =
+        VexDependencyProvider.named(
+            readableName =
+                "VexStream Playback Family",
+            dependencies =
+                listOf(
+                    playerStore,
+                    processExecutionRoot,
+                ),
+        ) { dependencies ->
+            VexStreamPlaybackFamily()
+                .also { family ->
+                    observeVexStreamPlaybackPlayerStore(
+                        family =
+                            family,
+                        store =
+                            dependencies.require(
+                                playerStore,
+                            ),
+                        executionRoot =
+                            dependencies.require(
+                                processExecutionRoot,
+                            ),
+                    )
+                }
+        }
+
+    val queueFamily =
+        VexDependencyProvider.named(
+            readableName =
+                "VexStream Queue Family",
+            dependencies =
+                listOf(
+                    playerStore,
+                    processExecutionRoot,
+                ),
+        ) { dependencies ->
+            VexStreamQueueFamily()
+                .also { family ->
+                    observeVexStreamQueuePlayerStore(
+                        family =
+                            family,
+                        store =
+                            dependencies.require(
+                                playerStore,
+                            ),
+                        executionRoot =
+                            dependencies.require(
+                                processExecutionRoot,
+                            ),
+                    )
+                }
+        }
+
+    val repeatFamily =
+        VexDependencyProvider.named(
+            readableName =
+                "VexStream Repeat Family",
+            dependencies =
+                listOf(
+                    playerStore,
+                    processExecutionRoot,
+                ),
+        ) { dependencies ->
+            VexStreamRepeatFamily()
+                .also { family ->
+                    observeVexStreamRepeatPlayerStore(
+                        family =
+                            family,
+                        store =
+                            dependencies.require(
+                                playerStore,
+                            ),
+                        executionRoot =
+                            dependencies.require(
+                                processExecutionRoot,
+                            ),
+                    )
+                }
+        }
+
     val module:
         VexDependencyModule =
         VexDependencyModule.of(
@@ -107,6 +214,11 @@ internal class VexApplicationDependencyModule(
             blueprintRegistry,
             repositories,
             themeModeStore,
+            processExecutionRoot,
+            playerStore,
+            playbackFamily,
+            queueFamily,
+            repeatFamily,
         )
 
     internal class AndroidApplicationProvider(

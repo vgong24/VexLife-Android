@@ -10,19 +10,18 @@ import androidx.compose.runtime.remember
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
-import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueProjection
-import com.vextreme.vexlife.android.vexstream.queue.toVexStreamQueueProjection
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import java.util.concurrent.atomic.AtomicLong
-import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Provider-derived Playback read data used by view-facing DisplayState.
+ * View-facing Playback read data composed from the one retained Player Store truth plus bounded
+ * controller timeline telemetry.
  *
- * This is not the semantic [VexStreamPlaybackState]. It carries Media3 read data such as metadata,
- * queue position and progress that the view needs alongside the Behavior Projection.
+ * Current media identity, metadata, queue membership and queue index come from [VexStreamPlayerStore].
+ * MediaController contributes only continuously changing position/duration/buffer telemetry. The
+ * telemetry carries media/index coordinates solely as a freshness fence so stale timing data cannot
+ * be applied to newer Store-owned identity.
  */
 internal data class VexStreamPlaybackReadState(
     val currentMediaId: String? = null,
@@ -82,21 +81,6 @@ internal data class VexStreamPlaybackReadState(
             VexStreamPlaybackReadState()
     }
 }
-
-/**
- * One provider-observed playback snapshot.
- *
- * Media3 Player / MediaSession remains canonical truth. This value only composes the read facts and
- * existing Playback / Queue projections that remote or in-app surfaces need to render one moment.
- */
-internal data class VexStreamCurrentPlaybackObservation(
-    val readState:
-        VexStreamPlaybackReadState,
-    val playbackProjection:
-        VexStreamPlaybackProjection,
-    val queueProjection:
-        VexStreamQueueProjection,
-)
 
 /**
  * Feature-local live diagnostic trace for the current-playback projection chain.
@@ -275,148 +259,25 @@ internal object VexStreamPlaybackTrace {
             )
 }
 
-/**
- * Playback-lifetime observation interface.
- *
- * Consumers depend on the immutable observation stream rather than independently timing provider
- * reads. The observer owns only Media3 listener registration; it does not own playback State.
- */
-internal interface VexStreamCurrentPlaybackObserver :
-    AutoCloseable {
-    val observations:
-        StateFlow<
-            VexStreamCurrentPlaybackObservation
-        >
-}
-
-/**
- * Media3 realization of the current-playback observer.
- *
- * Player.Listener callbacks run on the Player application looper. Projecting the complete
- * observation from onEvents therefore preserves Media3's ordering/thread contract before values
- * cross into other execution surfaces.
- */
-internal class Media3VexStreamCurrentPlaybackObserver(
-    private val player: Player,
-) :
-    VexStreamCurrentPlaybackObserver {
-    private val mutableObservations =
-        MutableStateFlow(
-            player
-                .toVexStreamCurrentPlaybackObservation(),
-        )
-
-    override val observations:
-        StateFlow<
-            VexStreamCurrentPlaybackObservation
-        > =
-        mutableObservations
-            .asStateFlow()
-
-    private val listener =
-        object :
-            Player.Listener {
-            override fun onEvents(
-                player: Player,
-                events: Player.Events,
-            ) {
-                val observed =
-                    player
-                        .toVexStreamCurrentPlaybackObservation()
-                val changed =
-                    mutableObservations.value !=
-                        observed
-
-                VexStreamPlaybackTrace.record(
-                    stage =
-                        "observer.event",
-                    mediaId =
-                        observed.readState
-                            .currentMediaId,
-                    title =
-                        observed.readState
-                            .currentTitle,
-                    artist =
-                        observed.readState
-                            .currentArtist,
-                    detail =
-                        "changed=$changed " +
-                            "index=${observed.readState.currentIndex} " +
-                            "playerState=${player.playbackState} " +
-                            "playWhenReady=${player.playWhenReady}",
-                )
-
-                if (
-                    changed
-                ) {
-                    mutableObservations.value =
-                        observed
-                    VexStreamPlaybackTrace.record(
-                        stage =
-                            "observer.emit",
-                        mediaId =
-                            observed.readState
-                                .currentMediaId,
-                        title =
-                            observed.readState
-                                .currentTitle,
-                        artist =
-                            observed.readState
-                                .currentArtist,
-                    )
-                }
-            }
-        }
-
-    init {
-        val initial =
-            mutableObservations.value
-        VexStreamPlaybackTrace.record(
-            stage =
-                "observer.start",
-            mediaId =
-                initial.readState
-                    .currentMediaId,
-            title =
-                initial.readState
-                    .currentTitle,
-            artist =
-                initial.readState
-                    .currentArtist,
-        )
-        player.addListener(
-            listener,
-        )
-    }
-
-    override fun close() {
-        VexStreamPlaybackTrace.record(
-            stage =
-                "observer.close",
-        )
-        player.removeListener(
-            listener,
-        )
+internal data class VexStreamPlaybackTelemetry(
+    val observedMediaId: String? = null,
+    val observedMediaItemIndex: Int = -1,
+    val currentPositionMs: Long = 0L,
+    val durationMs: Long = 0L,
+    val bufferedPositionMs: Long = 0L,
+) {
+    companion object {
+        val Empty =
+            VexStreamPlaybackTelemetry()
     }
 }
-
-internal fun Player.toVexStreamCurrentPlaybackObservation():
-    VexStreamCurrentPlaybackObservation =
-    VexStreamCurrentPlaybackObservation(
-        readState =
-            toVexStreamPlaybackReadState(),
-        playbackProjection =
-            toVexStreamPlaybackProjection(),
-        queueProjection =
-            toVexStreamQueueProjection(),
-    )
 
 @Composable
-internal fun rememberVexStreamPlaybackReadState(
+internal fun rememberVexStreamPlaybackTelemetry(
     controller:
         MediaController?,
 ): State<
-    VexStreamPlaybackReadState
+    VexStreamPlaybackTelemetry
 > {
     val projected =
         remember(
@@ -424,8 +285,8 @@ internal fun rememberVexStreamPlaybackReadState(
         ) {
             mutableStateOf(
                 controller
-                    ?.toVexStreamPlaybackReadState()
-                    ?: VexStreamPlaybackReadState
+                    ?.toVexStreamPlaybackTelemetry()
+                    ?: VexStreamPlaybackTelemetry
                         .Empty,
             )
         }
@@ -437,7 +298,7 @@ internal fun rememberVexStreamPlaybackReadState(
             controller == null
         ) {
             projected.value =
-                VexStreamPlaybackReadState
+                VexStreamPlaybackTelemetry
                     .Empty
             return@DisposableEffect onDispose {}
         }
@@ -452,20 +313,19 @@ internal fun rememberVexStreamPlaybackReadState(
                 ) {
                     val current =
                         player
-                            .toVexStreamPlaybackReadState()
+                            .toVexStreamPlaybackTelemetry()
                     projected.value =
                         current
                     VexStreamPlaybackTrace.record(
                         stage =
-                            "full-player.event",
+                            "full-player.telemetry",
                         mediaId =
-                            current.currentMediaId,
-                        title =
-                            current.currentTitle,
-                        artist =
-                            current.currentArtist,
+                            current
+                                .observedMediaId,
                         detail =
-                            "index=${current.currentIndex}",
+                            "index=" +
+                                current
+                                    .observedMediaItemIndex,
                     )
                 }
             }
@@ -475,7 +335,7 @@ internal fun rememberVexStreamPlaybackReadState(
         )
         projected.value =
             controller
-                .toVexStreamPlaybackReadState()
+                .toVexStreamPlaybackTelemetry()
 
         onDispose {
             controller.removeListener(
@@ -496,7 +356,7 @@ internal fun rememberVexStreamPlaybackReadState(
         while (true) {
             projected.value =
                 controller
-                    .toVexStreamPlaybackReadState()
+                    .toVexStreamPlaybackTelemetry()
 
             delay(
                 if (
@@ -513,9 +373,82 @@ internal fun rememberVexStreamPlaybackReadState(
     return projected
 }
 
-internal fun Player
-    .toVexStreamPlaybackReadState():
+internal fun VexStreamPlayerStore.Snapshot
+    .toVexStreamPlaybackReadState(
+        telemetry:
+            VexStreamPlaybackTelemetry,
+    ):
     VexStreamPlaybackReadState {
+    val available =
+        this as?
+            VexStreamPlayerStore.Snapshot.Available
+            ?: return VexStreamPlaybackReadState.Empty
+    val queueMediaIds =
+        available.queue
+            .items
+            .mediaIds
+    val currentIndex =
+        available.queue
+            .navigation
+            .currentIndex
+            .takeIf { index ->
+                index in
+                    queueMediaIds.indices
+            }
+            ?: -1
+    val telemetryIsCurrent =
+        telemetry.observedMediaId ==
+            available.currentMedia.mediaId &&
+            telemetry.observedMediaItemIndex ==
+            currentIndex
+
+    return VexStreamPlaybackReadState(
+        currentMediaId =
+            available.currentMedia
+                .mediaId,
+        currentTitle =
+            available.currentMedia
+                .title,
+        currentArtist =
+            available.currentMedia
+                .artist,
+        currentArtworkUri =
+            available.currentMedia
+                .artworkUri,
+        queueMediaIds =
+            queueMediaIds,
+        currentIndex =
+            currentIndex,
+        currentPositionMs =
+            if (
+                telemetryIsCurrent
+            ) {
+                telemetry.currentPositionMs
+            } else {
+                0L
+            },
+        durationMs =
+            if (
+                telemetryIsCurrent
+            ) {
+                telemetry.durationMs
+            } else {
+                0L
+            },
+        bufferedPositionMs =
+            if (
+                telemetryIsCurrent
+            ) {
+                telemetry.bufferedPositionMs
+            } else {
+                0L
+            },
+    )
+}
+
+internal fun Player
+    .toVexStreamPlaybackTelemetry():
+    VexStreamPlaybackTelemetry {
     val current =
         currentMediaItem
 
@@ -559,36 +492,13 @@ internal fun Player
                 }
             }
 
-    return VexStreamPlaybackReadState(
-        currentMediaId =
+    return VexStreamPlaybackTelemetry(
+        observedMediaId =
             current?.mediaId,
-        currentTitle =
-            current
-                ?.mediaMetadata
-                ?.title
-                ?.toString()
-                .orEmpty(),
-        currentArtist =
-            current
-                ?.mediaMetadata
-                ?.artist
-                ?.toString()
-                .orEmpty(),
-        currentArtworkUri =
-            current
-                ?.mediaMetadata
-                ?.artworkUri
-                ?.toString(),
-        queueMediaIds =
-            (0 until mediaItemCount)
-                .map { index ->
-                    getMediaItemAt(
-                        index,
-                    ).mediaId
-                },
-        currentIndex =
+        observedMediaItemIndex =
             if (
-                mediaItemCount > 0
+                mediaItemCount >
+                0
             ) {
                 currentMediaItemIndex
             } else {
