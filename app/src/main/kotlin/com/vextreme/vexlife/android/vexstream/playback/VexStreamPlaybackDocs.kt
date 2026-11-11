@@ -56,7 +56,8 @@ package com.vextreme.vexlife.android.vexstream.playback
  *
  * ## Presentation
  *
- * [VexStreamPlaybackProjection] and [toVexStreamPlaybackDisplayState] are projections of already-owned
+ * [VexStreamPlaybackProjection] is an alias of the canonical VexFamily Projection, while
+ * [toVexStreamPlaybackDisplayState] composes that Family projection with provider read data. Both are projections of already-owned
  * meaning, not another state machine. Pending State projects as Transitioning; no projection is
  * Unknown; converged media is Active.
  *

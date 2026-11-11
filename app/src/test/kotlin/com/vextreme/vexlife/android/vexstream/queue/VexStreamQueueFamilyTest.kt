@@ -26,7 +26,7 @@ class VexStreamQueueFamilyTest {
             }
 
         val projection =
-            family.currentQueueProjection
+            family.currentProjection
         assertFalse(
             projection.previousAvailable,
         )
@@ -166,7 +166,7 @@ class VexStreamQueueFamilyTest {
                     ),
             )
         val projection =
-            family.currentQueueProjection
+            family.currentProjection
 
         assertFalse(
             projection.previousAvailable,

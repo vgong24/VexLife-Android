@@ -90,7 +90,7 @@ internal fun rememberVexStreamPlaybackExperience():
             ) {
                 null
             } else {
-                family.playbackProjectionFor(
+                family.projectionFor(
                     semanticState,
                 )
             }

@@ -1,51 +1,59 @@
 package com.vextreme.vexlife.android.vexstream.queue
 
+import com.vextreme.vexlife.android.behavior.VexFamily
+
 internal data class VexStreamQueueControlProjection(
     val isAvailable:
         Boolean,
 )
 
-internal data class VexStreamQueueProjection(
-    val state:
+/**
+ * Feature-facing name for the canonical Family projection.
+ *
+ * Projection identity stays with VexFamily; Queue contributes only its concrete DisplayState.
+ */
+internal typealias VexStreamQueueProjection =
+    VexFamily.Projection<
+        VexStreamQueueFamily,
         VexStreamQueueState,
-    val previousAvailable:
-        Boolean,
-    val nextAvailable:
-        Boolean,
-    val shuffleAvailable:
-        Boolean,
-    val clearAvailable:
-        Boolean,
-) {
-    operator fun get(
-        control:
-            VexStreamQueueControl,
-    ):
-        VexStreamQueueControlProjection =
-        VexStreamQueueControlProjection(
-            isAvailable =
-                when (
-                    control
-                ) {
-                    VexStreamQueueControl.Previous ->
-                        previousAvailable
+        VexStreamQueueFamily.DisplayState
+    >
 
-                    VexStreamQueueControl.Next ->
-                        nextAvailable
+internal val VexStreamQueueProjection.previousAvailable:
+    Boolean
+    get() =
+        displayState
+            .previousAvailable
 
-                    VexStreamQueueControl.Shuffle ->
-                        shuffleAvailable
+internal val VexStreamQueueProjection.nextAvailable:
+    Boolean
+    get() =
+        displayState
+            .nextAvailable
 
-                    VexStreamQueueControl.Clear ->
-                        clearAvailable
+internal val VexStreamQueueProjection.shuffleAvailable:
+    Boolean
+    get() =
+        displayState
+            .shuffleAvailable
 
-                    else ->
-                        error(
-                            "Unknown VexStream Queue Control: " +
-                                control,
-                        )
-                },
-        )
-}
+internal val VexStreamQueueProjection.clearAvailable:
+    Boolean
+    get() =
+        displayState
+            .clearAvailable
+
+internal operator fun VexStreamQueueProjection.get(
+    control:
+        VexStreamQueueControl,
+):
+    VexStreamQueueControlProjection =
+    VexStreamQueueControlProjection(
+        isAvailable =
+            displayState
+                .isAvailable(
+                    control,
+                ),
+    )
 
 // [VXG RealForever][VEXSTREAM][QUEUE][DIRECT-FAMILY]

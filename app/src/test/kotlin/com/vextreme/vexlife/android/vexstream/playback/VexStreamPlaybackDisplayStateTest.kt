@@ -17,9 +17,7 @@ class VexStreamPlaybackDisplayStateTest {
             VexStreamPlaybackState,
     ):
         VexStreamPlaybackProjection =
-        VexStreamPlaybackFamily(
-            state,
-        ).playbackProjectionFor(
+        VexStreamPlaybackFamily.project(
             state,
         )
 

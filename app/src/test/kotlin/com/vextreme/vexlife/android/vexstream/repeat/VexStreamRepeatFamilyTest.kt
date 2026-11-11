@@ -88,7 +88,7 @@ class VexStreamRepeatFamilyTest {
             ),
         )
         assertFalse(
-            family.currentRepeatProjection
+            family.currentProjection
                 .toggleAvailable,
         )
     }
@@ -113,7 +113,7 @@ class VexStreamRepeatFamilyTest {
                 VexStreamRepeatState.Enabled,
         )
         assertTrue(
-            family.currentRepeatProjection
+            family.currentProjection
                 .toggleAvailable,
         )
     }

@@ -35,6 +35,50 @@ internal class VexStreamPlaybackFamily(
         initialState =
             initialState,
     ) {
+    data class DisplayState(
+        val playPauseAvailable:
+            Boolean,
+    ) :
+        VexFamily.DisplayState<
+            VexStreamPlaybackFamily,
+            VexStreamPlaybackState
+        >
+
+    companion object {
+        /**
+         * Pure projection of one exact Playback State snapshot.
+         *
+         * This does not create a live Family owner. It exists so read-only boundaries such as the
+         * Service-owned Widget can reuse Family-owned display meaning against exact retained Store
+         * truth without constructing a second semantic owner.
+         */
+        internal fun project(
+            state:
+                VexStreamPlaybackState,
+        ):
+            VexStreamPlaybackProjection =
+            VexFamily.Projection(
+                state =
+                    state,
+                displayState =
+                    DisplayState(
+                        playPauseAvailable =
+                            when (
+                                state
+                            ) {
+                                VexStreamPlaybackState.NoMedia ->
+                                    false
+
+                                is VexStreamPlaybackState.Media ->
+                                    state.playPauseAvailable
+
+                                is VexStreamPlaybackState.Ended ->
+                                    state.restartAvailable
+                            },
+                    ),
+            )
+    }
+
     /*
      * Feature-owned fence between accepted semantic intent, later provider observation, and
      * realization failure. The already-existing Accepted occurrence is the identity; no feature
@@ -189,23 +233,38 @@ internal class VexStreamPlaybackFamily(
                     }
         }
 
-    fun playbackProjectionFor(
+    override fun displayStateFor(
+        state:
+            VexStreamPlaybackState,
+    ):
+        DisplayState =
+        project(
+            state,
+        ).displayState
+
+    override fun projectionFor(
         state:
             VexStreamPlaybackState,
     ):
         VexStreamPlaybackProjection =
-        vexStreamPlaybackProjectionFor(
+        project(
             state,
         )
 
-    val currentPlaybackProjection:
+    override val currentProjection:
         VexStreamPlaybackProjection
         get() =
-            playbackProjectionFor(
+            projectionFor(
                 currentState,
             )
 
-    object Act {
+    override val displayState:
+        DisplayState
+        get() =
+            currentProjection
+                .displayState
+
+    object Act {    object Act {
         class Method(
             private val connection:
                 VexStreamPlayerPartner.Connection.Request,
@@ -252,29 +311,7 @@ internal class VexStreamPlaybackFamily(
     }
 }
 
-internal fun vexStreamPlaybackProjectionFor(
-    state:
-        VexStreamPlaybackState,
-):
-    VexStreamPlaybackProjection =
-    VexStreamPlaybackProjection(
-        state =
-            state,
-        playPauseAvailable =
-            when (
-                state
-            ) {
-                VexStreamPlaybackState.NoMedia ->
-                    false
-
-                is VexStreamPlaybackState.Media ->
-                    state.playPauseAvailable
-
-                is VexStreamPlaybackState.Ended ->
-                    state.restartAvailable
-            },
-    )
-
+internal fun activateVexStreamPlayback(
 internal fun activateVexStreamPlayback(
     family:
         VexStreamPlaybackFamily,

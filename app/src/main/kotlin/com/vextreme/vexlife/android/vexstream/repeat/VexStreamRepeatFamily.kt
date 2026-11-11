@@ -27,6 +27,27 @@ internal class VexStreamRepeatFamily(
             initialState,
     ) {
 
+    data class DisplayState(
+        val toggleAvailable:
+            Boolean,
+    ) :
+        VexFamily.DisplayState<
+            VexStreamRepeatFamily,
+            VexStreamRepeatState
+        > {
+        internal fun isAvailable(
+            control:
+                VexStreamRepeatControl,
+        ):
+            Boolean =
+            when (
+                control
+            ) {
+                VexStreamRepeatControl.Toggle ->
+                    toggleAvailable
+            }
+    }
+
     override fun act(
         currentState:
             VexStreamRepeatState,
@@ -76,34 +97,55 @@ internal class VexStreamRepeatFamily(
                 .toVexStreamRepeatState(),
         )
 
-    fun projectionFor(
+    override fun displayStateFor(
+        state:
+            VexStreamRepeatState,
+    ):
+        DisplayState =
+        when (
+            state
+        ) {
+            is VexStreamRepeatState.Disabled ->
+                DisplayState(
+                    toggleAvailable =
+                        state.toggleAvailable,
+                )
+
+            is VexStreamRepeatState.Enabled ->
+                DisplayState(
+                    toggleAvailable =
+                        state.toggleAvailable,
+                )
+        }
+
+    override fun projectionFor(
         state:
             VexStreamRepeatState,
     ):
         VexStreamRepeatProjection =
-        VexStreamRepeatProjection(
+        VexFamily.Projection(
             state =
                 state,
-            toggleAvailable =
-                when (
-                    state
-                ) {
-                    is VexStreamRepeatState.Disabled ->
-                        state.toggleAvailable
-
-                    is VexStreamRepeatState.Enabled ->
-                        state.toggleAvailable
-                },
+            displayState =
+                displayStateFor(
+                    state,
+                ),
         )
 
-    val currentRepeatProjection:
+    override val currentProjection:
         VexStreamRepeatProjection
         get() =
             projectionFor(
                 currentState,
             )
 
-    object Act {
+    override val displayState:
+        DisplayState
+        get() =
+            currentProjection
+                .displayState
+
+    object Act {    object Act {
         class Method(
             private val connection:
                 VexStreamPlayerPartner.Connection.Request,

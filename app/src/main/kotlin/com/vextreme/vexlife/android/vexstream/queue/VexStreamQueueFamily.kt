@@ -29,6 +29,95 @@ internal class VexStreamQueueFamily(
             initialState,
     ) {
 
+    data class DisplayState(
+        val previousAvailable:
+            Boolean,
+        val nextAvailable:
+            Boolean,
+        val shuffleAvailable:
+            Boolean,
+        val clearAvailable:
+            Boolean,
+    ) :
+        VexFamily.DisplayState<
+            VexStreamQueueFamily,
+            VexStreamQueueState
+        > {
+        internal fun isAvailable(
+            control:
+                VexStreamQueueControl,
+        ):
+            Boolean =
+            when (
+                control
+            ) {
+                VexStreamQueueControl.Previous ->
+                    previousAvailable
+
+                VexStreamQueueControl.Next ->
+                    nextAvailable
+
+                VexStreamQueueControl.Shuffle ->
+                    shuffleAvailable
+
+                VexStreamQueueControl.Clear ->
+                    clearAvailable
+
+                else ->
+                    error(
+                        "Unknown VexStream Queue Control: " +
+                            control,
+                    )
+            }
+    }
+
+    companion object {
+        /**
+         * Pure projection of one exact Queue State snapshot.
+         *
+         * The Widget consumes exact retained Store truth outside the live Family observation timing.
+         * Projecting that snapshot here reuses Family-owned display meaning without creating another
+         * live Queue Family.
+         */
+        internal fun project(
+            state:
+                VexStreamQueueState,
+        ):
+            VexStreamQueueProjection =
+            VexFamily.Projection(
+                state =
+                    state,
+                displayState =
+                    when (
+                        state
+                    ) {
+                        VexStreamQueueState.Empty ->
+                            DisplayState(
+                                previousAvailable =
+                                    false,
+                                nextAvailable =
+                                    false,
+                                shuffleAvailable =
+                                    false,
+                                clearAvailable =
+                                    false,
+                            )
+
+                        is VexStreamQueueState.NonEmpty ->
+                            DisplayState(
+                                previousAvailable =
+                                    state.previousAvailable,
+                                nextAvailable =
+                                    state.nextAvailable,
+                                shuffleAvailable =
+                                    state.shuffleAvailable,
+                                clearAvailable =
+                                    state.clearAvailable,
+                            )
+                    },
+            )
+    }
+
     override fun act(
         currentState:
             VexStreamQueueState,
@@ -99,23 +188,38 @@ internal class VexStreamQueueFamily(
                 .toVexStreamQueueState(),
         )
 
-    fun projectionFor(
+    override fun displayStateFor(
+        state:
+            VexStreamQueueState,
+    ):
+        DisplayState =
+        project(
+            state,
+        ).displayState
+
+    override fun projectionFor(
         state:
             VexStreamQueueState,
     ):
         VexStreamQueueProjection =
-        vexStreamQueueProjectionFor(
+        project(
             state,
         )
 
-    val currentQueueProjection:
+    override val currentProjection:
         VexStreamQueueProjection
         get() =
             projectionFor(
                 currentState,
             )
 
-    object Act {
+    override val displayState:
+        DisplayState
+        get() =
+            currentProjection
+                .displayState
+
+    object Act {    object Act {
         class Method(
             private val connection:
                 VexStreamPlayerPartner.Connection.Request,
@@ -165,82 +269,7 @@ internal class VexStreamQueueFamily(
     }
 }
 
-internal fun vexStreamQueueProjectionFor(
-    state:
-        VexStreamQueueState,
-):
-    VexStreamQueueProjection =
-    VexStreamQueueProjection(
-        state =
-            state,
-        previousAvailable =
-            vexStreamQueueControlAvailable(
-                state =
-                    state,
-                control =
-                    VexStreamQueueControl.Previous,
-            ),
-        nextAvailable =
-            vexStreamQueueControlAvailable(
-                state =
-                    state,
-                control =
-                    VexStreamQueueControl.Next,
-            ),
-        shuffleAvailable =
-            vexStreamQueueControlAvailable(
-                state =
-                    state,
-                control =
-                    VexStreamQueueControl.Shuffle,
-            ),
-        clearAvailable =
-            vexStreamQueueControlAvailable(
-                state =
-                    state,
-                control =
-                    VexStreamQueueControl.Clear,
-            ),
-    )
-
-private fun vexStreamQueueControlAvailable(
-    state:
-        VexStreamQueueState,
-    control:
-        VexStreamQueueControl,
-):
-    Boolean =
-    when (
-        state
-    ) {
-        VexStreamQueueState.Empty ->
-            false
-
-        is VexStreamQueueState.NonEmpty ->
-            when (
-                control
-            ) {
-                VexStreamQueueControl.Previous ->
-                    state.previousAvailable
-
-                VexStreamQueueControl.Next ->
-                    state.nextAvailable
-
-                VexStreamQueueControl.Shuffle ->
-                    state.shuffleAvailable
-
-                VexStreamQueueControl.Clear ->
-                    state.clearAvailable
-
-                else ->
-                    error(
-                        "Unknown VexStream Queue Control: " +
-                            control,
-                    )
-            }
-    }
-
-
+internal fun activateVexStreamQueue(
 internal fun activateVexStreamQueue(
     family:
         VexStreamQueueFamily,

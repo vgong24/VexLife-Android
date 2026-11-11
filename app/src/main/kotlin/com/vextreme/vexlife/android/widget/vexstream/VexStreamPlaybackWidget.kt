@@ -46,17 +46,17 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamArtworkStore
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.playback.activateVexStreamPlayback
 import com.vextreme.vexlife.android.vexstream.playback.toVexStreamPlaybackState
-import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackProjectionFor
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
 import com.vextreme.vexlife.android.vexstream.player.withVexStreamPlayerRequestConnection
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackTrace
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueFamily
 import com.vextreme.vexlife.android.vexstream.queue.activateVexStreamQueue
 import com.vextreme.vexlife.android.vexstream.queue.toVexStreamQueueState
-import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueProjectionFor
 import com.vextreme.vexlife.android.widget.VexGlanceAppWidget
 import com.vextreme.vexlife.android.widget.VexWidgetActionCallback
 import com.vextreme.vexlife.android.widget.VexWidgetActionRef
@@ -294,12 +294,12 @@ internal suspend fun vexStreamPlaybackWidgetSurfaceState(
                 context,
             )
     val playbackProjection =
-        vexStreamPlaybackProjectionFor(
+        VexStreamPlaybackFamily.project(
             available.playback
                 .toVexStreamPlaybackState(),
         )
     val queueProjection =
-        vexStreamQueueProjectionFor(
+        VexStreamQueueFamily.project(
             available.queue
                 .toVexStreamQueueState(),
         )
