@@ -177,6 +177,7 @@ class VexTestEngine(
 
         waitForTaggedNode(element.elementId)
         compose.onNodeWithTag(element.elementId)
+            .scrollIntoViewIfPossible()
             .performClick()
         compose.waitForIdle()
         observe(
