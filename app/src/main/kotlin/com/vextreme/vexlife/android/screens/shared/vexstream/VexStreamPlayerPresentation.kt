@@ -226,10 +226,10 @@ internal fun VexStreamMiniPlayer(
                 handler = handler,
                 enabled =
                     queueProjection
-                        ?.get(
+                        ?.displayState
+                        ?.isAvailable(
                             VexStreamQueueControl.Previous,
-                        )
-                        ?.isAvailable == true,
+                        ) == true,
             )
             VexIconButton(
                 element = VexStreamMusicScreen.TogglePlayback,
@@ -242,20 +242,20 @@ internal fun VexStreamMiniPlayer(
                 handler = handler,
                 enabled =
                     queueProjection
-                        ?.get(
+                        ?.displayState
+                        ?.isAvailable(
                             VexStreamQueueControl.Next,
-                        )
-                        ?.isAvailable == true,
+                        ) == true,
             )
             VexIconButton(
                 element = VexStreamMusicScreen.ShuffleQueue,
                 handler = handler,
                 enabled =
                     queueProjection
-                        ?.get(
+                        ?.displayState
+                        ?.isAvailable(
                             VexStreamQueueControl.Shuffle,
-                        )
-                        ?.isAvailable == true,
+                        ) == true,
             )
             VexIconButton(
                 element = VexStreamMusicScreen.ShowQueue,
@@ -667,11 +667,11 @@ internal fun VexStreamFullPlayerSheet(
                         handler = handler,
                         enabled =
                             queueProjection
-                                ?.get(
+                                ?.displayState
+                                ?.isAvailable(
                                     VexStreamQueueControl
                                         .Previous,
-                                )
-                                ?.isAvailable == true,
+                                ) == true,
                         semanticRef =
                             VexStreamPresentationRefs
                                 .fullPlayerAction(
@@ -703,10 +703,10 @@ internal fun VexStreamFullPlayerSheet(
                         handler = handler,
                         enabled =
                             queueProjection
-                                ?.get(
+                                ?.displayState
+                                ?.isAvailable(
                                     VexStreamQueueControl.Next,
-                                )
-                                ?.isAvailable == true,
+                                ) == true,
                         semanticRef =
                             VexStreamPresentationRefs
                                 .fullPlayerAction(
@@ -731,10 +731,10 @@ internal fun VexStreamFullPlayerSheet(
                         handler = handler,
                         enabled =
                             queueProjection
-                                ?.get(
+                                ?.displayState
+                                ?.isAvailable(
                                     VexStreamQueueControl.Shuffle,
-                                )
-                                ?.isAvailable == true,
+                                ) == true,
                         semanticRef =
                             VexStreamPresentationRefs
                                 .fullPlayerAction(
@@ -749,10 +749,10 @@ internal fun VexStreamFullPlayerSheet(
                         handler = handler,
                         enabled =
                             repeatProjection
-                                ?.get(
+                                ?.displayState
+                                ?.isAvailable(
                                     VexStreamRepeatControl.Toggle,
-                                )
-                                ?.isAvailable == true,
+                                ) == true,
                         selected =
                             repeatProjection
                                 ?.state is

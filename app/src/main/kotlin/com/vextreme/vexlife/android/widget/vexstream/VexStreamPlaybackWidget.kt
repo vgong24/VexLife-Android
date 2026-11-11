@@ -334,9 +334,11 @@ internal suspend fun vexStreamPlaybackWidgetSurfaceState(
             artworkAvailable,
         previousEnabled =
             queueProjection
+                .displayState
                 .previousAvailable,
         playPauseEnabled =
             playbackProjection
+                .displayState
                 .playPauseAvailable,
         showPause =
             (
@@ -347,6 +349,7 @@ internal suspend fun vexStreamPlaybackWidgetSurfaceState(
                 true,
         nextEnabled =
             queueProjection
+                .displayState
                 .nextAvailable,
     )
 }

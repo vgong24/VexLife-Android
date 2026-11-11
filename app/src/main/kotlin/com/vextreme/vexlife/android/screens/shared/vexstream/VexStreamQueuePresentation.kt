@@ -211,20 +211,20 @@ internal fun VexStreamQueueContent(
                     handler = handler,
                     enabled =
                         queueProjection
-                            ?.get(
+                            ?.displayState
+                            ?.isAvailable(
                                 VexStreamQueueControl.Shuffle,
-                            )
-                            ?.isAvailable == true,
+                            ) == true,
                 )
                 VexIconButton(
                     element = VexStreamMusicScreen.ToggleRepeat,
                     handler = handler,
                     enabled =
                         repeatProjection
-                            ?.get(
+                            ?.displayState
+                            ?.isAvailable(
                                 VexStreamRepeatControl.Toggle,
-                            )
-                            ?.isAvailable == true,
+                            ) == true,
                     selected =
                         repeatProjection
                             ?.state is
@@ -235,10 +235,10 @@ internal fun VexStreamQueueContent(
                     handler = handler,
                     enabled =
                         queueProjection
-                            ?.get(
+                            ?.displayState
+                            ?.isAvailable(
                                 VexStreamQueueControl.Clear,
-                            )
-                            ?.isAvailable == true,
+                            ) == true,
                 )
             }
 

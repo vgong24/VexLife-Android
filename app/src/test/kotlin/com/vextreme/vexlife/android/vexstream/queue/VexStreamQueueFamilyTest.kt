@@ -28,16 +28,16 @@ class VexStreamQueueFamilyTest {
         val projection =
             family.currentProjection
         assertFalse(
-            projection.previousAvailable,
+            projection.displayState.previousAvailable,
         )
         assertFalse(
-            projection.nextAvailable,
+            projection.displayState.nextAvailable,
         )
         assertFalse(
-            projection.shuffleAvailable,
+            projection.displayState.shuffleAvailable,
         )
         assertFalse(
-            projection.clearAvailable,
+            projection.displayState.clearAvailable,
         )
     }
 
@@ -169,16 +169,16 @@ class VexStreamQueueFamilyTest {
             family.currentProjection
 
         assertFalse(
-            projection.previousAvailable,
+            projection.displayState.previousAvailable,
         )
         assertTrue(
-            projection.nextAvailable,
+            projection.displayState.nextAvailable,
         )
         assertFalse(
-            projection.shuffleAvailable,
+            projection.displayState.shuffleAvailable,
         )
         assertTrue(
-            projection.clearAvailable,
+            projection.displayState.clearAvailable,
         )
     }
 

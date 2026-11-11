@@ -89,6 +89,7 @@ class VexStreamRepeatFamilyTest {
         )
         assertFalse(
             family.currentProjection
+                .displayState
                 .toggleAvailable,
         )
     }
@@ -114,6 +115,7 @@ class VexStreamRepeatFamilyTest {
         )
         assertTrue(
             family.currentProjection
+                .displayState
                 .toggleAvailable,
         )
     }

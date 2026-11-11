@@ -23,7 +23,7 @@ internal fun VexStreamPlaybackProjection.present(
 
     val icon =
         if (
-            !playPauseAvailable
+            !displayState.playPauseAvailable
         ) {
             ElementIcon.PlayPause
         } else {
@@ -52,7 +52,7 @@ internal fun VexStreamPlaybackProjection.present(
         icon =
             icon,
         enabled =
-            playPauseAvailable,
+            displayState.playPauseAvailable,
     )
 }
 

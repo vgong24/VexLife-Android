@@ -15,10 +15,4 @@ internal typealias VexStreamPlaybackProjection =
         VexStreamPlaybackFamily.DisplayState
     >
 
-internal val VexStreamPlaybackProjection.playPauseAvailable:
-    Boolean
-    get() =
-        displayState
-            .playPauseAvailable
-
 // [VXG RealForever][VEXSTREAM][PLAYBACK][DIRECT-FAMILY]
