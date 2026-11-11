@@ -860,6 +860,102 @@ internal suspend fun awaitVexStreamWidgetPlayerSnapshot(
                 .Available
     }
 
+internal suspend fun awaitVexStreamWidgetPlaybackFamilyCurrent(
+    family:
+        VexStreamPlaybackFamily,
+    store:
+        VexStreamPlayerStore,
+    timeoutMillis:
+        Long =
+        VEXSTREAM_WIDGET_PLAYER_CURRENT_TIMEOUT_MILLIS,
+):
+    Boolean =
+    withTimeoutOrNull(
+        timeoutMillis,
+    ) {
+        while (
+            true
+        ) {
+            val matched =
+                family.states
+                    .first { familyState ->
+                        val current =
+                            store.current as?
+                                VexStreamPlayerStore
+                                    .Snapshot
+                                    .Available
+                                ?: return@first false
+
+                        familyState ==
+                            current.playback
+                                .toVexStreamPlaybackState()
+                    }
+
+            val latest =
+                store.current as?
+                    VexStreamPlayerStore
+                        .Snapshot
+                        .Available
+                    ?: continue
+
+            if (
+                matched ==
+                latest.playback
+                    .toVexStreamPlaybackState()
+            ) {
+                return@withTimeoutOrNull true
+            }
+        }
+    } ?: false
+
+internal suspend fun awaitVexStreamWidgetQueueFamilyCurrent(
+    family:
+        VexStreamQueueFamily,
+    store:
+        VexStreamPlayerStore,
+    timeoutMillis:
+        Long =
+        VEXSTREAM_WIDGET_PLAYER_CURRENT_TIMEOUT_MILLIS,
+):
+    Boolean =
+    withTimeoutOrNull(
+        timeoutMillis,
+    ) {
+        while (
+            true
+        ) {
+            val matched =
+                family.states
+                    .first { familyState ->
+                        val current =
+                            store.current as?
+                                VexStreamPlayerStore
+                                    .Snapshot
+                                    .Available
+                                ?: return@first false
+
+                        familyState ==
+                            current.queue
+                                .toVexStreamQueueState()
+                    }
+
+            val latest =
+                store.current as?
+                    VexStreamPlayerStore
+                        .Snapshot
+                        .Available
+                    ?: continue
+
+            if (
+                matched ==
+                latest.queue
+                    .toVexStreamQueueState()
+            ) {
+                return@withTimeoutOrNull true
+            }
+        }
+    } ?: false
+
 class VexStreamPlaybackWidgetActionCallback :
     VexWidgetActionCallback() {
     override suspend fun onWidgetAction(
@@ -913,6 +1009,16 @@ class VexStreamPlaybackWidgetActionCallback :
                                         .dependencyModule
                                         .playbackFamily,
                                 )
+                        if (
+                            !awaitVexStreamWidgetPlaybackFamilyCurrent(
+                                family =
+                                    family,
+                                store =
+                                    playerStore,
+                            )
+                        ) {
+                            return@withVexStreamPlayerRequestConnection false
+                        }
                         val job =
                             activateVexStreamPlayback(
                                 family =
@@ -941,6 +1047,16 @@ class VexStreamPlaybackWidgetActionCallback :
                                         .dependencyModule
                                         .queueFamily,
                                 )
+                        if (
+                            !awaitVexStreamWidgetQueueFamilyCurrent(
+                                family =
+                                    family,
+                                store =
+                                    playerStore,
+                            )
+                        ) {
+                            return@withVexStreamPlayerRequestConnection false
+                        }
                         val job =
                             activateVexStreamQueue(
                                 family =
