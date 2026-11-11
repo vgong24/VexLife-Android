@@ -906,6 +906,9 @@ internal suspend fun awaitVexStreamWidgetPlaybackFamilyCurrent(
                 return@withTimeoutOrNull true
             }
         }
+
+        @Suppress("UNREACHABLE_CODE")
+        false
     } ?: false
 
 internal suspend fun awaitVexStreamWidgetQueueFamilyCurrent(
@@ -954,6 +957,9 @@ internal suspend fun awaitVexStreamWidgetQueueFamilyCurrent(
                 return@withTimeoutOrNull true
             }
         }
+
+        @Suppress("UNREACHABLE_CODE")
+        false
     } ?: false
 
 class VexStreamPlaybackWidgetActionCallback :
