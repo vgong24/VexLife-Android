@@ -8,7 +8,7 @@ import com.vextreme.vexlife.android.behavior.VexFamily
  * Item identity, queue-row selection payloads, reorder state and repeat remain with their current
  * owners. This family carries only provider truth required by Previous / Next / Shuffle / Clear.
  */
-sealed interface VexStreamQueueState :
+internal sealed interface VexStreamQueueState :
     VexFamily.State<
         VexStreamQueueFamily
     > {

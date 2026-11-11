@@ -8,7 +8,7 @@ import com.vextreme.vexlife.android.behavior.VexFamily
  * Media3 REPEAT_MODE_ONE and REPEAT_MODE_ALL both project as Enabled because the current VexStream UI
  * asks only whether Repeat is active. Enabling from Disabled still requests queue-wide Repeat All.
  */
-sealed interface VexStreamRepeatState :
+internal sealed interface VexStreamRepeatState :
     VexFamily.State<
         VexStreamRepeatFamily
     > {

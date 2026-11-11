@@ -2,7 +2,7 @@ package com.vextreme.vexlife.android.vexstream.repeat
 
 import com.vextreme.vexlife.android.behavior.VexFamily
 
-enum class VexStreamRepeatControl :
+internal enum class VexStreamRepeatControl :
     VexFamily.Control<
         VexStreamRepeatFamily
     > {

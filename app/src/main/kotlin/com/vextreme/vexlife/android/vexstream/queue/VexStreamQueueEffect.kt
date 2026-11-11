@@ -3,7 +3,7 @@ package com.vextreme.vexlife.android.vexstream.queue
 import com.vextreme.vexlife.android.behavior.VexFamily
 
 /** Runtime Queue transformations selected by semantic Acts. */
-sealed interface VexStreamQueueEffect :
+internal sealed interface VexStreamQueueEffect :
     VexFamily.Effect<
         VexStreamQueueFamily
     > {

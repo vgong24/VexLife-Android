@@ -8,7 +8,7 @@ enum class VexStreamPlaybackPhase {
     Ready,
 }
 
-sealed interface VexStreamPlaybackState :
+internal sealed interface VexStreamPlaybackState :
     VexFamily.State<
         VexStreamPlaybackFamily
     > {
