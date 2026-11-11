@@ -12,11 +12,13 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.printToString
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.text.intl.LocaleList
 import com.vextreme.vexlife.android.data.AppRepositories
@@ -433,6 +435,8 @@ class VexTestEngine(
                 ?.relayGraph
                 ?.events
                 ?.currentOutput
+        val semanticsSnapshot =
+            boundedUnmergedSemanticsSnapshot()
 
         val diagnostic =
             buildString {
@@ -480,6 +484,12 @@ class VexTestEngine(
                     "vexStream.playableTracks=" +
                         vexStreamState.playableTracks().size,
                 )
+                appendLine(
+                    "compose.unmergedSemantics=",
+                )
+                append(
+                    semanticsSnapshot,
+                )
             }.trimEnd()
 
         Log.e(
@@ -492,6 +502,38 @@ class VexTestEngine(
             diagnostic,
             waitFailure,
         )
+    }
+
+    private fun boundedUnmergedSemanticsSnapshot(): String {
+        val snapshot =
+            runCatching {
+                compose
+                    .onRoot(
+                        useUnmergedTree = true,
+                    )
+                    .printToString(
+                        maxDepth =
+                            JOURNEY_SEMANTICS_SNAPSHOT_MAX_DEPTH,
+                    )
+            }.getOrElse { failure ->
+                return "<unavailable: " +
+                    "${failure::class.simpleName}: " +
+                    "${failure.message}>"
+            }
+
+        if (
+            snapshot.length <=
+            JOURNEY_SEMANTICS_SNAPSHOT_MAX_CHARS
+        ) {
+            return snapshot
+        }
+
+        return snapshot.take(
+            JOURNEY_SEMANTICS_SNAPSHOT_MAX_CHARS,
+        ) +
+            "\n<truncated at " +
+            JOURNEY_SEMANTICS_SNAPSHOT_MAX_CHARS +
+            " characters>"
     }
 
     private fun node(element: ActionElement): SemanticsNodeInteraction {
@@ -592,3 +634,9 @@ private const val JOURNEY_WAIT_LOG_TAG =
 
 private const val JOURNEY_TRACE_LOG_TAG =
     "VexJourneyTrace"
+
+private const val JOURNEY_SEMANTICS_SNAPSHOT_MAX_DEPTH =
+    16
+
+private const val JOURNEY_SEMANTICS_SNAPSHOT_MAX_CHARS =
+    16_000
