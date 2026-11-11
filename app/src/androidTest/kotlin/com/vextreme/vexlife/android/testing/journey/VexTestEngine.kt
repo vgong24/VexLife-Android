@@ -11,8 +11,8 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
@@ -507,11 +507,19 @@ class VexTestEngine(
     private fun boundedUnmergedSemanticsSnapshot(): String {
         val snapshot =
             runCatching {
-                compose
-                    .onRoot(
+                val roots =
+                    compose.onAllNodes(
+                        matcher = isRoot(),
                         useUnmergedTree = true,
                     )
-                    .printToString(
+                val rootCount =
+                    roots.fetchSemanticsNodes()
+                        .size
+
+                "rootCount=" +
+                    rootCount +
+                    "\n" +
+                    roots.printToString(
                         maxDepth =
                             JOURNEY_SEMANTICS_SNAPSHOT_MAX_DEPTH,
                     )
@@ -639,4 +647,4 @@ private const val JOURNEY_SEMANTICS_SNAPSHOT_MAX_DEPTH =
     16
 
 private const val JOURNEY_SEMANTICS_SNAPSHOT_MAX_CHARS =
-    16_000
+    64_000
