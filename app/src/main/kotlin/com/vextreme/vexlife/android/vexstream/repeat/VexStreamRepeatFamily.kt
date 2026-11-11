@@ -145,7 +145,7 @@ internal class VexStreamRepeatFamily(
             currentProjection
                 .displayState
 
-    object Act {    object Act {
+    object Act {
         class Method(
             private val connection:
                 VexStreamPlayerPartner.Connection.Request,

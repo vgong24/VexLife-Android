@@ -219,7 +219,7 @@ internal class VexStreamQueueFamily(
             currentProjection
                 .displayState
 
-    object Act {    object Act {
+    object Act {
         class Method(
             private val connection:
                 VexStreamPlayerPartner.Connection.Request,
@@ -269,7 +269,6 @@ internal class VexStreamQueueFamily(
     }
 }
 
-internal fun activateVexStreamQueue(
 internal fun activateVexStreamQueue(
     family:
         VexStreamQueueFamily,
