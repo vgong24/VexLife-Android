@@ -1,6 +1,8 @@
 package com.vextreme.vexlife.android.vexstream.queue
 
 import com.vextreme.vexlife.android.execution.VexExecution
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 import kotlin.random.Random
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -131,22 +133,53 @@ class VexStreamQueueFamilyTest {
                 ),
             )
 
-        assertEquals(
-            previous.relationshipId,
-            shuffle.relationshipId,
-        )
-        assertSame(
-            VexExecution.Approach.Queued,
+        val previousBegin =
             requireNotNull(
                 previous.realizationBegin,
-            ).approach,
+            )
+        val shuffleBegin =
+            requireNotNull(
+                shuffle.realizationBegin,
+            )
+
+        assertSame(
+            VexExecution.Approach.Queued,
+            previousBegin.approach,
         )
         assertSame(
             VexExecution.Approach.Queued,
-            requireNotNull(
-                shuffle.realizationBegin,
-            ).approach,
+            shuffleBegin.approach,
         )
+
+        val executionRoot =
+            VexExecutionRoot()
+
+        try {
+            val outOfOrderFailure =
+                runCatching {
+                    shuffle.launch(
+                        executionRoot =
+                            executionRoot,
+                        method =
+                            VexStreamQueueFamily.Act.Method(
+                                connection =
+                                    AcceptingRequestConnection,
+                                effect =
+                                    shuffleBegin.effect,
+                            ),
+                    )
+                }
+                    .exceptionOrNull()
+
+            assertTrue(
+                outOfOrderFailure is
+                    IllegalStateException,
+            )
+        } finally {
+            executionRoot.forceStopAll(
+                "mixed Queue relationship proof complete",
+            )
+        }
     }
 
     @Test
@@ -180,6 +213,52 @@ class VexStreamQueueFamilyTest {
         assertTrue(
             projection.displayState.clearAvailable,
         )
+    }
+
+    private object AcceptingRequestConnection :
+        VexStreamPlayerPartner.Connection.Request {
+        override val id =
+            VexStreamPlayerPartner.Connection.Id(
+                value =
+                    "queue-family-test",
+                occurrence =
+                    1L,
+            )
+
+        override suspend fun play():
+            Boolean =
+            true
+
+        override suspend fun pause():
+            Boolean =
+            true
+
+        override suspend fun restartCurrent():
+            Boolean =
+            true
+
+        override suspend fun previous():
+            Boolean =
+            true
+
+        override suspend fun next():
+            Boolean =
+            true
+
+        override suspend fun shuffleFuture():
+            Boolean =
+            true
+
+        override suspend fun clearQueue():
+            Boolean =
+            true
+
+        override suspend fun setRepeatEnabled(
+            enabled:
+                Boolean,
+        ):
+            Boolean =
+            true
     }
 
     @Test
