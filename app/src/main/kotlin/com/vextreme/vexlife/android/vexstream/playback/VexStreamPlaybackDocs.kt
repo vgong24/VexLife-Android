@@ -12,8 +12,12 @@ package com.vextreme.vexlife.android.vexstream.playback
  * ## UI membrane
  *
  * Start at [VexStreamPlaybackExperience]. It observes the one process-shared
- * [VexStreamPlaybackFamily], combines that semantic projection with presentation-only
- * [VexStreamPlaybackReadState], and classifies [VexStreamPlaybackDisplayState].
+ * [VexStreamPlaybackFamily] plus the retained Player Store snapshot, combines those truths with
+ * bounded controller timeline telemetry, and classifies [VexStreamPlaybackDisplayState].
+ *
+ * [VexStreamPlaybackReadState] is a view composition: current media identity/metadata and queue
+ * identity/index come from Player Store; MediaController contributes only position/duration/buffer
+ * telemetry after its media/index freshness coordinates match the Store-owned current.
  *
  * Provider/controller connection availability remains visible: no request connection means the UI
  * stays Unknown rather than pretending the provider can currently accept a Control.
@@ -57,9 +61,10 @@ package com.vextreme.vexlife.android.vexstream.playback
  * ## Presentation
  *
  * [VexStreamPlaybackProjection] is an alias of the canonical VexFamily Projection, while
- * [toVexStreamPlaybackDisplayState] composes that Family projection with provider read data. Both are projections of already-owned
- * meaning, not another state machine. Pending State projects as Transitioning; no projection is
- * Unknown; converged media is Active.
+ * [toVexStreamPlaybackDisplayState] composes that Family projection with Store-owned Player read
+ * identity and bounded timeline telemetry. Both are projections of already-owned meaning, not
+ * another state machine. Pending State projects as Transitioning; no projection is Unknown;
+ * converged media is Active.
  *
  * Queue and Repeat remain sibling semantic Families. Track/Collection source selection and higher
  * convergence remain outside Playback.

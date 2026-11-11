@@ -49,25 +49,19 @@ internal class VexStreamQueueFamily(
         ):
             Boolean =
             when (
-                control
+                control.command
             ) {
-                VexStreamQueueControl.Previous ->
+                VexStreamQueueControl.Command.Previous ->
                     previousAvailable
 
-                VexStreamQueueControl.Next ->
+                VexStreamQueueControl.Command.Next ->
                     nextAvailable
 
-                VexStreamQueueControl.Shuffle ->
+                VexStreamQueueControl.Command.Shuffle ->
                     shuffleAvailable
 
-                VexStreamQueueControl.Clear ->
+                VexStreamQueueControl.Command.Clear ->
                     clearAvailable
-
-                else ->
-                    error(
-                        "Unknown VexStream Queue Control: " +
-                            control,
-                    )
             }
     }
 
@@ -137,37 +131,31 @@ internal class VexStreamQueueFamily(
 
             is VexStreamQueueState.NonEmpty ->
                 when (
-                    control
+                    control.command
                 ) {
-                    VexStreamQueueControl.Previous ->
+                    VexStreamQueueControl.Command.Previous ->
                         VexStreamQueueEffect.SeekPrevious
                             .takeIf {
                                 currentState.previousAvailable
                             }
 
-                    VexStreamQueueControl.Next ->
+                    VexStreamQueueControl.Command.Next ->
                         VexStreamQueueEffect.SeekNext
                             .takeIf {
                                 currentState.nextAvailable
                             }
 
-                    VexStreamQueueControl.Shuffle ->
+                    VexStreamQueueControl.Command.Shuffle ->
                         VexStreamQueueEffect.ShuffleFuture
                             .takeIf {
                                 currentState.shuffleAvailable
                             }
 
-                    VexStreamQueueControl.Clear ->
+                    VexStreamQueueControl.Command.Clear ->
                         VexStreamQueueEffect.ClearQueue
                             .takeIf {
                                 currentState.clearAvailable
                             }
-
-                    else ->
-                        error(
-                            "Unknown VexStream Queue Control: " +
-                                control,
-                        )
                 }
                     ?.let { effect ->
                         stay(

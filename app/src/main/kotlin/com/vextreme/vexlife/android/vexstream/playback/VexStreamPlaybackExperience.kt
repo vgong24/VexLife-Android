@@ -68,8 +68,28 @@ internal fun rememberVexStreamPlaybackExperience():
     val connection =
         owner.playerRequestConnection
 
-    val playback by
-        rememberVexStreamPlaybackReadState(owner.controller)
+    val playerSnapshot by
+        owner
+            .playerStore
+            .states
+            .collectAsStateWithLifecycle(
+                initialValue =
+                    owner.playerStore.current,
+            )
+    val telemetry by
+        rememberVexStreamPlaybackTelemetry(
+            owner.controller,
+        )
+    val playback =
+        remember(
+            playerSnapshot,
+            telemetry,
+        ) {
+            playerSnapshot
+                .toVexStreamPlaybackReadState(
+                    telemetry,
+                )
+        }
 
     val semanticState by
         family

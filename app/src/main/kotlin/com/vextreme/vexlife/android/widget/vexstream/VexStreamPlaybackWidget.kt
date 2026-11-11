@@ -68,7 +68,9 @@ import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 internal data class VexStreamPlaybackWidgetSurfaceState(
     val title: String,
@@ -835,6 +837,29 @@ class VexStreamPlaybackWidgetReceiver :
         VexStreamPlaybackWidget
 }
 
+internal suspend fun awaitVexStreamWidgetPlayerSnapshot(
+    store:
+        VexStreamPlayerStore,
+    timeoutMillis:
+        Long =
+        VEXSTREAM_WIDGET_PLAYER_CURRENT_TIMEOUT_MILLIS,
+):
+    VexStreamPlayerStore.Snapshot.Available? =
+    withTimeoutOrNull(
+        timeoutMillis,
+    ) {
+        store.states
+            .first { snapshot ->
+                snapshot is
+                    VexStreamPlayerStore
+                        .Snapshot
+                        .Available
+            } as
+            VexStreamPlayerStore
+                .Snapshot
+                .Available
+    }
+
 class VexStreamPlaybackWidgetActionCallback :
     VexWidgetActionCallback() {
     override suspend fun onWidgetAction(
@@ -867,58 +892,91 @@ class VexStreamPlaybackWidgetActionCallback :
                         .processExecutionRoot,
                 )
 
-        withVexStreamPlayerRequestConnection(
-            context,
-        ) { connection ->
-            val job =
+        val activated =
+            withVexStreamPlayerRequestConnection(
+                context,
+            ) { connection ->
+                val snapshot =
+                    awaitVexStreamWidgetPlayerSnapshot(
+                        playerStore,
+                    )
+                        ?: return@withVexStreamPlayerRequestConnection false
+
                 when (
                     command
                 ) {
-                    is VexStreamPlaybackWidgetCommand.Playback ->
-                        activateVexStreamPlayback(
-                            family =
-                                vexApplication
-                                    .dependencies
-                                    .resolve(
-                                        vexApplication
-                                            .dependencyModule
-                                            .playbackFamily,
-                                    ),
-                            control =
-                                command.control,
-                            connection =
-                                connection,
-                            playerStore =
-                                playerStore,
-                            executionRoot =
-                                root,
+                    is VexStreamPlaybackWidgetCommand.Playback -> {
+                        val family =
+                            vexApplication
+                                .dependencies
+                                .resolve(
+                                    vexApplication
+                                        .dependencyModule
+                                        .playbackFamily,
+                                )
+                        family.observePlayer(
+                            snapshot.playback,
                         )
+                        val job =
+                            activateVexStreamPlayback(
+                                family =
+                                    family,
+                                control =
+                                    command.control,
+                                connection =
+                                    connection,
+                                playerStore =
+                                    playerStore,
+                                executionRoot =
+                                    root,
+                            )
 
-                    is VexStreamPlaybackWidgetCommand.Queue ->
-                        activateVexStreamQueue(
-                            family =
-                                vexApplication
-                                    .dependencies
-                                    .resolve(
-                                        vexApplication
-                                            .dependencyModule
-                                            .queueFamily,
-                                    ),
-                            control =
-                                command.control,
-                            connection =
-                                connection,
-                            executionRoot =
-                                root,
+                        job?.join()
+                        job !=
+                            null
+                    }
+
+                    is VexStreamPlaybackWidgetCommand.Queue -> {
+                        val family =
+                            vexApplication
+                                .dependencies
+                                .resolve(
+                                    vexApplication
+                                        .dependencyModule
+                                        .queueFamily,
+                                )
+                        family.observeStore(
+                            snapshot.queue,
                         )
+                        val job =
+                            activateVexStreamQueue(
+                                family =
+                                    family,
+                                control =
+                                    command.control,
+                                connection =
+                                    connection,
+                                executionRoot =
+                                    root,
+                            )
+
+                        job?.join()
+                        job !=
+                            null
+                    }
                 }
-
-            job?.join()
-        }
+            } ==
+            true
 
         VexStreamPlaybackTrace.record(
             stage =
-                "widget.action.activated",
+                if (
+                    activated
+                ) {
+                    "widget.action.activated"
+                } else {
+                    "widget.action.unavailable"
+                },
             glanceId =
                 glanceId.toString(),
             detail =
@@ -1135,6 +1193,8 @@ internal const val VEXSTREAM_WIDGET_ARTWORK_SIZE_DP =
     64
 internal const val VEXSTREAM_WIDGET_PUBLICATION_RETRY_MILLIS =
     250L
+internal const val VEXSTREAM_WIDGET_PLAYER_CURRENT_TIMEOUT_MILLIS =
+    2_000L
 
 private const val CONTROLLER_CONNECT_TIMEOUT_MS =
     2_000L

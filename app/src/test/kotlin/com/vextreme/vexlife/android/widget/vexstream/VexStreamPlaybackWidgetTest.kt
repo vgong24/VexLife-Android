@@ -5,6 +5,8 @@ import com.vextreme.vexlife.android.MainActivity
 import com.vextreme.vexlife.android.resolveVexLifeExternalScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
+import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
 import com.vextreme.vexlife.android.widget.VexWidgetActionRef
 import org.junit.Assert.assertEquals
@@ -12,7 +14,9 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
+import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.yield
 import org.junit.Test
 
 class VexStreamPlaybackWidgetTest {
@@ -51,6 +55,109 @@ class VexStreamPlaybackWidgetTest {
             ),
         )
     }
+
+    @Test
+    fun coldWidgetWaitsForServiceOwnedPlayerStoreCurrentBeforeActivation() =
+        runTest {
+            val store =
+                VexStreamPlayerStore()
+            val waiting =
+                async {
+                    awaitVexStreamWidgetPlayerSnapshot(
+                        store =
+                            store,
+                        timeoutMillis =
+                            1_000L,
+                    )
+                }
+
+            yield()
+            assertFalse(
+                waiting.isCompleted,
+            )
+
+            val connectionId =
+                VexStreamPlayerPartner.Connection.Id(
+                    value =
+                        "widget-current",
+                    occurrence =
+                        1L,
+                )
+            val observedAt =
+                1L
+            val signals:
+                List<
+                    VexStreamPlayerPartner.Signal
+                > =
+                listOf(
+                    VexStreamPlayerPartner.Signal.Playback(
+                        hasMedia = true,
+                        playRequested = true,
+                        phase =
+                            VexStreamPlayerPartner.PlaybackPhase.Ready,
+                        playPauseAvailable = true,
+                        restartAvailable = true,
+                    ),
+                    VexStreamPlayerPartner.Signal.QueueItems(
+                        items =
+                            listOf(
+                                VexStreamPlayerPartner.Signal.QueueItems.Item(
+                                    mediaId = "widget.track",
+                                    title = "Widget track",
+                                    artist = "Vex",
+                                ),
+                            ),
+                    ),
+                    VexStreamPlayerPartner.Signal.QueueNavigation(
+                        currentIndex = 0,
+                        previousAvailable = false,
+                        nextAvailable = false,
+                        changeMediaItemsAvailable = true,
+                    ),
+                    VexStreamPlayerPartner.Signal.Repeat(
+                        enabled = false,
+                        toggleAvailable = true,
+                    ),
+                    VexStreamPlayerPartner.Signal.CurrentMedia(
+                        mediaId = "widget.track",
+                        title = "Widget track",
+                        artist = "Vex",
+                        artworkUri = null,
+                    ),
+                )
+
+            store.connectionOpened(
+                connectionId =
+                    connectionId,
+                observations =
+                    signals.map { signal ->
+                        VexStreamPlayerPartner.Connection.Observation(
+                            connectionId =
+                                connectionId,
+                            signal =
+                                signal,
+                            observedAtEpochMillis =
+                                observedAt,
+                        )
+                    },
+            )
+
+            val current =
+                requireNotNull(
+                    waiting.await(),
+                )
+
+            assertEquals(
+                "widget.track",
+                current.currentMedia.mediaId,
+            )
+            assertEquals(
+                listOf(
+                    "widget.track",
+                ),
+                current.queue.items.mediaIds,
+            )
+        }
 
     @Test
     fun widgetEntryReusesTheExistingMainActivityTask() {

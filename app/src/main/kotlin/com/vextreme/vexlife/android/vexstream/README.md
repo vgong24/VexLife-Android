@@ -45,7 +45,8 @@ WHAT IS PLAYBACK DOING?
     -> shared Player Store supplies outside playback truth
     -> finite Effects realize through the bounded Player request connection
     -> Seek remains a typed mediaId + position request
-    -> provider read projection carries current optional artwork URI beside title/artist/progress
+    -> Player Store supplies current media/queue identity + metadata
+    -> bounded controller telemetry supplies position/duration/buffer only
 
 HOW SHOULD THIS RENDERED COLLECTION START?
     vexstream/collection
@@ -432,8 +433,10 @@ configuration UI / Widget callback
 ~~~
 
 The Store owns retained outside-Player currentness and connection-occurrence fencing; each Family owns
-its own semantic State. The Service owns Player/MediaSession and Widget-publication lifetime. The
-Application is only the process composition surface for earned process-lifetime dependencies.
+its own semantic State. UI timeline telemetry may read the MediaController for position/duration/buffer,
+but it does not reconstruct current-media or queue identity. The Service owns Player/MediaSession and
+Widget-publication lifetime. The Application is only the process composition surface for earned
+process-lifetime dependencies.
 
 Track / Collection submission, Seek, Queue-row Play and Reorder deliberately keep their existing typed
 payload/currentness boundaries. Sharing Media3 does not make the Player Partner their semantic owner.

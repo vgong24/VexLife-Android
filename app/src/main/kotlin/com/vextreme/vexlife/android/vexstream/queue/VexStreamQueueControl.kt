@@ -5,36 +5,48 @@ import com.vextreme.vexlife.android.behavior.VexFamily
 /**
  * Stable finite Queue affordance value.
  *
- * All four values belong to one maintained Queue-command relationship. The value still names the
- * exact semantic request, while the shared Control class lets VexFamily preserve mixed command
- * Family acceptance order through one Queued realization lane.
+ * All four values belong to one maintained Queue-command relationship, so the outer Control remains
+ * one class. [Command] keeps the finite semantic vocabulary compiler-exhaustive without splitting
+ * Previous / Next / Shuffle / Clear into separate VexFamily relationship identities.
  */
 internal class VexStreamQueueControl private constructor(
-    val name:
-        String,
+    val command:
+        Command,
 ) :
     VexFamily.Control<
         VexStreamQueueFamily
     > {
+    enum class Command {
+        Previous,
+        Next,
+        Shuffle,
+        Clear,
+    }
+
+    val name:
+        String
+        get() =
+            command.name
+
     companion object {
         val Previous =
             VexStreamQueueControl(
-                "Previous",
+                Command.Previous,
             )
 
         val Next =
             VexStreamQueueControl(
-                "Next",
+                Command.Next,
             )
 
         val Shuffle =
             VexStreamQueueControl(
-                "Shuffle",
+                Command.Shuffle,
             )
 
         val Clear =
             VexStreamQueueControl(
-                "Clear",
+                Command.Clear,
             )
 
         val entries:
