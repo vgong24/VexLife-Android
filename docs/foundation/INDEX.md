@@ -22,9 +22,9 @@ A foundation earns a dedicated entry when it has a real recurring consumer, inva
 burden. Add detail at the narrowest rightful source rather than turning this index into a second
 implementation manual.
 
-### Direct Family / Method candidate
+### Direct Family / Method — accepted current foundation
 
-Current review source:
+Current accepted source:
 
 ~~~text
 architecture/behavior/FAMILY-CIRCUIT.md
@@ -38,7 +38,7 @@ PR #193 remains accepted lineage for the earlier direct Family refinement. PR #2
 subtractive VexArchitecture stability point on top of the #207/#208 review. Current source and tests
 own subsequent refinements.
 
-Current candidate call graph:
+Current accepted call graph:
 
 ~~~text
 Family.activate(Control)
@@ -79,7 +79,7 @@ ThemeMode display path:
     -> Compose / system-bar presentation
 ~~~
 
-Permanent candidate boundary:
+Permanent accepted boundary:
 
 ~~~text
 VexMethod
@@ -132,15 +132,103 @@ The Method carries that Effect object, and Act.Accepted.launch(...) verifies it 
 boundary's live Family owner, Act-authored Approach, and Family-authored RelationshipId enter the
 reusable execution foundation. Execution adds custody rather than another feature/domain decision.
 
-SourceOwner A004 reached the real repository-owned Gradle/JVM proof on #209 and exposed only stale
-tests that still depended on removed Logger/execution surfaces. The current candidate corrects those
-test dependencies; a fresh exact-head proof is still required before #209 may be called green or
-merge-ready. The prior #193 proof remains valid evidence for its accepted historical tree; it is not
-proof for this new refinement.
+PR #209 is accepted/merged provenance for the first executable VexArchitecture stability point.
+Later accepted Direct-Family realization refinements and current repository source/tests own present
+behavior. Future candidates require their own exact-head proof; the old #209 proof-pending lifecycle
+language is not current foundation status.
 
 Compound/Relay remains a separate semantic owner for multi-truth convergence.
 
 <!-- [VXG RealForever][FOUNDATION][FAMILY][DIRECT-ACT-EXECUTION-RELATIONSHIP] -->
+
+
+
+### VexPartner — accepted external-participant foundation
+
+Current entry:
+
+~~~text
+architecture/behavior/README.md
+architecture/behavior/src/main/.../VexPartner.kt
+architecture/behavior/src/test/.../VexPartnerHighConfidenceTest.kt
+~~~
+
+Accepted Partner grammar:
+
+~~~text
+VexPartner<Partner>
+├─ Source<Partner>
+├─ Signal<Partner>
+└─ Connection<Partner, Signal>
+   ├─ Id<Partner>
+   ├─ Conversion<Input, Partner, Signal>
+   ├─ Observation<Partner, Signal>
+   └─ Receiver<Partner, Signal, exact Observation>
+~~~
+
+PR #219 is accepted/merged provenance. CGM, connected pen and insulin pump pressure established
+transport-diverse Conversion, exact Connection occurrence/provenance, queued admission, Store/Family
+separation and bounded Android Room restart proof.
+
+~~~text
+ACCEPTED PARTNER ROOT
+!= REAL LOCAL HTTP LIFECYCLE COMPLETE
+!= REAL BLE/GATT LIFECYCLE COMPLETE
+!= EVERY PROVIDER IS A PARTNER
+~~~
+
+Current VexStream also consumes Partner through the Player relationship:
+
+~~~text
+Playback / Queue / Repeat Direct Families
+-> exact bound Methods / requests
+-> VexStreamPlayerPartner
+-> later Player Signals
+-> VexStreamPlayerStore
+-> Family observation
+~~~
+
+Partner owns external participation. Store owns durable/current outside truth where earned. Family
+owns product semantics. VexExecution owns only active custody.
+
+### Android Service pressure — sustained realization, generic root held
+
+Current production witnesses:
+
+~~~text
+VexStreamPlaybackService
+    MediaSession / ExoPlayer lifetime
+    Player Partner observation attachment
+    Service-lifetime Widget publication custody
+
+VexMapsNavigationService
+    foreground Android lifetime
+    location / speech / notification realization
+    consumes VexNavigationSession truth
+~~~
+
+The repeated question is sustained platform realization beyond a shorter caller/UI lifetime. Current
+source does not contain or require an accepted generic `VexService` root.
+
+~~~text
+SERVICE PLATFORM LIFETIME
+!= SEMANTIC CURRENT OWNER
+
+generic VexService<Service, Current>
+= NOT ACCEPTED / NOT CURRENT MAIN
+
+universal Service.current
+= NOT ACCEPTED
+
+mandatory VexExecution / typed ServiceScope
+= NOT ARCHITECTURE LAW
+~~~
+
+Do not rebuild the old #231/#233 Service hypothesis merely because Family and Partner have reusable
+roots. Re-derive any future Service abstraction from materially different current consumers after
+subtracting Family, Partner, Store, Relay, Execution, Dependency and Android platform ownership.
+
+<!-- [VXG RealForever][FOUNDATION][PARTNER][SERVICE-PRESSURE] -->
 
 
 ## Foundation establishment criteria
@@ -257,12 +345,15 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 | F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **CHECKPOINT EARNED / TEST PROOF PENDING** | Make a clean clone reproducibly Sync/build/install without VexLife monorepo or IDE-local state | standalone unit-test proof + later foundation extraction |
 | F1_UI_BLUEPRINT_HOME | element cells + placement + first Home practicum | **MERGED / LIVED DEVICE RUN OBSERVED / AGGREGATE TEST PROOF PENDING** | Make UI identity, placement, intent, navigation and diagnostics human-perceivable before feature depth | aggregate Gradle proof + clean rerun before any formal foundation checkpoint |
 | VEX_COMPOSE | VexModifier root + inherited custom-Compose identity + sanctioned cells | **ACCEPTED ON MAIN / PR #88 / A013 LOCAL + PHYSICAL DEVICE PASS / ADVISORY MIGRATION ACTIVE** | Make custom Compose inherit the same semantic lattice as ScreenBlueprint so product UI cannot silently fall back to detached primitive code | migrate one real consumer at a time; preserve exact runtime identities; keep raw-Compose findings advisory until replacements are earned |
-| ANDROID_WIDGET_SURFACE | Glance App Widget projection/callback boundary | **DRAFT CANDIDATE / SOURCE PROOF PENDING** | Let home-screen widgets consume feature-owned projections and return stable interaction identity without becoming product State or Effect owners | prove :architecture:widget + aggregate local build, then pressure with the compact VexStream playback patient zero |
+
+| DIRECT_FAMILY_METHOD | Direct VexFamily + VexMethod semantic/realization circuit | **ACCEPTED CURRENT FOUNDATION / PR #209 ORIGIN + LATER MAIN REFINEMENTS** | Keep CURRENT State + Control -> accepted Act, exact bound Method and Family-owned DisplayState under one semantic owner while realization/custody stay separate | current source/tests; future semantic changes require exact-head proof |
+| VEX_PARTNER | rooted external-participant Source / Signal / Connection grammar | **ACCEPTED ON MAIN / PR #219 / SOURCEOWNER + INDEPENDENT ASSURANCE + BOUNDED CONNECTED RESTART PROOF** | Preserve external Source/Signal/Connection occurrence/Conversion/Observation/Receiver meaning without making Partner own Store, Family or execution | pressure real Local HTTP/BLE consumers; do not infer every provider is Partner |
+| ANDROID_WIDGET_SURFACE | Glance App Widget projection/callback boundary | **ACCEPTED ON MAIN / PR #174 FOUNDATION + PR #185 TYPED SURFACE-STATE CURRENTNESS / #255 RUNTIME CURRENTNESS CORRECTION PENDING** | Let home-screen widgets consume feature-owned projections and return stable interaction identity without becoming product State or Effect owners | preserve accepted foundation; close #255 failed-update-request debt before treating identical SurfaceState as sufficient to suppress every future update request |
 | EXECUTION_BRIDGE | VexExecution owner + RelationshipId -> actual Job(s) custody | **ACCEPTED ON MAIN / PR #87 BASE + PR #209 MERGED REFINEMENT** | Keep asynchronous work under explicit runtime owners while making the actual Job the occurrence and removing parallel InstanceId/SourceRef/Handle/history architecture | current source/tests own behavior; future candidates require exact-head owner isolation / overlap / recovery proof |
 | READABLE_DEPENDENCY_TOPOLOGY | lazy prerequisite construction + lifetime memoization | **ACCEPTED ON MAIN / PR #209 MERGED ORIGIN** | Make production construction order, reuse and lifetime relationships inspectable without reflection/service-locator lookup or another identity namespace | current owning source/tests; future topology changes require exact-head source review and repository proof |
 | LOGGER_TRACEABILITY | one chronology + Blueprint-derived readable interpretation | **ACCEPTED ON MAIN / PR #209 MERGED REFINEMENT** | Let UI/semantic/runtime facts share one chronology and resolve stable UI coordinates through the existing Blueprint registry while exposing missing mappings | current owning source/tests; additional lived Debug Log review is required only for new lived claims |
 | BODY_SEMANTIC_BLUEPRINT | first-principle purpose -> primitive -> relationship -> form orientation | **DOCUMENTATION FOUNDATION / NO NEW RUNTIME CONTRACT** | Let a fresh human/AI recognize reusable semantic roles across differently named domains without turning the map into one class hierarchy | pressure the map against live feature/foundation examples; promote a primitive to a type/interface only when addressability or an executable invariant earns it |
-| BEHAVIOR_BLUEPRINT_EXPERIMENT | family-bound relational Behavior foundation | **ACCEPTED ON MAIN / PR #82 + #85 / EXACT `vexVerifyLocal` PASS / VEXSTREAM PLAYBACK CONSUMER CURRENT** | Preserve lawful Control + current State -> Act and current State + Act -> Effect + admitted State relationships while deriving reusable projections without a second UI state table | extend from independent real behavioral questions; keep runtime request payloads and generic Experience abstraction held until repeated consumers earn them |
+| BEHAVIOR_BLUEPRINT_EXPERIMENT | compatibility family-bound relational Behavior foundation | **ACCEPTED COMPATIBILITY / LIVE CURRENT CONSUMERS REMAIN / NOT COMMON NEW-FAMILY ROUTE** | Preserve lawful compatibility Control + current State -> Act and State + Act -> Effect + admitted State-kind relationships for current consumers such as VexMaps Distribution | maintain current consumers; route new/materially evolving semantic Families through Direct VexFamily first |
 | DATA_REPOSITORY | domain repositories + Room local persistence + reusable data fixtures | **MERGED / LIVED PARTIAL / INTEGRATION PROOF PENDING** | Let screens observe data without knowing DAO/storage/backend details; first consumer is Log History | aggregate unit/build + Room migration/integration proof + clean lived rerun |
 | TEST_PROOF_ARCHITECTURE | local-first proof topology + reusable verification entry points | **ACCEPTED ON MAIN / PR #78 EXACT HOST PROOF PASS** | Keep semantic, render, journey, visual, coverage and device proofs distinct while making the normal proof path reusable | extend only when a new proof claim earns another owner/task |
 | JOURNEY_INSTRUMENTATION | semantic walk grammar + map coverage + Compose instrumentation | **MERGED / CONNECTED DEVICE 13/13 OBSERVED** | Make real Android journeys executable once while keeping semantic coverage debt visible and non-blocking by default | extend journeys with new features + preserve baseline/device proof |
@@ -368,7 +459,7 @@ instrumentation tests executed = 10
 Further migration is consumer-driven. Raw Compose findings remain advisory while real product
 surfaces teach which additional Vex forms are actually worth preserving.
 
-## Execution bridge candidate
+## Execution bridge — accepted foundation
 
 Entry:
 [`architecture/execution/README.md`](../../architecture/execution/README.md)
@@ -403,7 +494,7 @@ VexLogger
     history / chronology
 ~~~
 
-The candidate removes the earlier public InstanceId / SourceRef / Handle / root execution-registry
+Current accepted source removes the earlier public InstanceId / SourceRef / Handle / root execution-registry
 architecture while preserving the real behaviors discovered by those earlier implementations:
 launchOnce duplicate protection, independent finite work, maintained Flow observation, Earliest /
 Latest / Queued overlap, source-vs-downstream failure distinction, bounded source recovery, structured
@@ -416,7 +507,7 @@ ThemeMode, VexMaps Distribution/search, and VexStream roots provide current prod
 PR #209 is accepted/merged provenance for this refinement; current repository source and tests own
 present execution behavior, and future candidates require their own exact-head proof.
 
-## Readable dependency topology candidate
+## Readable dependency topology — accepted foundation
 
 Entry:
 [`architecture/dependency/README.md`](../../architecture/dependency/README.md)
@@ -486,105 +577,53 @@ Intentional dynamic runtime element coordinates remain distinct from static Blue
 Missing expected static interpretation emits an observable BlueprintMappingMissing diagnostic rather
 than silently becoming unknown.
 
-## Behavior Blueprint experiment
+## Behavior Blueprint — accepted compatibility surface
 
-Canonical **SCAE architecture** entry:
+Compatibility SCAE entry:
 [`architecture/behavior/README.md`](../../architecture/behavior/README.md)
 
-SCAE names the State / Control / Act / Effect semantic architecture. Local Behavior owns those
-relationships; Convergence Relay is its fractal cross-State composition pattern when independently
-owned truths must be reconciled.
+Common new/materially-evolving Family authoring route:
+[`architecture/behavior/FAMILY-CIRCUIT.md`](../../architecture/behavior/FAMILY-CIRCUIT.md)
 
-Canonical family/package construction pattern:
+Historical/package construction reference:
 [`architecture/behavior/VEX-BEHAVIOR-FAMILY-BLUEPRINT.md`](../../architecture/behavior/VEX-BEHAVIOR-FAMILY-BLUEPRINT.md)
 
-Review checkpoint:
+Historical review checkpoint:
 [`architecture/behavior/REVIEW-CHECKPOINT.md`](../../architecture/behavior/REVIEW-CHECKPOINT.md)
 
-Code-navigation roots:
+Current distinction:
 
 ~~~text
-VexBehaviorDocs
-VexStreamPlaybackDocs
+Direct VexFamily / VexMethod
+    accepted common route for new/materially evolving semantic Families
+
+VexBehaviorFamily / VexBehaviorBlueprint
+    accepted compatibility source
+    still has production consumers
+    != peer default route for a new Family
 ~~~
 
-The candidate preserves one human-readable four-move vocabulary with explicit semantic equations:
+Current compatibility pressure includes VexMaps Distribution Mode / Delivery Route. VexStream
+Playback / Queue / Repeat have moved to Direct `VexFamily` and must not be used as evidence that
+compatibility Behavior is still their current semantic owner.
+
+Compatibility SCAE still preserves useful laws for its remaining consumers:
 
 ~~~text
 Control + CURRENT State
 -> Act
 
 CURRENT State + Act
--> Effect + admitted State
+-> Effect + admitted State-kind constraint
 
 CURRENT State + Controls
 -> Projection
-
-Projection
--> optional Presentation / Display State
--> UI
 ~~~
 
-Feature-owned State / Control / Act / Effect vocabularies share one F-bounded
-`VexBehaviorFamily` coordinate, making both role swaps and cross-family combinations
-compiler-invalid.
-
-`VexBehaviorProjection` carries current State plus resolved Control meaning without exposing
-Effect execution.
-
-`VexPort` standardizes the two-way semantic boundary as:
-
-~~~text
-currentProjection
-activate(Control)
-~~~
-
-and `VexPortFlow` adds a current `StateFlow` projection when observation over time is required.
-
-The first production-shaped consumer is VexStream Play/Pause:
-
-~~~text
-MediaSession / Player
-    -> Media3VexStreamPlaybackConnection
-    -> VexStreamPlaybackProjection
-    -> Mini Player + Context Dock
-
-Control activation
-    -> current semantic State
-    -> Act
-    -> Effect
-    -> MediaController
-~~~
-
-The Connection preserves synchronous admitted intent without pretending provider convergence. Its
-ViewModel is an Android lifetime host only.
-
-Control meaning is semantic-first as `Available(Act)` / `Unavailable`; Boolean availability is
-derived convenience. Every authored `on(...)` must explicitly terminate in `.stay()` or
-`.admit<State>()`, so incomplete relationships cannot silently disappear during construction.
-
-Behavior is the provider/UI/lifecycle-independent semantic rulebook. A concrete Connection is the
-reality boundary/adapter; it must identify its provider/runtime, rightful lifetime owner,
-currentness gates, and concurrency guarantees without requiring a generic Host abstraction.
-
-Cross-family reactions remain convergence-based: convergence may request another family through
-that family's Control/Port, but must not bypass directly to a foreign Effect.
-
-VexMaps pressure establishes four compatibility boundaries without adding new semantic nouns:
-
-- same State-kind + same Act may use mutually-exclusive conditional relationships;
-- relationship admission is immediate semantic topology, not guaranteed final provider outcome;
-- VexPort re-resolution protects stale meaning at activation but does not replace async
-  generation/revision/result-admission gates;
-- concrete Connections retain their provider-specific concurrency/serialization guarantees.
-
-The package construction law is fractal: a sibling Behavior family is earned when the **behavioral
-question itself splits**, not merely when files become large. The canonical split criteria and the
-VexStream Playback mapping live in the family/package blueprint above.
-
-Runtime request payloads, generic UIElement binding, heterogeneous convergence envelopes, generic
-concurrency, generic async failure grammar, and full VexStream queue/seek/shuffle/repeat migration
-remain deliberately held until real consumers earn them.
+The concrete Connection/runtime may construct an exact admitted State value where compatibility
+source owns only the State-kind constraint. Do not normalize that historical/current compatibility
+shape into Direct Family's exact-value admission, and do not migrate a consumer merely to make
+documentation or VexBoard visually uniform.
 
 ## F1 — UI Blueprint / Home Practicum
 

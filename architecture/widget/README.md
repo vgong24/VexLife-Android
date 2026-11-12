@@ -14,7 +14,7 @@ The first real consumer is VexStream playback, but this module does not contain 
 ```text
 product-owned State / provider truth
         |
-        | feature-owned pure mapping
+        | feature-owned mapping
         v
 typed VexWidgetSurfaceState
         |
@@ -40,9 +40,9 @@ widget tap
 -> VexWidgetActionRef
 -> VexWidgetActionCallback
 -> feature-local resolver
--> existing product Control / request boundary
--> current State -> Act -> Effect
--> existing Connection/provider
+-> rightful semantic / request boundary
+-> rightful realization/provider
+-> later current truth
 ```
 
 Permanent:
@@ -54,6 +54,8 @@ GLANCE_STATE != DOMAIN_STATE
 WIDGET_ACTION_REF != ACT
 WIDGET_ACTION_REF != EFFECT
 CALLBACK != LONG_RUNNING_WORK_OWNER
+SURFACE_STATE_PERSISTED != UPDATE_REQUEST_SUCCEEDED
+UPDATE_REQUEST_SUCCEEDED != LAUNCHER_RENDERED
 UPDATE_REQUESTED != LAUNCHER_RENDERED
 ```
 
@@ -85,36 +87,57 @@ reproduce a widget after process/session loss. It is not SCAE/domain State.
 State-to-Projection recomputation and bounded update fan-out.
 
 `publish(...)` / `publishAll(...)`
-: compare exact current durable state to the proposed state using value equality, persist only real
-changes, and request Glance update only for changed instances.
+: compare exact current durable state to the proposed state using value equality and suppress
+duplicate state writes. Current accepted main still couples an update request to a changed write;
+PR #255 is the pending runtime correction for preserving failed update-request debt so an exact-state
+retry can request Glance update again without rewriting identical SurfaceState.
 
 `transformAll(...)`
 : mutate already-persisted surface state for presentation-owned changes outside the main product
 observation stream, without inventing product truth. Example: an artwork asset becoming locally
 available changes one surface-state field and naturally triggers the same update path.
 
-There is deliberately no revision counter, Boolean invalidation toggle or hash surrogate. If
-`A -> B -> A`, both transitions are real because each new value is compared to the exact current
-surface value. Exact duplicate `A -> A` is suppressed.
+There is deliberately no product/domain revision counter, rendered-revision acknowledgement,
+Boolean invalidation toggle or hash surrogate. If `A -> B -> A`, both SurfaceState transitions are
+real because each new value is compared to the exact current durable value. Exact duplicate
+`A -> A` suppresses the state write.
 
-## SCAE relationship
+PR #255 separately pressures a **foundation-private update-request occurrence fence** for the case
+where persisted SurfaceState is current but a prior Glance `update()` request failed. That generation
+is not product State identity and does not claim launcher rendering. It remains candidate runtime
+source until its currentized head completes review/integration.
 
-The widget foundation sits downstream of SCAE rather than becoming another family:
+## Product / current-truth relationship
+
+The reusable Widget foundation is downstream of rightful product, provider or repository truth. It
+does not require one semantic grammar upstream:
 
 ```text
-CURRENT product State + Controls
--> existing Behavior Projection
+rightful current product / provider / repository truth
+-> feature-owned mapping
+-> VexWidgetSurfaceState
 
-provider/read truth + existing Projection(s)
--> feature-owned widget SurfaceState
-
-SurfaceState
--> widget Projection
--> RemoteViews
+VexWidgetSurfaceState
+-> VexWidgetProjection
+-> Glance / RemoteViews
 ```
 
-Controls still return through the rightful product family. SurfaceState is remote presentation
-custody only.
+Interaction returns through the consumer's rightful semantic/request boundary:
+
+```text
+widget tap
+-> VexWidgetActionRef
+-> VexWidgetActionCallback
+-> feature-local resolver
+-> existing product Control / request boundary
+-> rightful realization/provider
+-> later current truth
+-> later SurfaceState publication
+```
+
+A consumer may currently use SCAE/Behavior, Direct Family, an ordinary typed request, or another
+lawful product boundary. The Widget foundation does not choose that grammar. SurfaceState remains
+remote presentation custody only.
 
 ## Source roles
 
@@ -155,9 +178,12 @@ The first consumer remains deliberately compact:
 artwork | title/artist | previous | play/pause | next
 ```
 
-VexStream maps Media3/provider truth + existing Playback/Queue projections into one typed widget
-SurfaceState. Artwork availability is presentation truth, so artwork backfill uses `transformAll`
-to change that exact field rather than forcing a synthetic revision.
+VexStream maps current Player/Store truth plus Playback/Queue presentation facts into one typed
+widget SurfaceState. Playback, Queue and Repeat are current Direct `VexFamily` owners; Player
+participation is modeled through the VexStream Player Partner/Store circuit. Those product semantics
+belong to VexStream, not to Widget foundation itself. Artwork availability is presentation truth, so
+artwork backfill uses `transformAll` to change that exact field rather than forcing a synthetic
+product revision.
 
 VexStream-specific meaning remains with:
 
@@ -168,6 +194,44 @@ vexstream/repeat
 screens/shared/vexstream
 media/vexstream
 ```
+
+## Currentness hold — failed update-request debt
+
+Accepted Widget foundation/currentness provenance remains:
+
+```text
+PR #174
+    foundation SourceOwner PASS
+    Independent Assurance CLEAR_ON_EXACT_HEAD
+    tree-exact merge
+
+PR #185
+    typed SurfaceState/currentness evolution
+    SourceOwner PASS
+    Independent Assurance CLEAR_ON_EXACT_HEAD
+    lived launcher/currentness closure
+    tree-exact merge
+```
+
+Open PR #255 owns one narrower runtime correction:
+
+```text
+SurfaceState persisted
+!= update() request succeeded
+!= launcher rendered
+
+same SurfaceState
++ owed failed update request
+-> must remain retryable
+
+A -> B -> A update-request occurrences
+-> older completion must not settle newer debt
+```
+
+Its SourceOwner A002 passed on the exact three-file source candidate and that exact source has now
+been recovered onto current main without path-level source drift. Fresh current-head review/proof and
+integration remain separate; this README does not treat the generation fence as accepted main before
+that lifecycle closes.
 
 ## Proof
 
@@ -184,4 +248,4 @@ vexVerifyLocal
 
 A launcher-hosted appearance/update claim still needs Android/device or lived proof.
 
-<!-- [VXG RealForever][ANDROID][APP-WIDGET][GLANCE][SCAE] -->
+<!-- [VXG RealForever][ANDROID][APP-WIDGET][GLANCE][SURFACE-STATE] -->
