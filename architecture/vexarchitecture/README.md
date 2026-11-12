@@ -231,6 +231,23 @@ widget tap
 The Widget foundation does not choose whether its consumer uses Direct Family, compatibility
 Behavior, or another lawful typed request boundary.
 
+Currentness note:
+
+~~~text
+accepted Widget foundation relationship
+    PR #174 / #185 provenance
+
+publication request debt after persisted SurfaceState
+    active correction: PR #255
+
+Widget / Foundation-Index teaching currentization
+    active correction: PR #253
+~~~
+
+The active correction does not turn Widget into product State or another execution root. When working
+on Widget publication/currentness, descend into those owning candidates/current main rather than
+assuming this overview proves the pending update-request lifecycle.
+
 ### Android Service — useful repeated question, no reusable root yet
 
 Current concrete witnesses:
