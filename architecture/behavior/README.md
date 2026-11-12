@@ -82,10 +82,11 @@ CURRENT State + incoming Control
 -> current State / execution
 ~~~
 
-## Partner circuit patient-zero candidate
+## Partner circuit — accepted foundation
 
-The CGM / connected-pen / insulin-pump walk now pressures a second independent reusable root through
-transport diversity, execution ordering, persistence and process restart:
+Accepted PR #219 established a second independent reusable root through CGM, connected-pen and
+insulin-pump pressure across transport diversity, execution ordering, persistence and process
+restart:
 
 ~~~text
 VexPartner<Partner>
@@ -213,45 +214,64 @@ lane.
 
 ### Current proof boundary
 
-The pure Kotlin Partner/CGM Source + Conversion + generic Connection shape compiles in isolation.
-Source/readback tests also pressure BLE/HTTP Signal equivalence and distinct Connection occurrence.
-
-Still pending repository-owned proof:
+PR #219 is accepted/merged Partner provenance:
 
 ~~~text
-Gradle/KSP compile
-generated Room v6 schema / identity hash
-migration5To6 execution validation
-Android instrumentation execution
-repository-wide source-alignment/unit checks
-physical-device Screen proof
+merge
+7800c17909fd03d1170ec0211a6632172c87d1af
+
+SourceOwner
+PASS
+
+focused Partner / CGM / insulin proof
+PASS
+
+vexVerifyLocal + app Android-test assembly
+PASS
+
+generated Room v6 schema + migration/source consistency
+PASS
+
+bounded connected synthetic Room-restart instrumentation
+PASS
+
+Independent Assurance
+CLEAR
 ~~~
 
-The next external pressure after repository proof is a concrete Local HTTP / BLE provider realization.
+That proves the Partner root, Source/Conversion relationship, Store admission/restart semantics and
+bounded Android restart behavior. It does **not** prove real Local HTTP lifecycle, real BLE/GATT
+lifecycle, physical medical-device behavior or whole VexCgmLabs product completion.
+
+The next external pressure is concrete Local HTTP first, then BLE behind the same semantic vocabulary.
 The current synthetic BLE/HTTP forms prove vocabulary reuse, not networking/radio lifecycle.
 
-ThemeMode / VexStream migration and a first-class Partnership owner remain held.
+VexStream Player participation is now accepted current Partner source. A first-class Partnership
+manager/root remains held; Partner itself is already the accepted reusable external-participant root.
 
 ## Current foundation state
 
-Two behavior foundations intentionally coexist today:
+Two behavior generations intentionally coexist today:
 
 ~~~text
-existing VexBehaviorFamily / SCAE
-    accepted
-    still has production consumers
+existing VexBehaviorFamily / VexBehaviorBlueprint
+    accepted compatibility source
+    still has production consumers such as VexMaps Distribution
+    != common new-family authoring route
 
-Direct VexFamily
-    accepted on main through PR #193
-    owns the newer direct State + Control -> Act relationship model
+Direct VexFamily / VexMethod
+    accepted current foundation
+    common route for new/materially evolving semantic Families
+    current consumers include ThemeMode and VexStream Playback / Queue / Repeat
 ~~~
 
-Direct `VexFamily` did **not** wholesale replace the existing Behavior/SCAE implementation.
-Migration/evolution remains consumer-driven. A fresh worker should not delete or rewrite older
-Behavior source merely because the Direct Family foundation exists.
+Direct `VexFamily` did **not** wholesale replace every existing Behavior/SCAE consumer.
+Migration/evolution remains consumer-driven. A fresh worker should not delete or rewrite compatibility
+Behavior source merely because the Direct Family foundation exists, and should not start a new Family
+from compatibility SCAE merely because that older machinery remains live.
 
-PR #193 is the acceptance/origin reference for the Direct Family identity/custody refinement:
-https://github.com/vgong24/VexLife-Android/pull/193
+PR #193 is earlier Direct-Family lineage; PR #209 is the first executable VexArchitecture stability
+point, and later accepted main source/tests own the current realization details.
 
 ## Start here
 
@@ -268,7 +288,7 @@ Family.activate(control)
 -> StateRelay / execution
 ~~~
 
-State and Control traversal are native Kotlin sealed-type when expressions. The current candidate
+State and Control traversal are native Kotlin sealed-type when expressions. The current Direct Family source
 does not use:
 
 ~~~text
@@ -544,7 +564,7 @@ VexFamily
       -> Failure
 ~~~
 
-There is no standalone `VexStore` root in this candidate and no marker-only Store hierarchy.
+There is no standalone `VexStore` root in the current Direct Family foundation and no marker-only Store hierarchy.
 A concrete Family may extend `VexFamily.Store<State>` locally if a real consumer earns more
 operations, but `get`, `forget`, or Store observation are not implied by Save.
 

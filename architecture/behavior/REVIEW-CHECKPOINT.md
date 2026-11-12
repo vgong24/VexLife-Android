@@ -1,6 +1,26 @@
-# Behavior Blueprint — review checkpoint
+# Behavior Blueprint — historical compatibility review checkpoint
 
 [VXG RealForever]
+
+> **HISTORICAL / COMPATIBILITY REVIEW CHECKPOINT**
+>
+> This file preserves the PR #82 VexBehaviorFamily / VexBehaviorBlueprint review grammar for current
+> compatibility consumers and archaeology. It is **not** the common authoring entry for a new or
+> materially evolving Family.
+>
+> Current entry:
+>
+> ~~~text
+> FAMILY-CIRCUIT.md
+> -> VexFamily.kt / VexMethod.kt
+> -> current tests
+> ~~~
+>
+> Current VexStream Playback / Queue / Repeat have moved to Direct VexFamily + Player Partner/Store
+> source. Do not use their historical Behavior-era shapes below as current VexStream architecture.
+>
+> This document remains useful when maintaining a compatibility Behavior consumer such as current
+> VexMaps Distribution or when reviewing PR #82 lineage.
 
 This document is the shortest review entry for PR #82.
 
