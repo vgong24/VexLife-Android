@@ -400,7 +400,7 @@ reference/ui/ThemeMode.kt
 These are source snapshots, not production duplicates. They exist so a successor can recover the
 refined semantic grammar without replaying #206 or silently inheriting its later vocabulary.
 
-## Current architecture posture
+## Reference snapshot posture at refinement time
 
 ~~~text
 PRESERVE
