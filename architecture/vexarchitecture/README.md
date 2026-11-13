@@ -1,93 +1,517 @@
-# VexArchitecture — refined foundation snapshot
+# VexArchitecture — current entry + refined foundation snapshot
 
 [VXG RealForever]
 
-## Accepted implementation origin and reasoning record
+## Current source authority and accepted origin
 
-The first accepted executable VexArchitecture stability point that grew from this refined snapshot is:
+Current repository source and tests own present VexArchitecture behavior.
+
+The first accepted executable stability point is:
 
 - [PR #209 — VexArchitecture executable composition / ThemeMode patient zero](https://github.com/vgong24/VexLife-Android/pull/209)
 
-PR #209 is intentionally useful as a **before / pressure / subtraction / after** review record. It
-shows traditional-looking alternatives that were actually tried or inherited, the duplication or
-ownership leaks they created, and the smaller relationships that replaced them. A fresh human or AI
-may use that diff to understand *why* the current design exists instead of cargo-culting either the
-old code or the final names.
+The accepted external-participant stability point is:
 
-PR #209 produced the first accepted executable VexArchitecture stability point. The repository's
-current source and tests own current behavior. Keep the PR link here as provenance for the rejected
-alternatives, pressure, subtraction, and causal reasoning; accepted source remains the repository
-itself.
+- [PR #219 — VexPartner Source / Conversion through CGM, connected pen, and insulin pump](https://github.com/vgong24/VexLife-Android/pull/219)
 
-Fresh architecture orientation:
+PR #209 remains the before / pressure / subtraction / after reasoning record for the first body.
+PR #219 remains the pressure/proof record for the Partner root. Neither PR replaces current source.
+
+## Fresh architecture orientation
+
+A fresh human or parallel AI should not have to reconstruct the current body from PR chronology.
 
 ~~~text
 root README
 -> architecture/vexarchitecture/README.md
 -> VEXLOGGER.md
+-> architecture/behavior/FAMILY-CIRCUIT.md
+-> architecture/behavior/README.md
+-> architecture/execution/README.md
+-> architecture/widget/README.md when a system surface is implicated
+-> architecture/relay/README.md when independently-owned truths converge
+-> architecture/dependency/README.md when construction/lifetime is implicated
 -> contexts/logger-readable-dependencies/TOPOLOGY-AND-ID-PROTOCOL.md
    current relationship projection; navigation, not another truth owner
--> REFINED-BOUNDARIES.md
 -> docs/foundation/VEX-BODY-SEMANTIC-BLUEPRINT.md
--> PR #209 before/after review when the reason for a choice matters
 -> exact owning production source + tests
 ~~~
 
-The current causal body is broader than execution alone:
+Use `REFINED-BOUNDARIES.md`, `reference/`, and PR #209 when the reason/history of the first
+stability point matters. They are provenance/reference, not a substitute for the current owners above.
+
+## Current accepted architecture map
+
+Read VexArchitecture by the question each owner answers, not as a mandatory class stack.
 
 ~~~text
-REQUEST / REALIZATION
+SEMANTIC MEANING
+    VexFamily
+        CURRENT State + Control
+        -> accepted Act
+        -> admitted State when authored
+        -> optional Begin(Effect + Approach)
+        -> exact Act.Method when realization is required
 
-Family.Parameter
--> Family.Control
--> Family.Act
--> Family.Effect
--> Family.Act.Method
-   -> specializes VexMethod
--> concrete realization
--> VexMethod.Result
-   -> Success / Failure / Error
--> rightful result interpretation
+BOUND REALIZATION
+    VexMethod
+        one fully-bound executable contract
+        -> Success / Failure
+        escaped invocation -> Error at the behavior/execution continuation
+        != provider/Store truth
+        != resulting State
 
+ACTIVE ASYNC CUSTODY
+    VexExecution
+        source-addressed work when the exact callable/Flow is the local work address
+        relationship-addressed work when Family already authored RelationshipId + Approach
+        concrete VexExecution owner only when a distinct sustained custody responsibility is earned
+        ordinary owner-local coroutine lifetime may remain rightful when no VexExecution invariant is needed
 
-OUTSIDE / OBSERVATION
+EXTERNAL PARTICIPATION
+    VexPartner
+        Source
+        Signal
+        Connection
+            Id
+            Conversion
+            Observation
+            Receiver
+        != Store
+        != Family
+        != VexExecution
+        != every provider by default
 
-outside/provider truth
--> rightful observation / reconciliation
--> already-semantic Family.State
+OUTSIDE / DURABLE TRUTH
+    Store / provider / platform owner
+        returns or exposes its smallest truthful fact
+        keeps independently-owned reality outside Family
 
+RELATIONSHIP TRUTH
+    Relay / Compound Relay
+        composes independently-complete truths
+        owns the relationship among them
+        does not steal either source owner
+
+REMOTE SYSTEM SURFACE
+    Android Widget foundation
+        rightful product/provider truth
+        -> feature-owned VexWidgetSurfaceState
+        -> VexWidgetProjection
+        -> Glance / RemoteViews
+        callback -> existing product request/Control boundary
+        APP_WIDGET != PRODUCT_STATE_OWNER
+        CALLBACK != LONG_RUNNING_WORK_OWNER
+
+SUSTAINED PLATFORM REALIZATION
+    concrete Android Service when a feature actually needs one
+        keeps platform/provider realization alive beyond a shorter caller/UI lifetime
+        semantic/provider truth stays with its rightful owner
+
+    current source earns this composition relationship
+    current source does NOT earn a generic VexService root,
+    universal Service.current, or mandatory ServiceScope/VexExecution shape
+
+CONSTRUCTION / LIFETIME
+    VexDependency
+        provider prerequisites
+        lifetime memoization / parent-child reuse
+        construction identity != semantic identity
+
+CHRONOLOGY
+    VexLogger
+        what happened and in what order
+        != active-work custody
+        != semantic truth
 
 EXPERIENCE / DISPLAY
-
-Family.State
--> Family.Projection
--> Family.DisplayState
--> concrete presentation meaning
--> concrete manifestation such as Compose
--> human experience
+    Family State
+    -> Family Projection / DisplayState where earned
+    -> concrete presentation
+    -> manifestation such as Compose / Glance / Android platform
+    -> human experience
 ~~~
 
-VexMethod.Result reports the outcome of attempting one Method realization. It is the terminal
-return contract of `VexMethod.invoke()`, not a generic provider / Store / repository outcome wrapper.
-Those boundaries return their smallest truthful fact; the bound Method interprets that fact into
-Success / Failure. Error is formed inside the behavior foundation only when a Method actually escapes
-its returned contract. Result does not become resulting State or require a subsequent Observation,
-and cancellation remains Execution lifetime.
+## Worked relationship examples
 
-ThemeMode is the current concrete display example:
+### Direct Family + Method + Execution — ThemeMode
 
 ~~~text
-ThemeMode State
--> ThemeModeFamily.DisplayState
--> VexThemePresentation
--> VexLifeTheme
--> MaterialTheme / system bars / Compose Surface
+human Select(mode)
+-> ThemeModeFamily.Control.Select
+-> CURRENT State + Control
+-> Act.Accepted
+   -> admitted State when authored
+   -> realizationBegin = Latest(Effect.Save)
+-> exact ThemeModeFamily.Act.Method.Save
+-> Act.Accepted.launch(...)
+-> VexExecution Job custody
+-> ThemeModeStore.save(...)
+-> Method-owned VexMethod.Result
+-> independently observed durable ThemeMode truth
+-> same ThemeModeFamily
+-> DisplayState / VexThemePresentation
+-> Compose
 ~~~
 
-DisplayState is Family-owned outward interpretation. Compose is a manifestation technology, not a
-Family child or semantic truth owner. Do not introduce a generic FamilyRenderer, UiState, or
-ViewState merely to bridge those layers when the concrete consumer already has a truthful
-presentation boundary.
+This example teaches semantic carriage, bound realization, active custody, durable observation, and
+presentation without making any one layer own the others.
+
+### Direct Family + Partner + Store — current VexStream Playback
+
+~~~text
+human Play/Pause
+-> VexStreamPlaybackFamily
+-> Act.Accepted
+-> realizationBegin
+-> exact Effect-bound Act.Method
+-> VexExecution when the accepted relationship requires custody
+-> VexStreamPlayerPartner.Connection.Request
+-> provider acknowledgement
+   != durable outside truth
+
+later Player truth
+-> VexStreamPlayerPartner.Signal.Playback
+-> VexStreamPlayerStore
+-> source-addressed Store observation
+-> same VexStreamPlaybackFamily
+-> DisplayState / presentation
+~~~
+
+Playback, Queue, and Repeat are current Direct Family consumers. Do not reconstruct their current
+shape from older compatibility-Behavior VexStream source or historical PRs.
+
+### Partner — CGM / connected pen / insulin pump
+
+~~~text
+BLE-like bytes -> CgmPartner.Connection.BleDecoder --\
+                                                    +-> CgmPartner.Source / Signal
+HTTP-like body -> CgmPartner.Connection.HttpDecoder-/
+                                                    -> Observation
+                                                    -> suspend Receiver
+                                                    -> CgmStore
+                                                    -> CgmFamily
+
+ConnectedPenPartner
+    same Partner grammar
+    different domain meaning
+    no imported CGM continuity law
+
+InsulinFamily Control
+-> Effect / exact Method
+-> VexExecution
+-> InsulinPumpPartner request
+-> acknowledgement
+   != physical delivery
+
+later DeliveryObserved
+-> Partner inbound truth
+-> rightful consumer truth
+~~~
+
+Partner is earned by an independently-owned external-participant question, not by a class name or by
+the fact that data crosses a network/device boundary.
+
+### Widget — presentation custody, not product truth
+
+~~~text
+rightful product / provider / repository truth
+-> feature-owned widget SurfaceState
+-> foundation persistence / currentness
+-> Widget Projection
+-> Glance / RemoteViews
+
+widget tap
+-> ActionRef
+-> bounded callback
+-> feature resolver
+-> existing product Control / request boundary
+~~~
+
+The Widget foundation does not choose whether its consumer uses Direct Family, compatibility
+Behavior, or another lawful typed request boundary.
+
+Currentness note:
+
+~~~text
+accepted Widget foundation relationship
+    PR #174 / #185 provenance
+
+publication request debt after persisted SurfaceState
+    active correction: PR #255
+
+Widget / Foundation-Index teaching currentization
+    active correction: PR #253
+~~~
+
+The active correction does not turn Widget into product State or another execution root. When working
+on Widget publication/currentness, descend into those owning candidates/current main rather than
+assuming this overview proves the pending update-request lifecycle.
+
+### Android Service — sustained realization law, reusable root still held
+
+The original Service pressure was valid: make the relationship between a sustained platform
+realization and the truth it participates in **perceivable** without allowing an Android Service to
+become the semantic/current owner.
+
+Current concrete witnesses:
+
+~~~text
+VexStreamPlaybackService
+    MediaSession / ExoPlayer host lifetime
+    Media3PlayerConnection -> VexStreamPlayerStore attachment
+    Service-lifetime Widget publication custody
+    does not require universal PlaybackFamily.current awareness
+
+VexMapsNavigationService
+    foreground-Service lifetime
+    Android location / notification / speech realization
+    borrows VexNavigationSession current truth because this realization needs it
+~~~
+
+The common relationship that survives both is **sustained realization hosting**:
+
+~~~text
+shorter caller / UI lifetime may end
+-> concrete platform realization must remain available
+-> Service hosts / attaches / maintains / releases realization resources
+-> semantic / provider / Store / Session truth stays with its rightful existing owner
+~~~
+
+Permanent Service laws:
+
+~~~text
+SERVICE_CURRENT_AWARENESS
+!= SERVICE_OWNED_CURRENT_TRUTH
+
+SERVICE_ALIVE
+!= EFFECT_SUCCESS
+!= PROVIDER_SUCCESS
+
+SERVICE
+!= FAMILY
+!= PARTNER
+!= STORE
+!= RELAY
+!= VEXEXECUTION
+~~~
+
+What current source does **not yet** prove is that every materially different Service shares one
+compiler-visible `Service <-> Current` contract or one reusable lifecycle algorithm. Playback does
+not need the same semantic-current relationship that Navigation needs. Therefore the current
+promotion boundary is:
+
+~~~text
+SUSTAINED REALIZATION RELATIONSHIP = EARNED
+
+VexService<Service, Current>
+    original intention = VALID PRESSURE
+    universal reusable type = NOT YET EARNED
+
+universal Service.current               = NOT YET EARNED
+mandatory VexExecution in every Service = NOT EARNED
+typed ServiceScope architecture law     = NOT EARNED
+BackgroundServiceRelay by symmetry      = NOT EARNED
+~~~
+
+Do not erase the Service question merely because its first generic type did not survive. Preserve the
+relationship law, pressure it with materially different sustained realizations, and promote a
+`VexService` root only when a repeated executable invariant would otherwise be duplicated or become
+easy to violate. A future shared Admission / Retention / Release law could earn a root even if the
+earlier universal `current` getter does not.
+
+### Navigation — same ownership law, different implementation shape
+
+VexMaps Navigation is useful counter-pressure against class-shape cargo culting:
+
+~~~text
+prepared route
+-> VexNavigationSession phase = READY
+
+user / product Start
+-> concrete VexMapsNavigationService
+-> inspect the existing Session current truth
+
+READY
+-> start foreground Android realization
+-> Session.start()
+-> continuous Android location observation
+-> VexMapsNavigationProcess.acceptLocation(...)
+-> same VexNavigationSession owns route-relative navigation truth
+
+Session states
+-> notification / speech / foreground-retention decisions
+
+Service ends
+-> concrete realization resources release
+-> Session truth is stopped only when the feature contract says the journey ended
+~~~
+
+Ownership boundaries:
+
+~~~text
+VexNavigationSession
+    navigation/domain current truth
+
+VexMapsNavigationProcess
+    feature composition / route + reroute operations around that Session
+
+VexDeviceLocationSource
+    Android location observation
+    != navigation truth
+    != permission owner
+
+VexMapsNavigationService
+    sustained Android foreground realization
+    != Navigation State owner
+
+CoroutineScope / Job fields
+    owner-local Service lifetime
+    currently lawful because no additional VexExecution custody invariant is required
+~~~
+
+Location/admission truth must remain non-collapsed:
+
+~~~text
+manifest capability
+!= runtime permission grant
+
+precise permission grant
+!= location services enabled
+
+location services enabled
+!= fresh location fix
+
+fresh location fix
+!= acceptable accuracy
+
+acceptable current fix
+!= prepared route
+
+prepared route
+!= active navigation
+
+historical stored location
+!= current device location
+~~~
+
+This example is deliberately **not** normalized into Direct Family, Partner, Relay or VexExecution.
+If future Navigation pressure earns one of those relationships, add it because the question becomes
+real—not because another VexArchitecture example already uses that shape.
+
+### Compatibility Behavior remains real where current source still uses it
+
+Direct `VexFamily` is the common new/materially-evolving Family authoring route. Existing
+`VexBehaviorFamily` / `VexBehaviorBlueprint` remains accepted compatibility source where current
+production still consumes it, including current VexMaps Distribution Mode / Delivery Route.
+
+~~~text
+CURRENT SOURCE EXAMPLE
+    VexMaps Distribution
+    -> compatibility Behavior owners
+    -> Session
+    -> VexExecution only for earned custody
+    -> Relay / convergence for relationship truth
+
+COMPATIBILITY
+!= PEER NEW-FAMILY TEMPLATE
+!= DEPRECATED-BY-ASSUMPTION
+~~~
+
+## Reuse the question, not the syntax
+
+Two consumers may express the same ownership law with different Kotlin shapes. Two similar code
+shapes may answer different questions.
+
+Before adding or promoting a reusable root, ask:
+
+~~~text
+What exact question recurs?
+Which current owner already answers part of it?
+What remains after Family / Partner / Store / Relay / Execution / Dependency / platform ownership
+are subtracted?
+Which materially different consumers preserve the same semantic promise?
+What correctness would be lost if the shared abstraction did not exist?
+~~~
+
+If the answer is only "the code looks similar" or "the architecture diagram would look cleaner", keep
+the relationship local and document the negative result.
+
+## Apply VexArchitecture in another environment
+
+Do **not** port the Android/Kotlin class graph. Port the ownership questions and only then choose the
+native mechanism available in the target environment.
+
+~~~text
+1. HUMAN / PRODUCT PRESSURE
+   What is the person trying to do or understand?
+
+2. RIGHTFUL CURRENT TRUTH
+   Which owner can answer what is true now?
+
+3. SEMANTIC DECISION
+   Does one domain own CURRENT State + Control -> accepted consequence?
+       yes -> Family-shaped meaning may be present
+
+4. EXTERNAL PARTICIPATION
+   Is there an independently meaningful outside participant with Source / Signal /
+   Connection / Conversion / Observation relationships?
+       yes -> Partner-shaped relationship may be present
+
+5. ACTIVE CUSTODY
+   Does work need overlap policy, exact-source replacement/cancellation,
+   bounded recovery, or owner-isolated stop/join?
+       yes -> VexExecution-shaped custody may be present
+       no  -> ordinary native coroutine/task lifetime may remain rightful
+
+6. RELATIONSHIP TRUTH
+   Do several independently complete truths create a new question together?
+       yes -> Relay / convergence may be present
+
+7. REMOTE / HOSTED SURFACE
+   Must current truth be reproduced on a platform-hosted surface after the
+   foreground/session may be gone?
+       yes -> Widget-style bounded SurfaceState / Projection may be present
+
+8. SUSTAINED PLATFORM REALIZATION
+   Must a concrete realization outlive the initiating caller/UI?
+       yes -> preserve the Service sustained-realization law;
+              do not manufacture a generic Service root before the lifecycle invariant repeats
+
+9. CONSTRUCTION / LIFETIME
+   What creates these owners, what are their prerequisites, and how long are they reused?
+
+10. CHRONOLOGY / PROOF
+    What happened belongs to Logger/proof; do not turn history into another runtime owner.
+~~~
+
+Examples translate by **question**, not by Android syntax:
+
+~~~text
+Android ThemeMode Family
+    -> on another platform: one semantic owner still answers CURRENT choice + request meaning;
+       persistence/task/UI mechanisms may be completely different
+
+Android VexStream Player Partner
+    -> on desktop/server/embedded: external participant may be a process, socket, daemon, device,
+       SDK or transport; Partner is earned by the relationship, not by Bluetooth/HTTP vocabulary
+
+Android Widget
+    -> on another hosted surface: preserve bounded remote-surface truth and action return;
+       do not copy Glance if the platform uses tiles, complications, tray surfaces or extensions
+
+Android Service
+    -> on another platform: preserve the sustained-realization question;
+       use the platform's background/session/daemon mechanism without inventing VexService by name
+
+VexExecution
+    -> use the target runtime's task primitive underneath;
+       preserve only the custody invariant that was actually earned
+~~~
+
+A fresh instance should be able to explain the target design without mentioning any Vex class name
+first. If the ownership/relationship sentence is unclear without the class name, the abstraction has
+not yet been understood well enough to copy.
 
 ## READ FIRST — VexLogger
 
@@ -109,19 +533,29 @@ reading RelationshipId / Execution, otherwise it is too easy to mistake runtime 
 ownership and recreate the OwnerToken / SourceRef / InstanceId / completed-Snapshot style machinery
 this snapshot is designed to subtract.
 
-After `VEXLOGGER.md`, continue with:
+After `VEXLOGGER.md`, continue through the current owners implicated by the work:
 
 ~~~text
 README.md                         <- you are here
+../behavior/FAMILY-CIRCUIT.md     current Direct Family / Method circuit
+../behavior/README.md             Direct Family + accepted Partner + compatibility Behavior map
+../execution/README.md            execution-custody patterns and necessity boundary
+../widget/README.md               remote-system-surface / callback boundary when Widget is implicated
+../relay/README.md                independently-owned truth -> relationship truth
+../dependency/README.md           construction / lifetime topology
 contexts/logger-readable-dependencies/TOPOLOGY-AND-ID-PROTOCOL.md
-    current cross-root relationship map; descend from it to owning source
-REFINED-BOUNDARIES.md
-reference/behavior/VexFamily.kt
-reference/ui/ThemeMode.kt
+                                  current cross-root relationship projection
+../../docs/foundation/VEX-BODY-SEMANTIC-BLUEPRINT.md
+                                  purpose -> primitive -> relationship -> form orientation
+exact owning production source + tests
 ~~~
 
+Use `REFINED-BOUNDARIES.md` and `reference/` when historical refinement/provenance is needed. They
+remain reference snapshots, not a competing current-entry map.
+
 Do not use draft PR #206 as the entry point. PR #209 is the accepted implementation-origin /
-reasoning record; the snapshot below is historical reconstruction context that led into the accepted
+reasoning record; PR #219 is accepted Partner provenance. Current repository source and tests own the
+present body. The snapshot below is historical reconstruction context that led into the accepted
 body.
 
 > **REFERENCE SNAPSHOT — NOT A MERGE RECOMMENDATION**
@@ -177,7 +611,7 @@ reference/ui/ThemeMode.kt
 These are source snapshots, not production duplicates. They exist so a successor can recover the
 refined semantic grammar without replaying #206 or silently inheriting its later vocabulary.
 
-## Current architecture posture
+## Reference snapshot posture at refinement time
 
 ~~~text
 PRESERVE

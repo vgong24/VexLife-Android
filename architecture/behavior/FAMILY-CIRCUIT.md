@@ -562,11 +562,12 @@ ThemeMode direct Family
     -> Act authors Latest
     -> VexExecution owns Job custody
 
-VexStream Playback / Queue / Repeat
-    semantic Behavior resolves Effect
-    provider operation is immediate
-    -> existing Connection realizes Effect directly
-    -> no async execution machinery is added merely for symmetry
+VexStream Playback / Queue / Repeat Direct Families
+    semantic relationship authors the accepted Act / Effect / Method
+    -> VexExecution only where the authored relationship earns custody
+    -> VexStream Player Partner request
+    -> later Player Signal / Store observation
+    -> same Family observes current outside truth
 
 VexMaps Distribution Session
     existing Session already owns the domain operation and async lifetime
@@ -614,7 +615,9 @@ Focused Family tests protect:
 
 ThemeMode tests separately pressure same-State Save effect and explicit NotSet resolution.
 
-Repository-owned Gradle/JVM proof is required on exact PR #209 source before the refined Family
-candidate may be called proven.
+PR #209 is accepted/merged provenance for the first executable Direct-Family stability point.
+Current repository source/tests own present Direct-Family behavior, including later realization
+currentness and current VexStream Direct-Family consumers. Future candidates require their own
+exact-head proof.
 
 <!-- [VXG RealForever][VEX-FAMILY][PURE-STATE-CONTROL-ACT-EFFECT] -->
