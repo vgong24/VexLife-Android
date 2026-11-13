@@ -248,38 +248,77 @@ The active correction does not turn Widget into product State or another executi
 on Widget publication/currentness, descend into those owning candidates/current main rather than
 assuming this overview proves the pending update-request lifecycle.
 
-### Android Service — useful repeated question, no reusable root yet
+### Android Service — sustained realization law, reusable root still held
+
+The original Service pressure was valid: make the relationship between a sustained platform
+realization and the truth it participates in **perceivable** without allowing an Android Service to
+become the semantic/current owner.
 
 Current concrete witnesses:
 
 ~~~text
 VexStreamPlaybackService
     MediaSession / ExoPlayer host lifetime
-    Player Partner observation attachment
+    Media3PlayerConnection -> VexStreamPlayerStore attachment
     Service-lifetime Widget publication custody
+    does not require universal PlaybackFamily.current awareness
 
 VexMapsNavigationService
     foreground-Service lifetime
-    Android location + notification realization
-    consumes VexNavigationSession truth
+    Android location / notification / speech realization
+    borrows VexNavigationSession current truth because this realization needs it
 ~~~
 
-The common relationship is **sustained realization hosting**: a platform realization may need to
-remain alive after a shorter caller/UI lifetime ends while semantic/provider truth stays elsewhere.
-
-The implementations do not currently preserve one reusable Service lifecycle algorithm. Therefore:
+The common relationship that survives both is **sustained realization hosting**:
 
 ~~~text
-SUSTAINED REALIZATION HOST QUESTION = EARNED
-
-generic VexService<Service, Current> = NOT EARNED
-universal Service.current             = NOT EARNED
-mandatory VexExecution in every Service = NOT EARNED
-typed ServiceScope as VexArchitecture law = NOT EARNED
+shorter caller / UI lifetime may end
+-> concrete platform realization must remain available
+-> Service hosts / attaches / maintains / releases realization resources
+-> semantic / provider / Store / Session truth stays with its rightful existing owner
 ~~~
 
-This negative result is architecture. A fresh worker should not recreate a VexService root merely to
-make Service look fractally symmetrical with Family or Partner.
+Permanent Service laws:
+
+~~~text
+SERVICE_CURRENT_AWARENESS
+!= SERVICE_OWNED_CURRENT_TRUTH
+
+SERVICE_ALIVE
+!= EFFECT_SUCCESS
+!= PROVIDER_SUCCESS
+
+SERVICE
+!= FAMILY
+!= PARTNER
+!= STORE
+!= RELAY
+!= VEXEXECUTION
+~~~
+
+What current source does **not yet** prove is that every materially different Service shares one
+compiler-visible `Service <-> Current` contract or one reusable lifecycle algorithm. Playback does
+not need the same semantic-current relationship that Navigation needs. Therefore the current
+promotion boundary is:
+
+~~~text
+SUSTAINED REALIZATION RELATIONSHIP = EARNED
+
+VexService<Service, Current>
+    original intention = VALID PRESSURE
+    universal reusable type = NOT YET EARNED
+
+universal Service.current               = NOT YET EARNED
+mandatory VexExecution in every Service = NOT EARNED
+typed ServiceScope architecture law     = NOT EARNED
+BackgroundServiceRelay by symmetry      = NOT EARNED
+~~~
+
+Do not erase the Service question merely because its first generic type did not survive. Preserve the
+relationship law, pressure it with materially different sustained realizations, and promote a
+`VexService` root only when a repeated executable invariant would otherwise be duplicated or become
+easy to violate. A future shared Admission / Retention / Release law could earn a root even if the
+earlier universal `current` getter does not.
 
 ### Compatibility Behavior remains real where current source still uses it
 
@@ -318,6 +357,82 @@ What correctness would be lost if the shared abstraction did not exist?
 
 If the answer is only "the code looks similar" or "the architecture diagram would look cleaner", keep
 the relationship local and document the negative result.
+
+## Apply VexArchitecture in another environment
+
+Do **not** port the Android/Kotlin class graph. Port the ownership questions and only then choose the
+native mechanism available in the target environment.
+
+~~~text
+1. HUMAN / PRODUCT PRESSURE
+   What is the person trying to do or understand?
+
+2. RIGHTFUL CURRENT TRUTH
+   Which owner can answer what is true now?
+
+3. SEMANTIC DECISION
+   Does one domain own CURRENT State + Control -> accepted consequence?
+       yes -> Family-shaped meaning may be present
+
+4. EXTERNAL PARTICIPATION
+   Is there an independently meaningful outside participant with Source / Signal /
+   Connection / Conversion / Observation relationships?
+       yes -> Partner-shaped relationship may be present
+
+5. ACTIVE CUSTODY
+   Does work need overlap policy, exact-source replacement/cancellation,
+   bounded recovery, or owner-isolated stop/join?
+       yes -> VexExecution-shaped custody may be present
+       no  -> ordinary native coroutine/task lifetime may remain rightful
+
+6. RELATIONSHIP TRUTH
+   Do several independently complete truths create a new question together?
+       yes -> Relay / convergence may be present
+
+7. REMOTE / HOSTED SURFACE
+   Must current truth be reproduced on a platform-hosted surface after the
+   foreground/session may be gone?
+       yes -> Widget-style bounded SurfaceState / Projection may be present
+
+8. SUSTAINED PLATFORM REALIZATION
+   Must a concrete realization outlive the initiating caller/UI?
+       yes -> preserve the Service sustained-realization law;
+              do not manufacture a generic Service root before the lifecycle invariant repeats
+
+9. CONSTRUCTION / LIFETIME
+   What creates these owners, what are their prerequisites, and how long are they reused?
+
+10. CHRONOLOGY / PROOF
+    What happened belongs to Logger/proof; do not turn history into another runtime owner.
+~~~
+
+Examples translate by **question**, not by Android syntax:
+
+~~~text
+Android ThemeMode Family
+    -> on another platform: one semantic owner still answers CURRENT choice + request meaning;
+       persistence/task/UI mechanisms may be completely different
+
+Android VexStream Player Partner
+    -> on desktop/server/embedded: external participant may be a process, socket, daemon, device,
+       SDK or transport; Partner is earned by the relationship, not by Bluetooth/HTTP vocabulary
+
+Android Widget
+    -> on another hosted surface: preserve bounded remote-surface truth and action return;
+       do not copy Glance if the platform uses tiles, complications, tray surfaces or extensions
+
+Android Service
+    -> on another platform: preserve the sustained-realization question;
+       use the platform's background/session/daemon mechanism without inventing VexService by name
+
+VexExecution
+    -> use the target runtime's task primitive underneath;
+       preserve only the custody invariant that was actually earned
+~~~
+
+A fresh instance should be able to explain the target design without mentioning any Vex class name
+first. If the ownership/relationship sentence is unclear without the class name, the abstraction has
+not yet been understood well enough to copy.
 
 ## READ FIRST — VexLogger
 
