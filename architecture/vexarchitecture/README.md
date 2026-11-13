@@ -320,6 +320,85 @@ relationship law, pressure it with materially different sustained realizations, 
 easy to violate. A future shared Admission / Retention / Release law could earn a root even if the
 earlier universal `current` getter does not.
 
+### Navigation — same ownership law, different implementation shape
+
+VexMaps Navigation is useful counter-pressure against class-shape cargo culting:
+
+~~~text
+prepared route
+-> VexNavigationSession phase = READY
+
+user / product Start
+-> concrete VexMapsNavigationService
+-> inspect the existing Session current truth
+
+READY
+-> start foreground Android realization
+-> Session.start()
+-> continuous Android location observation
+-> VexMapsNavigationProcess.acceptLocation(...)
+-> same VexNavigationSession owns route-relative navigation truth
+
+Session states
+-> notification / speech / foreground-retention decisions
+
+Service ends
+-> concrete realization resources release
+-> Session truth is stopped only when the feature contract says the journey ended
+~~~
+
+Ownership boundaries:
+
+~~~text
+VexNavigationSession
+    navigation/domain current truth
+
+VexMapsNavigationProcess
+    feature composition / route + reroute operations around that Session
+
+VexDeviceLocationSource
+    Android location observation
+    != navigation truth
+    != permission owner
+
+VexMapsNavigationService
+    sustained Android foreground realization
+    != Navigation State owner
+
+CoroutineScope / Job fields
+    owner-local Service lifetime
+    currently lawful because no additional VexExecution custody invariant is required
+~~~
+
+Location/admission truth must remain non-collapsed:
+
+~~~text
+manifest capability
+!= runtime permission grant
+
+precise permission grant
+!= location services enabled
+
+location services enabled
+!= fresh location fix
+
+fresh location fix
+!= acceptable accuracy
+
+acceptable current fix
+!= prepared route
+
+prepared route
+!= active navigation
+
+historical stored location
+!= current device location
+~~~
+
+This example is deliberately **not** normalized into Direct Family, Partner, Relay or VexExecution.
+If future Navigation pressure earns one of those relationships, add it because the question becomes
+real—not because another VexArchitecture example already uses that shape.
+
 ### Compatibility Behavior remains real where current source still uses it
 
 Direct `VexFamily` is the common new/materially-evolving Family authoring route. Existing
