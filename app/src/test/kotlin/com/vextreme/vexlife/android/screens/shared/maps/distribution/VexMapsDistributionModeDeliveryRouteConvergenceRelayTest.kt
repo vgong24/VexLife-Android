@@ -2,9 +2,7 @@ package com.vextreme.vexlife.android.screens.shared.maps.distribution
 
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionModeDeliveryRouteCoherence
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionModeDeliveryRouteConvergenceRelay
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeConnection
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeControl
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeState
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeFamily
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteConnection
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -18,13 +16,13 @@ class VexMapsDistributionModeDeliveryRouteConvergenceRelayTest {
     fun nonEmptyDeliveryRouteRequestsOnlyModeReconciliationThenBecomesCoherent() =
         runBlocking {
             val mode =
-                VexMapsDistributionModeConnection()
+                VexMapsDistributionModeFamily()
             val deliveryRoute =
                 VexMapsDeliveryRouteConnection()
             val relay =
                 VexMapsDistributionModeDeliveryRouteConvergenceRelay(
-                    modeProjections =
-                        mode.projections,
+                    modeStates =
+                        mode.states,
                     deliveryRouteProjections =
                         deliveryRoute.projections,
                 )
@@ -57,17 +55,17 @@ class VexMapsDistributionModeDeliveryRouteConvergenceRelayTest {
                     }
 
                 assertEquals(
-                    VexMapsDistributionModeControl.UseDistribution,
+                    VexMapsDistributionModeFamily.Control.UseDistribution,
                     needsMode.requestedModeControl,
                 )
 
                 // Satisfy the relationship before consuming the stale Relay output.
                 mode.activate(
-                    VexMapsDistributionModeControl.ToggleDistribution,
+                    VexMapsDistributionModeFamily.Control.ToggleDistribution,
                 )
                 assertEquals(
-                    VexMapsDistributionModeState.Distribution,
-                    mode.currentProjection.state,
+                    VexMapsDistributionModeFamily.State.Distribution,
+                    mode.currentState,
                 )
 
                 // Directional feedback is now unavailable instead of toggling back to Regular.
@@ -77,8 +75,8 @@ class VexMapsDistributionModeDeliveryRouteConvergenceRelayTest {
                     ),
                 )
                 assertEquals(
-                    VexMapsDistributionModeState.Distribution,
-                    mode.currentProjection.state,
+                    VexMapsDistributionModeFamily.State.Distribution,
+                    mode.currentState,
                 )
 
                 val coherent =

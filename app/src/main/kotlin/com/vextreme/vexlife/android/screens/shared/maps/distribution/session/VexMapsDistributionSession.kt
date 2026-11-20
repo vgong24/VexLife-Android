@@ -23,9 +23,7 @@ import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationReconciliationRequest
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationRouteIdentity
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.vexMapsDeliveryRouteNavigationRealizesExpectedLeg
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeConnection
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeControl
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeProjection
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeFamily
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.planning.VexMapsDistributionPlan
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.planning.VexMapsDistributionPreparationSnapshot
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteConnection
@@ -149,8 +147,8 @@ internal class VexMapsDistributionSession(
     private val relayScope:
         CoroutineScope,
     private val mode:
-        VexMapsDistributionModeConnection =
-        VexMapsDistributionModeConnection(),
+        VexMapsDistributionModeFamily =
+        VexMapsDistributionModeFamily(),
     private val deliveryRoute:
         VexMapsDeliveryRouteConnection =
         VexMapsDeliveryRouteConnection(),
@@ -179,10 +177,10 @@ internal class VexMapsDistributionSession(
         StateFlow<VexMapsDistributionSessionState> =
         mutableState.asStateFlow()
 
-    val modeProjections:
-        StateFlow<VexMapsDistributionModeProjection>
+    val modeStates:
+        StateFlow<VexMapsDistributionModeFamily.State>
         get() =
-            mode.projections
+            mode.states
 
     val deliveryRouteProjections:
         StateFlow<VexMapsDeliveryRouteProjection>
@@ -190,9 +188,9 @@ internal class VexMapsDistributionSession(
             deliveryRoute.projections
 
     val currentMode:
-        VexMapsDistributionModeProjection
+        VexMapsDistributionModeFamily.State
         get() =
-            mode.currentProjection
+            mode.currentState
 
     val currentDeliveryRoute:
         VexMapsDeliveryRouteProjection
@@ -201,8 +199,8 @@ internal class VexMapsDistributionSession(
 
     private val modeDeliveryRouteRelay =
         VexMapsDistributionModeDeliveryRouteConvergenceRelay(
-            modeProjections =
-                mode.projections,
+            modeStates =
+                mode.states,
             deliveryRouteProjections =
                 deliveryRoute.projections,
         )
@@ -273,7 +271,7 @@ internal class VexMapsDistributionSession(
 
     fun toggleMode() {
         mode.activate(
-            VexMapsDistributionModeControl
+            VexMapsDistributionModeFamily.Control
                 .ToggleDistribution,
         )
     }

@@ -4,7 +4,7 @@ import com.vextreme.vexlife.android.screens.shared.maps.VexMapCoordinate
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsRegionPack
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsTravelMode
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationOutput
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeProjection
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeFamily
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteProjection
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.session.VexMapsDistributionSession
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.session.VexMapsDistributionSessionState
@@ -26,18 +26,18 @@ internal class VexMapsDistributionUi(
         get() =
             session.states
 
-    val modeProjections:
-        StateFlow<VexMapsDistributionModeProjection>
+    val modeStates:
+        StateFlow<VexMapsDistributionModeFamily.State>
         get() =
-            session.modeProjections
+            session.modeStates
 
     val deliveryRouteProjections:
         StateFlow<VexMapsDeliveryRouteProjection>
         get() =
             session.deliveryRouteProjections
 
-    val modeProjection:
-        VexMapsDistributionModeProjection
+    val modeState:
+        VexMapsDistributionModeFamily.State
         get() =
             session.currentMode
 

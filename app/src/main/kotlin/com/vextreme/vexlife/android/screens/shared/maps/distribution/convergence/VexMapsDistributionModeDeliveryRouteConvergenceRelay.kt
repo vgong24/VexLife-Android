@@ -5,9 +5,7 @@ import com.vextreme.vexlife.android.relay.VexCompoundState
 import com.vextreme.vexlife.android.relay.VexInputState
 import com.vextreme.vexlife.android.relay.VexOutputState
 import com.vextreme.vexlife.android.relay.vexDependencies
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeControl
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeProjection
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeState
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeFamily
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteProjection
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteState
 import kotlinx.coroutines.flow.StateFlow
@@ -26,7 +24,7 @@ import kotlinx.coroutines.flow.StateFlow
  */
 internal data class VexMapsDistributionModeDeliveryRouteInputState(
     val mode:
-        VexMapsDistributionModeProjection? =
+        VexMapsDistributionModeFamily.State? =
         null,
     val deliveryRoute:
         VexMapsDeliveryRouteProjection? =
@@ -37,10 +35,7 @@ internal data class VexMapsDistributionModeDeliveryRouteInputState(
         VexMapsDistributionModeDeliveryRouteInputState =
         copy(
             mode =
-                mode?.copy(
-                    controls =
-                        mode.controls.toMap(),
-                ),
+                mode,
             deliveryRoute =
                 deliveryRoute?.copy(
                     controls =
@@ -66,7 +61,7 @@ internal data class VexMapsDistributionModeDeliveryRouteOutput(
      * the lawful Act/Effect from its own current truth instead of Delivery Route changing Mode for it.
      */
     val requestedModeControl:
-        VexMapsDistributionModeControl? =
+        VexMapsDistributionModeFamily.Control? =
         null,
 ) :
     VexOutputState<VexMapsDistributionModeDeliveryRouteOutput> {
@@ -89,7 +84,7 @@ internal data class VexMapsDistributionModeDeliveryRouteOutput(
  *
  * This Relay observes those two independently complete truths and projects only their coherence.
  * When a non-empty Delivery Route exists while Mode is Regular, the relationship may request
- * VexMapsDistributionModeControl.UseDistribution; it does not choose Mode's Act/Effect itself.
+ * VexMapsDistributionModeFamily.Control.UseDistribution; it does not choose Mode's Act/Effect itself.
  *
  * Focused proof example:
  * VexMapsDistributionModeDeliveryRouteConvergenceRelayTest
@@ -99,8 +94,8 @@ internal data class VexMapsDistributionModeDeliveryRouteOutput(
  * full Delivery Route human walk is still separate proof debt.
  */
 internal class VexMapsDistributionModeDeliveryRouteConvergenceRelay(
-    private val modeProjections:
-        StateFlow<VexMapsDistributionModeProjection>,
+    private val modeStates:
+        StateFlow<VexMapsDistributionModeFamily.State>,
     private val deliveryRouteProjections:
         StateFlow<VexMapsDeliveryRouteProjection>,
 ) :
@@ -113,14 +108,14 @@ internal class VexMapsDistributionModeDeliveryRouteConvergenceRelay(
         initialInputState =
             VexMapsDistributionModeDeliveryRouteInputState(
                 mode =
-                    modeProjections.value,
+                    modeStates.value,
                 deliveryRoute =
                     deliveryRouteProjections.value,
             ),
         initialOutputState =
             projectModeDeliveryRoute(
                 mode =
-                    modeProjections.value,
+                    modeStates.value,
                 deliveryRoute =
                     deliveryRouteProjections.value,
             ),
@@ -133,7 +128,7 @@ internal class VexMapsDistributionModeDeliveryRouteConvergenceRelay(
                 dependencyRef =
                     "mode",
                 flow =
-                    modeProjections,
+                    modeStates,
             ) { projection ->
                 VexMapsDistributionModeDeliveryRouteInputState(
                     mode =
@@ -224,7 +219,7 @@ internal class VexMapsDistributionModeDeliveryRouteConvergenceRelay(
 
 private fun projectModeDeliveryRoute(
     mode:
-        VexMapsDistributionModeProjection,
+        VexMapsDistributionModeFamily.State,
     deliveryRoute:
         VexMapsDeliveryRouteProjection,
 ): VexMapsDistributionModeDeliveryRouteOutput {
@@ -234,15 +229,15 @@ private fun projectModeDeliveryRoute(
 
     return if (
         hasDeliveryRouteTruth &&
-        mode.state is
-            VexMapsDistributionModeState.Regular
+        mode is
+            VexMapsDistributionModeFamily.State.Regular
     ) {
         VexMapsDistributionModeDeliveryRouteOutput(
             coherence =
                 VexMapsDistributionModeDeliveryRouteCoherence
                     .NeedsDistributionMode,
             requestedModeControl =
-                VexMapsDistributionModeControl
+                VexMapsDistributionModeFamily.Control
                     .UseDistribution,
         )
     } else {
