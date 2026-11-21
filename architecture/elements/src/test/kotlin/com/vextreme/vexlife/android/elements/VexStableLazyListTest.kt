@@ -34,6 +34,58 @@ class VexStableLazyListTest {
     }
 
     @Test
+    fun stableItemRefsPreserveExistingIdentityAcrossInsertAndRemove() {
+        data class Item(
+            val ref: String,
+            val value: String,
+        )
+
+        val initial =
+            listOf(
+                Item("event.a", "A"),
+                Item("event.b", "B"),
+            )
+        val inserted =
+            listOf(
+                Item("event.a", "A changed"),
+                Item("event.c", "C"),
+                Item("event.b", "B changed"),
+            )
+        val removed =
+            listOf(
+                Item("event.c", "C changed"),
+                Item("event.b", "B changed again"),
+            )
+
+        assertEquals(
+            setOf("event.a", "event.b"),
+            stableItemRefs(initial, Item::ref),
+        )
+        assertEquals(
+            setOf("event.a", "event.b", "event.c"),
+            stableItemRefs(inserted, Item::ref),
+        )
+        assertEquals(
+            setOf("event.b", "event.c"),
+            stableItemRefs(removed, Item::ref),
+        )
+
+        assertTrue(
+            stableItemRefs(inserted, Item::ref)
+                .containsAll(
+                    stableItemRefs(initial, Item::ref),
+                ),
+        )
+        assertTrue(
+            "event.a" !in
+                stableItemRefs(
+                    removed,
+                    Item::ref,
+                ),
+        )
+    }
+
+    @Test
     fun headerOffsetsLazyPositionWithoutEnteringFeatureItemIdentity() {
         assertEquals(
             0,
