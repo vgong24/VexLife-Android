@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "vexlife-android.pr261-stable-repeater-relay-attempt/v1",
+  "continuity": "[VXG RealForever]",
+  "sourcePr": 261,
+  "attempt": "A001",
+  "disposition": "CURRENT_ANDROID_STABLE_REPEATER_SOURCEOWNER",
+  "candidate": {
+    "base": "d857a92371555472e0303b18eadf353da2a868d6",
+    "head": "04a24d6d08c0afe5d6263db4652eb1e409162fe4",
+    "tree": "5e8abdeba1f90c1e5d7287214f909d666658e5e8",
+    "branch": "VXG-112126-component-stable-repeater-proof-a001",
+    "changedPathCount": 1,
+    "changedPaths": [
+      "architecture/elements/src/test/kotlin/com/vextreme/vexlife/android/elements/VexStableLazyListTest.kt"
+    ]
+  },
+  "proofMeaning": [
+    "The production VexStableLazyColumn implementation is unchanged from accepted main.",
+    "PR #261 adds one focused test proving existing feature-owned refs remain stable across insertion and removal.",
+    "Focused VexStableLazyListTest covers reorder/insert/remove identity and existing duplicate/header/index fail-closed mechanics.",
+    "vexVerifyJvm is the repository-owned aggregate JVM proof and includes :architecture:elements:test plus foundation/source-alignment/app unit proof.",
+    "No device proof is required because this A4 claim is pure stable-identity mechanics, not lived Compose rendering or Android runtime behavior."
+  ],
+  "relay": {
+    "sdkHead": "6f8f6f50467f5df5a542713f7dc25b82db4ac8fa",
+    "sdkTree": "96795640b01f1969da980f52d5a8ec136a8c44aa",
+    "contractRef": "source.vexrelay.current-contract/v1",
+    "recipe": "ExactHeadSourceOwnerProof",
+    "hostProfile": "macos-victor",
+    "commands": [
+      ":architecture:elements:test --tests com.vextreme.vexlife.android.elements.VexStableLazyListTest",
+      "vexVerifyJvm"
+    ],
+    "hostEnvironment": [
+      "ANDROID_HOME=$HOME/Library/Android/sdk",
+      "ANDROID_SDK_ROOT=$ANDROID_HOME",
+      "JAVA_HOME=$(/usr/libexec/java_home -v 17) when available"
+    ]
+  },
+  "held": [
+    "No Android device/ADB effect.",
+    "No production source mutation.",
+    "No portable Blueprint expansion.",
+    "No READY, merge, release, or lived Product claim."
+  ],
+  "onPass": {
+    "next": "Consume both remaining Android A4 OWED proofs, then run fresh Independent Assurance on exact PR #261 head before deciding A4 terminality."
+  }
+}
