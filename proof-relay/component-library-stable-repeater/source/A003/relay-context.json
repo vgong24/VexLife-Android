@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "vexlife-android.pr261-stable-repeater-assurance-attempt/v1",
+  "continuity": "[VXG RealForever]",
+  "sourcePr": 261,
+  "relayPr": 262,
+  "attempt": "A003",
+  "disposition": "FRESH_EXACT_HEAD_INDEPENDENT_ASSURANCE_EVIDENCE",
+  "candidate": {
+    "base": "d857a92371555472e0303b18eadf353da2a868d6",
+    "head": "04a24d6d08c0afe5d6263db4652eb1e409162fe4",
+    "tree": "5e8abdeba1f90c1e5d7287214f909d666658e5e8",
+    "branch": "VXG-112126-component-stable-repeater-proof-a001",
+    "changedPathCount": 1,
+    "changedPaths": [
+      "architecture/elements/src/test/kotlin/com/vextreme/vexlife/android/elements/VexStableLazyListTest.kt"
+    ]
+  },
+  "predecessor": {
+    "attempt": "A002",
+    "sourceOwner": "PASS",
+    "outerReturnSha256": "3812d072c89cb2e36dc8ddd28436d535d3907f751cb29204ccd6e8dd6038eea4",
+    "innerReturnSha256": "14817286b43d79539ba9e7a81f9a1a144f95c53ad155afac55667bb8dd51ab54",
+    "focusedArchitectureElementsTest": "PASS",
+    "repositoryVexVerifyJvm": "PASS",
+    "exactHead": "04a24d6d08c0afe5d6263db4652eb1e409162fe4",
+    "exactTree": "5e8abdeba1f90c1e5d7287214f909d666658e5e8"
+  },
+  "assuranceQuestions": [
+    "Does #261 change only test/proof source while production VexStableLazyColumn remains byte-identical to accepted main?",
+    "Do feature-owned stable refs remain the semantic item identity across reorder, insert and remove?",
+    "Does visual/list position remain non-authoritative?",
+    "Does Compose remain Android target realization rather than portable semantic owner?",
+    "Does the new regression strengthen only the already-accepted Stable Repeated Items relationship rather than minting new portable law?",
+    "Are device/ADB and lived rendering correctly held because this claim is pure identity-helper/repository proof?"
+  ],
+  "a4CompletionQuestion": {
+    "remainingExecutableOwed": 0,
+    "intentionalHeld": [
+      "proof.vexstream-lens-self-currentness on Stable Repeater",
+      "proof.vexstream-lens-self-currentness on Frame/Region"
+    ],
+    "question": "If #261 is CLEAR_ON_EXACT_HEAD, may A4 be terminal with those two HELDs preserved because VexStream Lens currentness is externally bound by VexBoard rather than self-owned?"
+  },
+  "held": [
+    "No source mutation.",
+    "No inherited semantic CLEAR from SourceOwner.",
+    "No Android device/ADB effect.",
+    "No portable Blueprint expansion.",
+    "No READY, merge, release or lived Product claim."
+  ],
+  "relay": {
+    "sdkHead": "6f8f6f50467f5df5a542713f7dc25b82db4ac8fa",
+    "sdkTree": "96795640b01f1969da980f52d5a8ec136a8c44aa",
+    "contractRef": "source.vexrelay.current-contract/v1",
+    "recipe": "IndependentAssurance",
+    "stageGate": "INDEPENDENT_ASSURANCE_EVIDENCE",
+    "hostProfile": "macos-victor",
+    "maxFiles": 1,
+    "platformGitHubRead": "UNAVAILABLE",
+    "providerRead": "GITHUB_GH"
+  },
+  "onPass": {
+    "next": "F13 semantic Assurance judgment on exact #261 head; if CLEAR, determine A4 terminality with the two intentional VexStream HELDs preserved."
+  }
+}
