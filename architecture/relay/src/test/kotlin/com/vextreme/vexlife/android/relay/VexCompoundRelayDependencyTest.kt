@@ -32,7 +32,7 @@ class VexCompoundRelayDependencyTest {
         initialOutputState = DependencyOutput(),
     ) {
         override fun dependencies() =
-            vexDependencies<DependencyInput> {
+            vexObserveDependencies<DependencyInput> {
                 observe(
                     dependencyRef = "left",
                     flow = left,

@@ -5,7 +5,7 @@ import com.vextreme.vexlife.android.relay.VexCompoundState
 import com.vextreme.vexlife.android.relay.VexDeepCopyable
 import com.vextreme.vexlife.android.relay.VexInputState
 import com.vextreme.vexlife.android.relay.VexOutputState
-import com.vextreme.vexlife.android.relay.vexDependencies
+import com.vextreme.vexlife.android.relay.vexObserveDependencies
 
 /**
  * Distinguishes an effective Conversation input from the place its current value came from.
@@ -163,7 +163,7 @@ internal class VexConversationHybridRelay(
     )
 
     override fun dependencies() =
-        vexDependencies<VexConversationHybridInputState> {
+        vexObserveDependencies<VexConversationHybridInputState> {
             conversationRepository?.let { repository ->
                 observe(
                     dependencyRef =
