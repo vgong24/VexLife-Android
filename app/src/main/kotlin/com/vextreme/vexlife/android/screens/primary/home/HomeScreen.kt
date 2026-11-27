@@ -54,6 +54,7 @@ import com.vextreme.vexlife.android.screens.shared.maps.rememberVexNavigationGla
 import com.vextreme.vexlife.android.screens.shared.vex.TalkToVexScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
 import com.vextreme.vexlife.android.shell.VexNowFeature
+import com.vextreme.vexlife.android.shell.VexLiveDot
 import com.vextreme.vexlife.android.shell.VexNowGlyph
 import com.vextreme.vexlife.android.shell.VexPresenceOrb
 import com.vextreme.vexlife.android.shell.accent
@@ -325,6 +326,7 @@ private fun HomeNowCard(
     element: ColumnElement,
     feature: VexNowFeature,
     eyebrow: String,
+    live: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     VexContainer(
@@ -345,6 +347,11 @@ private fun HomeNowCard(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (live) {
+                VexLiveDot(
+                    feature = feature,
+                )
+            }
         }
         content()
     }
@@ -364,6 +371,7 @@ private fun HomeListeningCard(
     HomeNowCard(
         element = HomeScreen.VexStreamSection,
         feature = VexNowFeature.Music,
+        live = nowPlaying?.let { it.playRequested && !it.ended } == true,
         eyebrow =
             stringResource(
                 if (nowPlaying != null) {
@@ -483,6 +491,7 @@ private fun HomeJourneyCard(
     HomeNowCard(
         element = HomeScreen.JourneySection,
         feature = VexNowFeature.Navigation,
+        live = navigation != null,
         eyebrow = stringResource(R.string.home_journey_eyebrow),
     ) {
         if (navigation == null) {

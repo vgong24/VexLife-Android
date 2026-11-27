@@ -1,5 +1,10 @@
 package com.vextreme.vexlife.android.ui
 
+import com.vextreme.vexlife.android.ui.look.LocalVexLook
+import com.vextreme.vexlife.android.ui.look.VexLookPreference
+import com.vextreme.vexlife.android.ui.look.rememberVexLook
+import com.vextreme.vexlife.android.ui.look.spec
+import com.vextreme.vexlife.android.ui.look.typography
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -16,6 +21,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -145,27 +151,6 @@ internal fun currentVexThemePresentation():
     VexThemePresentation =
     LocalVexThemePresentation.current
 
-private val VexTypography = Typography(
-    headlineLarge = TextStyle(
-        fontFamily = FontFamily.Serif,
-        fontWeight = FontWeight.Bold,
-        fontSize = 30.sp,
-        lineHeight = 34.sp,
-    ),
-    headlineMedium = TextStyle(
-        fontFamily = FontFamily.Serif,
-        fontWeight = FontWeight.Bold,
-        fontSize = 24.sp,
-        lineHeight = 28.sp,
-    ),
-    labelSmall = TextStyle(
-        fontFamily = FontFamily.Monospace,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 10.sp,
-        letterSpacing = 0.8.sp,
-    ),
-)
-
 /**
  * App theme owns both Compose colors and the matching Android system-bar appearance.
  *
@@ -182,6 +167,8 @@ internal fun VexLifeTheme(
         themeModeFamily
             .states
             .collectAsState()
+    val look =
+        rememberVexLook()
 
     VexLifeTheme(
         presentation =
@@ -190,6 +177,9 @@ internal fun VexLifeTheme(
                     currentState,
                 )
                 .presentation,
+        look =
+            look?.preference
+                ?: VexLookPreference(),
         content = content,
     )
 }
@@ -197,16 +187,39 @@ internal fun VexLifeTheme(
 @Composable
 internal fun VexLifeTheme(
     presentation: VexThemePresentation,
+    // ThemeMode decides light vs dark; the Look decides palette, display face, shape and ambient.
+    look: VexLookPreference = VexLookPreference(),
     content: @Composable () -> Unit,
 ) {
+    val spec =
+        remember(look.choice) {
+            look.choice.spec()
+        }
+    val dark =
+        !presentation.lightSystemBars
+    val colorScheme =
+        remember(spec, dark) {
+            spec.colorScheme(dark)
+        }
+    val typography =
+        remember(spec) {
+            spec.typography()
+        }
+    val shapes =
+        remember(spec) {
+            spec.shapes()
+        }
+
     MaterialTheme(
-        colorScheme =
-            presentation.materialColorScheme,
-        typography = VexTypography,
+        colorScheme = colorScheme,
+        typography = typography,
+        shapes = shapes,
     ) {
         CompositionLocalProvider(
             LocalVexThemePresentation provides
                 presentation,
+            LocalVexLook provides
+                look,
         ) {
             val view = LocalView.current
 

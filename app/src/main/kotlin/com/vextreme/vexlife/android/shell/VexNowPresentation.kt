@@ -1,5 +1,10 @@
 package com.vextreme.vexlife.android.shell
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -22,6 +27,8 @@ import com.vextreme.vexlife.android.conversation.VexConversationGlance
 import com.vextreme.vexlife.android.elements.ElementIcon
 import com.vextreme.vexlife.android.elements.VexIcon
 import com.vextreme.vexlife.android.screens.shared.maps.VexNavigationGlance
+import com.vextreme.vexlife.android.ui.look.LocalVexLook
+import com.vextreme.vexlife.android.ui.look.VexMotion
 import com.vextreme.vexlife.android.screens.shared.maps.VexNavigationSessionPhase
 import com.vextreme.vexlife.android.vexstream.VexStreamNowPlaying
 import java.util.Locale
@@ -335,8 +342,8 @@ internal fun VexConversationGlance.latestLine(): String? {
 
 /**
  * Vex's presence mark: an orb in the same accent family as the feature glyphs (Music -> Navigation),
- * because Vex spans them. Dimmed with a hollow core while Vex is not connected; a solid core is
- * reserved for a connected, attentive Vex.
+ * because Vex spans them. A soft halo breathes around it under Lively motion. Dimmed with a hollow
+ * core while Vex is not connected; a solid core is reserved for a connected, attentive Vex.
  */
 @Composable
 internal fun VexPresenceOrb(
@@ -345,46 +352,133 @@ internal fun VexPresenceOrb(
     val colors =
         MaterialTheme.colorScheme
     val strength =
-        if (connected) 1f else 0.7f
+        if (connected) 1f else 0.72f
+    val breath =
+        rememberVexBreath(
+            periodMs = 3_600,
+        )
+
     Box(
-        modifier = Modifier
-            .size(48.dp)
-            .background(
-                brush = Brush.linearGradient(
-                    listOf(
-                        colors.primaryContainer.copy(alpha = strength),
-                        colors.tertiaryContainer.copy(alpha = strength),
+        modifier = Modifier.size(56.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        // Halo: the orb's light, breathing.
+        Box(
+            modifier = Modifier
+                .size((48 + 8 * breath).dp)
+                .background(
+                    brush = Brush.radialGradient(
+                        listOf(
+                            colors.primary.copy(alpha = 0.30f - 0.12f * breath),
+                            Color.Transparent,
+                        ),
                     ),
+                    shape = CircleShape,
                 ),
-                shape = CircleShape,
+        )
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .background(
+                    brush = Brush.linearGradient(
+                        listOf(
+                            colors.primaryContainer.copy(alpha = strength),
+                            colors.tertiaryContainer.copy(alpha = strength),
+                        ),
+                    ),
+                    shape = CircleShape,
+                )
+                .border(
+                    width = 1.dp,
+                    color = colors.onPrimaryContainer.copy(alpha = 0.35f),
+                    shape = CircleShape,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                modifier =
+                    if (connected) {
+                        Modifier
+                            .size(13.dp)
+                            .background(
+                                color = colors.onPrimaryContainer,
+                                shape = CircleShape,
+                            )
+                    } else {
+                        Modifier
+                            .size(13.dp)
+                            .border(
+                                width = 2.dp,
+                                color = colors.onPrimaryContainer.copy(alpha = 0.8f),
+                                shape = CircleShape,
+                            )
+                    },
             )
-            .border(
-                width = 1.dp,
-                color = colors.onPrimaryContainer.copy(alpha = 0.35f),
-                shape = CircleShape,
-            ),
+        }
+    }
+}
+
+/** A small pulsing dot that says "this is live right now". Still under Calm motion. */
+@Composable
+internal fun VexLiveDot(
+    feature: VexNowFeature,
+) {
+    val breath =
+        rememberVexBreath(
+            periodMs = 1_400,
+        )
+    val accent =
+        feature.accent()
+
+    Box(
+        modifier = Modifier.size(14.dp),
         contentAlignment = Alignment.Center,
     ) {
         Box(
-            modifier =
-                if (connected) {
-                    Modifier
-                        .size(14.dp)
-                        .background(
-                            color = colors.onPrimaryContainer,
-                            shape = CircleShape,
-                        )
-                } else {
-                    Modifier
-                        .size(14.dp)
-                        .border(
-                            width = 2.dp,
-                            color = colors.onPrimaryContainer.copy(alpha = 0.8f),
-                            shape = CircleShape,
-                        )
-                },
+            modifier = Modifier
+                .size((8 + 6 * breath).dp)
+                .background(
+                    color = accent.content.copy(alpha = 0.35f * (1f - breath)),
+                    shape = CircleShape,
+                ),
+        )
+        Box(
+            modifier = Modifier
+                .size(7.dp)
+                .background(
+                    color = accent.content,
+                    shape = CircleShape,
+                ),
         )
     }
+}
+
+/**
+ * One 0..1 breathing value. Lively motion animates it; Calm holds it still at rest, so nothing on
+ * screen moves on its own.
+ */
+@Composable
+internal fun rememberVexBreath(
+    periodMs: Int,
+): Float {
+    if (LocalVexLook.current.motion != VexMotion.Lively) {
+        return 0f
+    }
+    val transition =
+        rememberInfiniteTransition(
+            label = "vex-breath",
+        )
+
+    return transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(periodMs),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "vex-breath-value",
+    ).value
 }
 
 // [VXG RealForever][SHELL][NOW][PRESENTATION]

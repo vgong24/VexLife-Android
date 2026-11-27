@@ -19,6 +19,9 @@ import com.vextreme.vexlife.android.vexstream.repeat.observeVexStreamRepeatPlaye
 import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.ui.SharedPreferencesThemeModeStore
 import com.vextreme.vexlife.android.ui.ThemeModeStore
+import com.vextreme.vexlife.android.ui.look.SharedPreferencesVexLookStore
+import com.vextreme.vexlife.android.ui.look.VexLookFamily
+import com.vextreme.vexlife.android.ui.look.observeVexLookStore
 
 /**
  * Android process-lifetime composition root.
@@ -207,6 +210,53 @@ internal class VexApplicationDependencyModule(
                 }
         }
 
+    /*
+     * Appearance preference (Look / Motion / Ambient). Process lifetime: the same Look applies to
+     * every session and, later, to process-owned surfaces such as widgets.
+     */
+    val lookStore =
+        VexDependencyProvider.named(
+            readableName =
+                "VexLife Look Store",
+            dependencies =
+                listOf(
+                    androidApplication,
+                ),
+        ) { dependencies ->
+            SharedPreferencesVexLookStore(
+                dependencies.require(
+                    androidApplication,
+                ),
+            )
+        }
+
+    val lookFamily =
+        VexDependencyProvider.named(
+            readableName =
+                "VexLife Look Family",
+            dependencies =
+                listOf(
+                    lookStore,
+                    processExecutionRoot,
+                ),
+        ) { dependencies ->
+            VexLookFamily()
+                .also { family ->
+                    observeVexLookStore(
+                        family =
+                            family,
+                        store =
+                            dependencies.require(
+                                lookStore,
+                            ),
+                        executionRoot =
+                            dependencies.require(
+                                processExecutionRoot,
+                            ),
+                    )
+                }
+        }
+
     val module:
         VexDependencyModule =
         VexDependencyModule.of(
@@ -219,6 +269,8 @@ internal class VexApplicationDependencyModule(
             playbackFamily,
             queueFamily,
             repeatFamily,
+            lookStore,
+            lookFamily,
         )
 
     internal class AndroidApplicationProvider(

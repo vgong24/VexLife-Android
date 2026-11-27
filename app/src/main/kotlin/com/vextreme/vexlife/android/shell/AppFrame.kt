@@ -12,6 +12,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import com.vextreme.vexlife.android.ui.look.VexAmbientField
+import com.vextreme.vexlife.android.ui.look.VexAmbientLiveness
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.testTag
 import com.vextreme.vexlife.android.elements.ButtonElement
@@ -30,7 +33,7 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
  * - [runtime.currentScreen] tells you which screen should currently occupy the viewport.
  */
 @Composable
-fun AppFrame(
+internal fun AppFrame(
     runtime: VexRuntime,
     toolbarActions: List<ButtonElement> = emptyList(),
     // App-wide Now strip slot. Live by default; preview/screenshot fixtures pass their own.
@@ -39,6 +42,8 @@ fun AppFrame(
             runtime = runtime,
         )
     },
+    // Ambient light input. Null reads live glances; preview/screenshot fixtures pass their own.
+    ambientLiveness: VexAmbientLiveness? = null,
     content: @Composable () -> Unit,
 ) {
     // One resolved Back plan drives both Android native Back and the toolbar affordance below.
@@ -52,6 +57,16 @@ fun AppFrame(
         }
     }
 
+    val liveAmbient =
+        rememberVexAmbientLiveness()
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        // Behind everything, including system bars: VexLife's ambient light.
+        VexAmbientField(
+            liveness = ambientLiveness ?: liveAmbient,
+        )
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -59,7 +74,7 @@ fun AppFrame(
     ) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
-            containerColor = MaterialTheme.colorScheme.background,
+            containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             topBar = {
                 VexAppToolBar(
@@ -95,5 +110,6 @@ fun AppFrame(
                 content()
             }
         }
+    }
     }
 }

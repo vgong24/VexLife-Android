@@ -66,8 +66,6 @@
     <string name="events_attention_expected_suspend_short">Expected: row stays and moves to the current-queue tail.</string>
     <string name="events_attention_expected_suppress_short">Expected: row stays and leaves proactive attention for this lab.</string>
     <string name="events_attention_expected_blocking_short">Expected: Acknowledge releases the locked list and reveals provider updates accumulated underneath.</string>
-    <string name="settings_preview_title">Settings preview</string>
-    <string name="settings_preview_body">Future home for preferences, device posture, and user-controlled configuration. This is placeholder content for the first navigation practicum.</string>
 
     <string name="nav_home">Home</string>
     <string name="nav_events">Events</string>
@@ -472,4 +470,33 @@
     <string name="talk_to_vex_lens_owner_family">from Family Conversation</string>
     <string name="talk_to_vex_lens_owner_screen">from the app runtime</string>
     <string name="talk_to_vex_composer_hint">Ask Vex… (available once Vex is connected)</string>
+
+    <!-- Looks: VexLife's customizable personality layer -->
+    <string name="look_nocturne">Nocturne</string>
+    <string name="look_nocturne_mood">Ink and violet. Calm, focused, after dark.</string>
+    <string name="look_aurora">Aurora</string>
+    <string name="look_aurora_mood">Midnight teal with mint and violet light.</string>
+    <string name="look_ember">Ember</string>
+    <string name="look_ember_mood">Warm charcoal, amber and rose. Evening light.</string>
+    <string name="look_tide">Tide</string>
+    <string name="look_tide_mood">Deep ocean blues with sea glass and sand.</string>
+    <string name="look_paper">Paper</string>
+    <string name="look_paper_mood">Ink on warm paper, one vermilion mark.</string>
+    <string name="look_custom">Your color</string>
+    <string name="look_custom_mood">A whole palette grown from one hue you pick.</string>
+
+    <string name="appearance_title">Make it yours</string>
+    <string name="appearance_subtitle">Choose how VexLife looks and moves. Every feature follows your choice.</string>
+    <string name="appearance_look">Look</string>
+    <string name="appearance_choose_look">Choose this look</string>
+    <string name="appearance_your_color">Your color</string>
+    <string name="appearance_choose_hue">Choose this color</string>
+    <string name="appearance_motion">Motion</string>
+    <string name="appearance_motion_lively">Lively</string>
+    <string name="appearance_motion_lively_body">Ambient light drifts and Vex breathes.</string>
+    <string name="appearance_motion_calm">Calm</string>
+    <string name="appearance_motion_calm_body">Nothing moves on its own.</string>
+    <string name="appearance_ambient">Ambient light</string>
+    <string name="appearance_ambient_body">A soft glow that warms when music plays and shifts while you navigate.</string>
+    <string name="appearance_saved_note">Saved on this phone. Light or dark still follows your theme mode.</string>
 </resources>
