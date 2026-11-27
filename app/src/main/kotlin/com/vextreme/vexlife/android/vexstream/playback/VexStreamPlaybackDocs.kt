@@ -34,6 +34,15 @@ package com.vextreme.vexlife.android.vexstream.playback
  * -> later outside Player observation
  * -> Family State
  *
+ * ## Toggle versus directional intent
+ *
+ * [VexStreamPlaybackControl.PlayPause] is the human toggle: the listener sees current Playback before
+ * acting. [VexStreamPlaybackControl.Play] and [VexStreamPlaybackControl.Pause] are directional intent
+ * for callers that may have formed the request against older perception (a spoken/typed Vex request
+ * or a future system surface). Already-satisfied directional intent authors no Act instead of being
+ * inverted. All three share one Control class, and therefore one Latest relationship, so a newer human
+ * tap supersedes an older Vex request before realization.
+ *
  * [VexStreamPlaybackPending] documents the feature-local reconciliation law. Accepted intent is
  * visible immediately; stale outside truth cannot erase it. Realization failure may roll back only
  * the exact still-current accepted occurrence.

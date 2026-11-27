@@ -16,6 +16,11 @@ package com.vextreme.vexlife.android.vexstream.repeat
  * provider already changed. Later outside Player Repeat Signal returns through the shared Player
  * Store and [VexStreamRepeatFamily.observeStore].
  *
+ * [VexStreamRepeatControl.Enable] / [VexStreamRepeatControl.Disable] are directional intent for
+ * callers that may have formed the request against older perception ("repeat on"). Already-satisfied
+ * directional intent authors no Act. All three commands share one Control class and therefore one
+ * Latest relationship with the human Toggle.
+ *
  * Concrete finite requests use
  * com.vextreme.vexlife.android.vexstream.player.Media3ControllerConnection, which re-checks current
  * Media3 command capability at dispatch. [VexStreamRepeatExperience] is only the Compose membrane.

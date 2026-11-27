@@ -41,9 +41,12 @@ internal class VexStreamRepeatFamily(
         ):
             Boolean =
             when (
-                control
+                control.command
             ) {
-                VexStreamRepeatControl.Toggle ->
+                VexStreamRepeatControl.Command.Toggle,
+                VexStreamRepeatControl.Command.Enable,
+                VexStreamRepeatControl.Command.Disable,
+                ->
                     toggleAvailable
             }
     }
@@ -60,32 +63,49 @@ internal class VexStreamRepeatFamily(
             VexStreamRepeatEffect
         >? =
         when (
-            control
+            currentState
         ) {
-            VexStreamRepeatControl.Toggle ->
+            is VexStreamRepeatState.Disabled ->
                 when (
-                    currentState
+                    control.command
                 ) {
-                    is VexStreamRepeatState.Disabled ->
+                    VexStreamRepeatControl.Command.Toggle,
+                    VexStreamRepeatControl.Command.Enable,
+                    ->
                         VexStreamRepeatEffect.RequestEnableAll
-                            .takeIf {
-                                currentState.toggleAvailable
-                            }
 
-                    is VexStreamRepeatState.Enabled ->
-                        VexStreamRepeatEffect.RequestDisable
-                            .takeIf {
-                                currentState.toggleAvailable
-                            }
+                    // Already satisfied.
+                    VexStreamRepeatControl.Command.Disable ->
+                        null
                 }
-                    ?.let { effect ->
-                        stay(
-                            beginLatest(
-                                effect,
-                            ),
-                        )
+                    ?.takeIf {
+                        currentState.toggleAvailable
+                    }
+
+            is VexStreamRepeatState.Enabled ->
+                when (
+                    control.command
+                ) {
+                    VexStreamRepeatControl.Command.Toggle,
+                    VexStreamRepeatControl.Command.Disable,
+                    ->
+                        VexStreamRepeatEffect.RequestDisable
+
+                    // Already satisfied.
+                    VexStreamRepeatControl.Command.Enable ->
+                        null
+                }
+                    ?.takeIf {
+                        currentState.toggleAvailable
                     }
         }
+            ?.let { effect ->
+                stay(
+                    beginLatest(
+                        effect,
+                    ),
+                )
+            }
 
     internal fun observeStore(
         repeat:
