@@ -150,6 +150,8 @@ internal fun VexPreviewHost(
     startScreen: ScreenBlueprint,
     repositoriesFactory: () -> AppRepositories = VexPreviewRepositories::empty,
     previewSetup: VexPreviewSetup.() -> Unit = {},
+    // Fixture Now strip for screenshot cases; null keeps the live (inspection-safe) strip host.
+    nowStrip: (@Composable (VexRuntime) -> Unit)? = null,
     content: @Composable (VexPreviewContext) -> Unit,
 ) {
     val themePresentation =
@@ -202,12 +204,27 @@ internal fun VexPreviewHost(
                 context.runtime.currentScreen.screenId,
             )
 
-        AppFrame(
-            runtime = context.runtime,
-            toolbarActions =
-                currentScreenBlueprint.toolbarActions,
-        ) {
-            content(context)
+        if (nowStrip == null) {
+            AppFrame(
+                runtime = context.runtime,
+                toolbarActions =
+                    currentScreenBlueprint.toolbarActions,
+            ) {
+                content(context)
+            }
+        } else {
+            AppFrame(
+                runtime = context.runtime,
+                toolbarActions =
+                    currentScreenBlueprint.toolbarActions,
+                nowStrip = {
+                    nowStrip(
+                        context.runtime,
+                    )
+                },
+            ) {
+                content(context)
+            }
         }
     }
 }

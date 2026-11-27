@@ -58,7 +58,7 @@ object Journeys {
     }
 
     object talkToVex : JourneyDomain() {
-        val placeholder = JourneyPath()
+        val contextLens = JourneyPath()
     }
 }
 
@@ -142,8 +142,8 @@ private val journeyDomainBindings: List<JourneyDomainBinding> =
             domain = Journeys.talkToVex,
             shard = TalkToVexJourneys,
             paths = mapOf(
-                Journeys.talkToVex.placeholder to
-                    TalkToVexJourneys.placeholder,
+                Journeys.talkToVex.contextLens to
+                    TalkToVexJourneys.contextLens,
             ),
         ),
     )

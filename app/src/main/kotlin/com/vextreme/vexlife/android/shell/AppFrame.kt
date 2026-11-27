@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.shell
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -32,6 +33,12 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 fun AppFrame(
     runtime: VexRuntime,
     toolbarActions: List<ButtonElement> = emptyList(),
+    // App-wide Now strip slot. Live by default; preview/screenshot fixtures pass their own.
+    nowStrip: @Composable () -> Unit = {
+        VexNowStripHost(
+            runtime = runtime,
+        )
+    },
     content: @Composable () -> Unit,
 ) {
     // One resolved Back plan drives both Android native Back and the toolbar affordance below.
@@ -63,11 +70,14 @@ fun AppFrame(
                 )
             },
             bottomBar = {
-                if (runtime.isPrimary()) {
-                    PrimaryBottomNavigation(
-                        currentScreen = runtime.currentScreen,
-                        runtime = runtime,
-                    )
+                Column {
+                    nowStrip()
+                    if (runtime.isPrimary()) {
+                        PrimaryBottomNavigation(
+                            currentScreen = runtime.currentScreen,
+                            runtime = runtime,
+                        )
+                    }
                 }
             },
             floatingActionButton = {

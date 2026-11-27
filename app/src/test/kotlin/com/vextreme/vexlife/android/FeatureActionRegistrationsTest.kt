@@ -10,6 +10,7 @@ import com.vextreme.vexlife.android.data.maps.distribution.InMemoryVexMapsDistri
 import com.vextreme.vexlife.android.data.userprofile.InMemoryUserProfileRepository
 import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.shared.vex.TalkToVexScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
@@ -66,11 +67,12 @@ class FeatureActionRegistrationsTest {
                 registrations[VexStreamMusicScreen.TogglePlayback]
                     .isEmpty(),
             )
-            assertEquals(
-                TalkToVexScreen.screenId,
-                registrations[TalkToVexScreen.PlaceholderAction]
-                    .single()
-                    .ownerRef,
+            // Talk to Vex is a read-only context lens with no Invoke owner until a real Vex session exists.
+            assertTrue(
+                AppScreens.registry
+                    .elementsForScreen(TalkToVexScreen)
+                    .filterIsInstance<com.vextreme.vexlife.android.elements.ActionElement>()
+                    .none { registrations[it].isNotEmpty() },
             )
         } finally {
             executionRoot.forceStopAll()
