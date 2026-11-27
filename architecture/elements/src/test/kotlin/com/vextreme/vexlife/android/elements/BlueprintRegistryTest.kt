@@ -18,6 +18,10 @@ class BlueprintRegistryTest {
     private object HomeRoot : ColumnElement("element.home.root")
     private object HomeBody : ScrollableColumnElement("element.home.body")
     private object HomeText : TextElement("element.home.preview", 4)
+    private object HomeRuntimeText : TextElement(
+        elementId = "element.home.runtime-status",
+        role = TextRole.Supporting,
+    )
     private object HomeToolbarAction : ButtonElement(
         elementId = "element.home.toolbar-action",
         labelRes = 6,
@@ -55,6 +59,7 @@ class BlueprintRegistryTest {
                         column(HomeRoot) {
                             scrollableColumn(HomeBody) {
                                 text(HomeText)
+                                text(HomeRuntimeText)
                             }
                         },
                     ),
@@ -66,6 +71,11 @@ class BlueprintRegistryTest {
         assertNull(registry.ownerScreenOf(ShellButton))
         assertEquals(Home, registry.ownerScreenOf(HomeText))
         assertEquals(HomeBody, registry.parentOf(HomeText))
+        assertEquals(Home, registry.ownerScreenOf(HomeRuntimeText))
+        assertEquals(HomeBody, registry.parentOf(HomeRuntimeText))
+        assertEquals("Text", HomeRuntimeText.kind)
+        assertNull(HomeRuntimeText.textRes)
+        assertNull(HomeRuntimeText.labelRes)
         assertEquals(listOf(Help), registry.navigationTargetsFrom(listOf(ShellButton)))
     }
 

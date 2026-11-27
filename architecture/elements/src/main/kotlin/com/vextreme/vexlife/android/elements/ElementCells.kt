@@ -55,8 +55,11 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 fun interface ElementActionHandler {
@@ -64,43 +67,114 @@ fun interface ElementActionHandler {
 }
 
 /**
- * Registered TextElement realization through the Vex Compose front door.
+ * Registered Android-resource realization of one [TextElement] identity.
+ *
+ * The element owns stable semantic identity / role / style. [TextElement.textRes] is the Android
+ * target-resource mapping used by this overload; it is not the portable content Origin.
+ *
+ * This signature intentionally remains source-compatible with the established VexText API.
  */
 @Composable
 fun VexText(
     element: TextElement,
     modifier: Modifier = VexModifier,
+    style: TextStyle? = null,
+    color: Color = Color.Unspecified,
+    maxLines: Int = Int.MAX_VALUE,
+    overflow: TextOverflow = TextOverflow.Clip,
+) {
+    val textRes =
+        requireNotNull(element.textRes) {
+            "${element.elementId} requires an Android text resource mapping or supplied text value"
+        }
+    VexTextContent(
+        element = element,
+        text = stringResource(textRes),
+        role = element.role,
+        modifier = modifier,
+        style = style,
+        color = color,
+        maxLines = maxLines,
+        overflow = overflow,
+    )
+}
+
+/**
+ * Runtime-bound realization of the same [TextElement] identity.
+ *
+ * [text] is the current value supplied by the rightful Screen/domain projection. Value source is a
+ * binding/realization concern; it does not create another semantic element type.
+ */
+@Composable
+fun VexText(
+    element: TextElement,
+    text: String,
+    modifier: Modifier = VexModifier,
+    style: TextStyle? = null,
+    color: Color = Color.Unspecified,
+    maxLines: Int = Int.MAX_VALUE,
+    overflow: TextOverflow = TextOverflow.Clip,
+) {
+    VexTextContent(
+        element = element,
+        text = text,
+        role = element.role,
+        modifier = modifier,
+        style = style,
+        color = color,
+        maxLines = maxLines,
+        overflow = overflow,
+    )
+}
+
+@Composable
+private fun VexTextContent(
+    element: UIElement,
+    text: String,
+    role: TextRole,
+    modifier: Modifier,
+    style: TextStyle?,
+    color: Color,
+    maxLines: Int,
+    overflow: TextOverflow,
 ) {
     Text(
-        text = stringResource(element.textRes),
+        text = text,
         modifier =
             modifier.vex(
                 element,
             ),
         style =
-            when (element.role) {
-                TextRole.Title ->
-                    MaterialTheme.typography.headlineMedium
+            style
+                ?: when (role) {
+                    TextRole.Title ->
+                        MaterialTheme.typography.headlineMedium
 
-                TextRole.Body ->
-                    MaterialTheme.typography.bodyLarge
+                    TextRole.Body ->
+                        MaterialTheme.typography.bodyLarge
 
-                TextRole.Supporting ->
-                    MaterialTheme.typography.bodyMedium
+                    TextRole.Supporting ->
+                        MaterialTheme.typography.bodyMedium
 
-                TextRole.Label ->
-                    MaterialTheme.typography.labelSmall
-            },
+                    TextRole.Label ->
+                        MaterialTheme.typography.labelSmall
+                },
         color =
-            when (element.role) {
-                TextRole.Supporting,
-                TextRole.Label,
-                ->
-                    MaterialTheme.colorScheme.onSurfaceVariant
+            if (color != Color.Unspecified) {
+                color
+            } else {
+                when (role) {
+                    TextRole.Supporting,
+                    TextRole.Label,
+                    ->
+                        MaterialTheme.colorScheme.onSurfaceVariant
 
-                else ->
-                    MaterialTheme.colorScheme.onSurface
+                    else ->
+                        MaterialTheme.colorScheme.onSurface
+                }
             },
+        maxLines = maxLines,
+        overflow = overflow,
     )
 }
 
@@ -448,6 +522,7 @@ fun VexElementTree(
     textFieldValue: (TextFieldElement) -> String = { "" },
     onTextFieldValueChange: (TextFieldElement, String) -> Unit = { _, _ -> },
     selectedChild: (SwappableContainerElement) -> UIElement = { it.defaultChild },
+    textValue: (TextElement) -> String? = { null },
 ) {
     val element = placement.element
     val style = registry.styleOf(element)
@@ -468,6 +543,7 @@ fun VexElementTree(
                     handler = handler,
                     modifier = modifier,
                     toggleChecked = toggleChecked,
+                    textValue = textValue,
                     textFieldValue = textFieldValue,
                     onTextFieldValueChange = onTextFieldValueChange,
                     selectedChild = selectedChild,
@@ -484,6 +560,7 @@ fun VexElementTree(
                 registry,
                 handler,
                 toggleChecked,
+                textValue,
                 textFieldValue,
                 onTextFieldValueChange,
                 selectedChild,
@@ -500,6 +577,7 @@ fun VexElementTree(
                 registry,
                 handler,
                 toggleChecked,
+                textValue,
                 textFieldValue,
                 onTextFieldValueChange,
                 selectedChild,
@@ -515,6 +593,7 @@ fun VexElementTree(
                 registry,
                 handler,
                 toggleChecked,
+                textValue,
                 textFieldValue,
                 onTextFieldValueChange,
                 selectedChild,
@@ -531,6 +610,7 @@ fun VexElementTree(
                     registry,
                     handler,
                     toggleChecked = toggleChecked,
+                    textValue = textValue,
                     textFieldValue = textFieldValue,
                     onTextFieldValueChange = onTextFieldValueChange,
                     selectedChild = selectedChild,
@@ -547,6 +627,7 @@ fun VexElementTree(
                     registry,
                     handler,
                     toggleChecked = toggleChecked,
+                    textValue = textValue,
                     textFieldValue = textFieldValue,
                     onTextFieldValueChange = onTextFieldValueChange,
                     selectedChild = selectedChild,
@@ -584,10 +665,21 @@ fun VexElementTree(
             modifier = modifier,
         )
 
-        is TextElement -> VexText(
-            element = element,
-            modifier = modifier,
-        )
+        is TextElement -> {
+            val currentValue = textValue(element)
+            if (currentValue != null) {
+                VexText(
+                    element = element,
+                    text = currentValue,
+                    modifier = modifier,
+                )
+            } else {
+                VexText(
+                    element = element,
+                    modifier = modifier,
+                )
+            }
+        }
 
         is ImageElement -> Unit
 
@@ -601,6 +693,7 @@ fun VexElementTree(
                 registry,
                 handler,
                 toggleChecked,
+                textValue,
                 textFieldValue,
                 onTextFieldValueChange,
                 selectedChild,
@@ -615,6 +708,7 @@ private fun ColumnScope.RenderChildren(
     registry: UIBlueprintRegistry,
     handler: ElementActionHandler,
     toggleChecked: (ToggleElement) -> Boolean,
+    textValue: (TextElement) -> String?,
     textFieldValue: (TextFieldElement) -> String,
     onTextFieldValueChange: (TextFieldElement, String) -> Unit,
     selectedChild: (SwappableContainerElement) -> UIElement,
@@ -625,6 +719,7 @@ private fun ColumnScope.RenderChildren(
             registry = registry,
             handler = handler,
             toggleChecked = toggleChecked,
+            textValue = textValue,
             textFieldValue = textFieldValue,
             onTextFieldValueChange = onTextFieldValueChange,
             selectedChild = selectedChild,
