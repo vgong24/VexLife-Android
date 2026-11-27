@@ -50,7 +50,10 @@ import com.vextreme.vexlife.android.elements.VexIconButton
 import com.vextreme.vexlife.android.elements.close
 import com.vextreme.vexlife.android.elements.column
 import com.vextreme.vexlife.android.elements.navigateBack
+import com.vextreme.vexlife.android.elements.localEffect
 import com.vextreme.vexlife.android.elements.navigateTo
+import com.vextreme.vexlife.android.screens.shared.maps.VexMapsScreen
+import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
 import com.vextreme.vexlife.android.elements.then
 import com.vextreme.vexlife.android.elements.toggle
 import com.vextreme.vexlife.android.elements.vexElement
@@ -113,6 +116,38 @@ object AppShell {
             intent = navigateTo(SettingsScreen),
         )
 
+        /*
+         * App-wide Now strip: compact glances of independently owned current truth (what is
+         * playing, where the journey is going) shown on every Screen except the one that owns
+         * that truth. The strip composes projections; it never owns playback or navigation.
+         */
+        object NowStrip : ColumnElement("element.shell.now-strip")
+
+        object NowPlayingOpen : ButtonElement(
+            elementId = "element.shell.now-strip.music.open",
+            labelRes = R.string.now_strip_open_music,
+            style = VexElementStyles.Navigation,
+            icon = ElementIcon.Music,
+            intent = navigateTo(VexStreamMusicScreen),
+        )
+
+        /** The listener sees current state on the strip, so this is the human PlayPause toggle. */
+        object NowPlayingToggle : ButtonElement(
+            elementId = "element.shell.now-strip.music.toggle",
+            labelRes = R.string.now_strip_toggle_playback,
+            style = VexElementStyles.ToolbarIcon,
+            icon = ElementIcon.PlayPause,
+            intent = localEffect(),
+        )
+
+        object NavigationOpen : ButtonElement(
+            elementId = "element.shell.now-strip.navigation.open",
+            labelRes = R.string.now_strip_open_navigation,
+            style = VexElementStyles.Navigation,
+            icon = ElementIcon.Location,
+            intent = navigateTo(VexMapsScreen),
+        )
+
         object FabCluster : StackElement("element.shell.fab-cluster")
         object FabOptions : ColumnElement("element.shell.fab-options")
 
@@ -152,6 +187,11 @@ object AppShell {
         row(Elements.Toolbar) {
             image(Elements.BrandMark)
             button(Elements.Back)
+        }
+        column(Elements.NowStrip) {
+            button(Elements.NavigationOpen)
+            button(Elements.NowPlayingOpen)
+            button(Elements.NowPlayingToggle)
         }
         row(Elements.PrimaryNavigation) {
             button(Elements.Home)

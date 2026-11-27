@@ -665,6 +665,13 @@ SURFACE_ELIGIBLE != PROVIDER_ADMITTED
 
 A Ready surface still crosses VexFamilyConversationRepository, which revalidates currentness.
 
+## Glance for other surfaces
+
+`VexConversationGlance` is a pure projection of the session Hybrid output for compact surfaces
+outside the room (Home "Now", Talk to Vex context lens): Home availability, latest message speaker /
+content, participant labels. It deliberately carries no unread / attention meaning, because no
+read-position owner exists yet, and it grants no Send capability.
+
 ## Why no Experience yet
 
 Draft PR #81 uses Experience for a broad human/product orientation root.

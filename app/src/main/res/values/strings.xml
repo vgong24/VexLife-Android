@@ -25,7 +25,6 @@
 
     <string name="home_preview_title">Home preview</string>
     <string name="home_preview_body">Sample preview only. This body is intentionally light while the reusable Android element, placement, navigation, and logging foundations are being learned.</string>
-    <string name="home_systems_title">Vex systems</string>
     <string name="home_vexstream_music">VexStream Music</string>
     <string name="home_vexstream_connect">Connect VexStream Music</string>
     <string name="home_vexstream_open">Open VexStream Music</string>
@@ -306,10 +305,6 @@
     <string name="vexmaps_route_error">No usable local route was found in this region pack.</string>
     <string name="vexmaps_route_destination_label">Pinned destination</string>
 
-    <string name="talk_to_vex_placeholder_title">Talk to Vex placeholder</string>
-    <string name="talk_to_vex_placeholder_body">A future conversational Vex runtime can attach here. For now this screen proves that its semantic action stays owned beside the feature instead of moving into the app root.</string>
-    <string name="talk_to_vex_placeholder_action">Run Talk to Vex placeholder action</string>
-
     <string name="dark_mode">Dark mode</string>
     <string name="log_history">Log History</string>
     <string name="log_history_show">Show</string>
@@ -423,4 +418,58 @@
     <string name="partners_circuit_lab_receive_pump">Receive synthetic pump outcome</string>
     <string name="partners_circuit_lab_debug_helper">Start here for the end-to-end Partner feedback path: provider representation → Partner → Store → Family → optional cross-Family rule → Control/Effect/Method → Pump Partner → later observed outcome. Synthetic architecture fixture only.</string>
 
+
+    <!-- One living surface: shell Now strip, Home "Now", Talk to Vex context lens -->
+    <string name="now_strip_open_music">Open what\'s playing</string>
+    <string name="now_strip_open_navigation">Open navigation</string>
+    <string name="now_strip_toggle_playback">Play or pause</string>
+    <string name="now_untitled_track">Untitled track</string>
+    <string name="now_playing_state_playing">Playing</string>
+    <string name="now_playing_state_paused">Paused</string>
+    <string name="now_playing_state_starting">Starting…</string>
+    <string name="now_playing_state_pausing">Pausing…</string>
+    <string name="now_playing_state_finished">Finished</string>
+    <string name="now_navigation_ready">Route ready · start it in VexMaps</string>
+    <string name="now_navigation_off_route">Off route · finding a new way</string>
+    <string name="now_navigation_location_held">Waiting for your location</string>
+    <string name="now_navigation_arrived">Arrived</string>
+    <string name="now_navigation_continue">Continue on route</string>
+    <string name="now_navigation_in_distance">in %1$s</string>
+    <string name="now_navigation_left">%1$s left</string>
+    <string name="now_navigation_planned">Planned trip: %1$s</string>
+    <string name="now_distance_meters">%1$d m</string>
+    <string name="now_distance_kilometers">%1$s km</string>
+    <string name="now_duration_minutes">%1$d min</string>
+    <string name="now_duration_hours">%1$d h %2$d min</string>
+
+    <string name="home_vex_eyebrow">Vex</string>
+    <string name="home_vex_not_connected">Not connected yet</string>
+    <string name="home_vex_body">When Vex connects through your VexHome, it will see what you see here, and act only through the same controls you use.</string>
+    <string name="home_listening_eyebrow">Listening</string>
+    <string name="home_vexstream_library_summary">%1$d songs · %2$d on this phone</string>
+    <string name="home_journey_eyebrow">Getting there</string>
+    <string name="home_journey_idle_title">Where to?</string>
+    <string name="home_journey_idle_body">Plan a route in VexMaps. Active navigation shows up here and across the app.</string>
+    <string name="home_family_eyebrow">Family</string>
+    <string name="home_family_unavailable_body">The Family room lives on your VexHome. This phone isn\'t connected to it yet.</string>
+    <string name="home_family_unobserved_body">Checking the Family room…</string>
+    <string name="home_family_empty_body">No messages yet.</string>
+    <string name="home_family_you">you</string>
+
+    <string name="talk_to_vex_status_title">Vex isn\'t connected yet</string>
+    <string name="talk_to_vex_status_body">Vex will run on your VexHome. Until this phone is connected to it, nothing here is sent anywhere.</string>
+    <string name="talk_to_vex_lens_title">What Vex would see right now</string>
+    <string name="talk_to_vex_lens_body">Only these bounded glances, each read from the part of VexLife that owns it. Seeing them grants Vex nothing: any change goes through the same controls you use.</string>
+    <string name="talk_to_vex_lens_screen">Screen</string>
+    <string name="talk_to_vex_lens_music">Music</string>
+    <string name="talk_to_vex_lens_navigation">Navigation</string>
+    <string name="talk_to_vex_lens_family">Family</string>
+    <string name="talk_to_vex_lens_nothing_playing">Nothing playing</string>
+    <string name="talk_to_vex_lens_no_journey">No active journey</string>
+    <string name="talk_to_vex_lens_family_unavailable">Family room not reachable</string>
+    <string name="talk_to_vex_lens_owner_music">from VexStream Player</string>
+    <string name="talk_to_vex_lens_owner_navigation">from VexMaps Navigation</string>
+    <string name="talk_to_vex_lens_owner_family">from Family Conversation</string>
+    <string name="talk_to_vex_lens_owner_screen">from the app runtime</string>
+    <string name="talk_to_vex_composer_hint">Ask Vex… (available once Vex is connected)</string>
 </resources>

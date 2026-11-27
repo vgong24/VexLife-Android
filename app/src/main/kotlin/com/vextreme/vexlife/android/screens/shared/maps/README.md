@@ -218,6 +218,10 @@ VexNavigationSession / VexMapsNavigationProcess
 VexMapsNavigationService
     Android foreground lifetime + continuous device-location delivery
 
+VexNavigationGlance
+    read-only glance of the one current journey for Home / shell Now strip / Vex context
+    plannedDurationSeconds is the planning-time estimate, never a live ETA
+
 VexMapLibreAdapter
     Maps rendering meaning -> MapLibre operations
 

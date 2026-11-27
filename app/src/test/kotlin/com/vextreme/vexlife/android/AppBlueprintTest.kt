@@ -79,28 +79,46 @@ class AppBlueprintTest {
     fun ordinaryScreenLayoutProducesNestedInspectableIdentity() {
         val root = registry.screenRoot(HomeScreen).element
         val children = registry.childrenOf(root)
-        val vexStream = children.single {
-            it.elementId == HomeScreen.VexStreamSection.elementId
-        }
-        val systems = children.single {
-            it.elementId == HomeScreen.SystemsSection.elementId
-        }
+        fun section(element: com.vextreme.vexlife.android.elements.UIElement) =
+            children.single {
+                it.elementId == element.elementId
+            }
 
         assertEquals("element.home.body", root.elementId)
+        assertEquals(
+            listOf(
+                HomeScreen.VexSection.elementId,
+                HomeScreen.VexStreamSection.elementId,
+                HomeScreen.JourneySection.elementId,
+                HomeScreen.FamilySection.elementId,
+            ),
+            children.map { it.elementId },
+        )
+        assertEquals(
+            setOf(
+                HomeScreen.TalkToVex.elementId,
+            ),
+            registry.childrenOf(section(HomeScreen.VexSection)).map { it.elementId }.toSet(),
+        )
         assertEquals(
             setOf(
                 HomeScreen.ConnectVexStreamMusic.elementId,
                 HomeScreen.VexStreamMusic.elementId,
+                HomeScreen.NowPlayingToggle.elementId,
             ),
-            registry.childrenOf(vexStream).map { it.elementId }.toSet(),
+            registry.childrenOf(section(HomeScreen.VexStreamSection)).map { it.elementId }.toSet(),
+        )
+        assertEquals(
+            setOf(
+                HomeScreen.VexMaps.elementId,
+            ),
+            registry.childrenOf(section(HomeScreen.JourneySection)).map { it.elementId }.toSet(),
         )
         assertEquals(
             setOf(
                 HomeScreen.FamilyConversation.elementId,
-                HomeScreen.VexMaps.elementId,
-                HomeScreen.TalkToVex.elementId,
             ),
-            registry.childrenOf(systems).map { it.elementId }.toSet(),
+            registry.childrenOf(section(HomeScreen.FamilySection)).map { it.elementId }.toSet(),
         )
     }
 

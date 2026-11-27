@@ -30,5 +30,4 @@ object AppActions {
     val ForgetPairedVexStream = ActionKey("action.vexstream-music.connection.forget")
     val RefreshVexStreamCatalog = ActionKey("action.vexstream-music.catalog.refresh")
     val SendFamilyConversationMessage = ActionKey("action.conversation.family.send")
-    val TalkToVexPlaceholder = ActionKey("action.talk-to-vex.placeholder")
 }

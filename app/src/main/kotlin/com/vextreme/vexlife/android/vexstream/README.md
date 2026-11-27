@@ -132,6 +132,17 @@ vexstream/repeat/
     human question: Is Repeat active for the current playback context?
     Direct Family + shared Player outside truth + UI Experience membrane
 
+vexstream/VexStreamNowPlaying.kt
+    human question: what's playing, and is it playing? (asked outside the Music screen)
+    pure glance = Player Store identity/metadata + Playback Family intent; null without media
+    VexStreamNowPlayingViewModel borrows process owners and owns NO MediaController
+    consumers: app-shell Now strip, Home "Now", Talk to Vex context lens
+
+vexstream/player/VexStreamFiniteRequest.kt
+    one finite Playback / Queue request from a caller with no long-lived controller
+    borrow one controller -> await Family currentness -> existing activation -> join
+    callers: home-screen widget, app-shell Now strip (later: a Vex request)
+
 media/vexstream/
     Android MediaSession/player/network realization
 

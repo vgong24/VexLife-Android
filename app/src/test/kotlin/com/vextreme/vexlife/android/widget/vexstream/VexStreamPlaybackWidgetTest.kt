@@ -8,6 +8,10 @@ import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerPartner
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
+import com.vextreme.vexlife.android.vexstream.player.awaitVexStreamPlaybackFamilyCurrent
+import com.vextreme.vexlife.android.vexstream.player.awaitVexStreamPlayerSnapshot
+import com.vextreme.vexlife.android.vexstream.player.awaitVexStreamQueueFamilyCurrent
+import com.vextreme.vexlife.android.vexstream.player.VexStreamFiniteRequest
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueFamily
 import com.vextreme.vexlife.android.widget.VexWidgetActionRef
@@ -22,6 +26,26 @@ import kotlinx.coroutines.yield
 import org.junit.Test
 
 class VexStreamPlaybackWidgetTest {
+
+    @Test
+    fun widgetCommandsAskForTheSharedFiniteRequestWithTheSameControl() {
+        assertEquals(
+            VexStreamFiniteRequest.Playback(
+                VexStreamPlaybackControl.PlayPause,
+            ),
+            VexStreamPlaybackWidgetCommand.Playback(
+                VexStreamPlaybackControl.PlayPause,
+            ).toVexStreamFiniteRequest(),
+        )
+        assertEquals(
+            VexStreamFiniteRequest.Queue(
+                VexStreamQueueControl.Next,
+            ),
+            VexStreamPlaybackWidgetCommand.Queue(
+                VexStreamQueueControl.Next,
+            ).toVexStreamFiniteRequest(),
+        )
+    }
 
     @Test
     fun widgetActionRefsResolveOnlyExistingPlaybackAndQueueControls() {
@@ -65,7 +89,7 @@ class VexStreamPlaybackWidgetTest {
                 VexStreamPlayerStore()
             val waiting =
                 async {
-                    awaitVexStreamWidgetPlayerSnapshot(
+                    awaitVexStreamPlayerSnapshot(
                         store =
                             store,
                         timeoutMillis =
@@ -186,7 +210,7 @@ class VexStreamPlaybackWidgetTest {
 
             val waiting =
                 async {
-                    awaitVexStreamWidgetPlaybackFamilyCurrent(
+                    awaitVexStreamPlaybackFamilyCurrent(
                         family =
                             family,
                         store =
@@ -235,7 +259,7 @@ class VexStreamPlaybackWidgetTest {
 
             val waiting =
                 async {
-                    awaitVexStreamWidgetQueueFamilyCurrent(
+                    awaitVexStreamQueueFamilyCurrent(
                         family =
                             family,
                         store =

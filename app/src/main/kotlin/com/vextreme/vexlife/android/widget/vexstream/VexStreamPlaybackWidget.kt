@@ -48,14 +48,14 @@ import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
-import com.vextreme.vexlife.android.vexstream.playback.activateVexStreamPlayback
 import com.vextreme.vexlife.android.vexstream.playback.toVexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
-import com.vextreme.vexlife.android.vexstream.player.withVexStreamPlayerRequestConnection
+import com.vextreme.vexlife.android.vexstream.player.VexStreamFiniteRequest
+import com.vextreme.vexlife.android.vexstream.player.VexStreamFiniteRequestOwners
+import com.vextreme.vexlife.android.vexstream.player.requestVexStreamFiniteControl
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackTrace
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueFamily
-import com.vextreme.vexlife.android.vexstream.queue.activateVexStreamQueue
 import com.vextreme.vexlife.android.vexstream.queue.toVexStreamQueueState
 import com.vextreme.vexlife.android.widget.VexGlanceAppWidget
 import com.vextreme.vexlife.android.widget.VexWidgetActionCallback
@@ -68,9 +68,7 @@ import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 
 internal data class VexStreamPlaybackWidgetSurfaceState(
     val title: String,
@@ -257,6 +255,23 @@ internal sealed interface VexStreamPlaybackWidgetCommand {
         val control: VexStreamQueueControl,
     ) : VexStreamPlaybackWidgetCommand
 }
+
+/** Which widget control was tapped -> the shared finite request it asks for. */
+internal fun VexStreamPlaybackWidgetCommand.toVexStreamFiniteRequest():
+    VexStreamFiniteRequest =
+    when (
+        this
+    ) {
+        is VexStreamPlaybackWidgetCommand.Playback ->
+            VexStreamFiniteRequest.Playback(
+                control,
+            )
+
+        is VexStreamPlaybackWidgetCommand.Queue ->
+            VexStreamFiniteRequest.Queue(
+                control,
+            )
+    }
 
 internal fun vexStreamPlaybackWidgetCommand(
     actionRef: VexWidgetActionRef,
@@ -837,131 +852,6 @@ class VexStreamPlaybackWidgetReceiver :
         VexStreamPlaybackWidget
 }
 
-internal suspend fun awaitVexStreamWidgetPlayerSnapshot(
-    store:
-        VexStreamPlayerStore,
-    timeoutMillis:
-        Long =
-        VEXSTREAM_WIDGET_PLAYER_CURRENT_TIMEOUT_MILLIS,
-):
-    VexStreamPlayerStore.Snapshot.Available? =
-    withTimeoutOrNull(
-        timeoutMillis,
-    ) {
-        store.states
-            .first { snapshot ->
-                snapshot is
-                    VexStreamPlayerStore
-                        .Snapshot
-                        .Available
-            } as
-            VexStreamPlayerStore
-                .Snapshot
-                .Available
-    }
-
-internal suspend fun awaitVexStreamWidgetPlaybackFamilyCurrent(
-    family:
-        VexStreamPlaybackFamily,
-    store:
-        VexStreamPlayerStore,
-    timeoutMillis:
-        Long =
-        VEXSTREAM_WIDGET_PLAYER_CURRENT_TIMEOUT_MILLIS,
-):
-    Boolean =
-    withTimeoutOrNull(
-        timeoutMillis,
-    ) {
-        while (
-            true
-        ) {
-            val matched =
-                family.states
-                    .first { familyState ->
-                        val current =
-                            store.current as?
-                                VexStreamPlayerStore
-                                    .Snapshot
-                                    .Available
-                                ?: return@first false
-
-                        familyState ==
-                            current.playback
-                                .toVexStreamPlaybackState()
-                    }
-
-            val latest =
-                store.current as?
-                    VexStreamPlayerStore
-                        .Snapshot
-                        .Available
-                    ?: continue
-
-            if (
-                matched ==
-                latest.playback
-                    .toVexStreamPlaybackState()
-            ) {
-                return@withTimeoutOrNull true
-            }
-        }
-
-        @Suppress("UNREACHABLE_CODE")
-        false
-    } ?: false
-
-internal suspend fun awaitVexStreamWidgetQueueFamilyCurrent(
-    family:
-        VexStreamQueueFamily,
-    store:
-        VexStreamPlayerStore,
-    timeoutMillis:
-        Long =
-        VEXSTREAM_WIDGET_PLAYER_CURRENT_TIMEOUT_MILLIS,
-):
-    Boolean =
-    withTimeoutOrNull(
-        timeoutMillis,
-    ) {
-        while (
-            true
-        ) {
-            val matched =
-                family.states
-                    .first { familyState ->
-                        val current =
-                            store.current as?
-                                VexStreamPlayerStore
-                                    .Snapshot
-                                    .Available
-                                ?: return@first false
-
-                        familyState ==
-                            current.queue
-                                .toVexStreamQueueState()
-                    }
-
-            val latest =
-                store.current as?
-                    VexStreamPlayerStore
-                        .Snapshot
-                        .Available
-                    ?: continue
-
-            if (
-                matched ==
-                latest.queue
-                    .toVexStreamQueueState()
-            ) {
-                return@withTimeoutOrNull true
-            }
-        }
-
-        @Suppress("UNREACHABLE_CODE")
-        false
-    } ?: false
-
 class VexStreamPlaybackWidgetActionCallback :
     VexWidgetActionCallback() {
     override suspend fun onWidgetAction(
@@ -977,111 +867,37 @@ class VexStreamPlaybackWidgetActionCallback :
             context.applicationContext as?
                 VexApplication
                 ?: return
-        val playerStore =
-            vexApplication
-                .dependencies
-                .resolve(
-                    vexApplication
-                        .dependencyModule
-                        .playerStore,
-                )
-        val root =
-            vexApplication
-                .dependencies
-                .resolve(
-                    vexApplication
-                        .dependencyModule
-                        .processExecutionRoot,
-                )
+        val dependencies =
+            vexApplication.dependencies
+        val module =
+            vexApplication.dependencyModule
 
         val activated =
-            withVexStreamPlayerRequestConnection(
-                context,
-            ) { connection ->
-                awaitVexStreamWidgetPlayerSnapshot(
-                    playerStore,
-                )
-                    ?: return@withVexStreamPlayerRequestConnection false
-
-                when (
-                    command
-                ) {
-                    is VexStreamPlaybackWidgetCommand.Playback -> {
-                        val family =
-                            vexApplication
-                                .dependencies
-                                .resolve(
-                                    vexApplication
-                                        .dependencyModule
-                                        .playbackFamily,
-                                )
-                        if (
-                            !awaitVexStreamWidgetPlaybackFamilyCurrent(
-                                family =
-                                    family,
-                                store =
-                                    playerStore,
-                            )
-                        ) {
-                            return@withVexStreamPlayerRequestConnection false
-                        }
-                        val job =
-                            activateVexStreamPlayback(
-                                family =
-                                    family,
-                                control =
-                                    command.control,
-                                connection =
-                                    connection,
-                                playerStore =
-                                    playerStore,
-                                executionRoot =
-                                    root,
-                            )
-
-                        job?.join()
-                        job !=
-                            null
-                    }
-
-                    is VexStreamPlaybackWidgetCommand.Queue -> {
-                        val family =
-                            vexApplication
-                                .dependencies
-                                .resolve(
-                                    vexApplication
-                                        .dependencyModule
-                                        .queueFamily,
-                                )
-                        if (
-                            !awaitVexStreamWidgetQueueFamilyCurrent(
-                                family =
-                                    family,
-                                store =
-                                    playerStore,
-                            )
-                        ) {
-                            return@withVexStreamPlayerRequestConnection false
-                        }
-                        val job =
-                            activateVexStreamQueue(
-                                family =
-                                    family,
-                                control =
-                                    command.control,
-                                connection =
-                                    connection,
-                                executionRoot =
-                                    root,
-                            )
-
-                        job?.join()
-                        job !=
-                            null
-                    }
-                }
-            } ==
-            true
+            requestVexStreamFiniteControl(
+                context =
+                    context,
+                owners =
+                    VexStreamFiniteRequestOwners(
+                        playerStore =
+                            dependencies.resolve(
+                                module.playerStore,
+                            ),
+                        playbackFamily =
+                            dependencies.resolve(
+                                module.playbackFamily,
+                            ),
+                        queueFamily =
+                            dependencies.resolve(
+                                module.queueFamily,
+                            ),
+                        executionRoot =
+                            dependencies.resolve(
+                                module.processExecutionRoot,
+                            ),
+                    ),
+                request =
+                    command.toVexStreamFiniteRequest(),
+            )
 
         VexStreamPlaybackTrace.record(
             stage =
@@ -1308,8 +1124,6 @@ internal const val VEXSTREAM_WIDGET_ARTWORK_SIZE_DP =
     64
 internal const val VEXSTREAM_WIDGET_PUBLICATION_RETRY_MILLIS =
     250L
-internal const val VEXSTREAM_WIDGET_PLAYER_CURRENT_TIMEOUT_MILLIS =
-    2_000L
 
 private const val CONTROLLER_CONNECT_TIMEOUT_MS =
     2_000L
