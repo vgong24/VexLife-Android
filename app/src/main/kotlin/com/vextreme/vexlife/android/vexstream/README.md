@@ -23,6 +23,13 @@ WHAT MUSIC IS KNOWN?
     data/vexstream
     -> VexStreamMusicRepository + track/collection state
 
+WHICH KNOWN MUSIC MATCHES WHAT SOMEONE ASKED FOR?
+    vexstream/library
+    -> VexStreamLibraryQuery: the one text-matching law over repository playable truth
+    -> human Search sheet membership and non-UI callers (Vex "play Alright") use the same law
+    -> ranked matches + ambiguity ("Alright" by two artists) so a caller clarifies instead of guessing
+    -> Playable or Downloaded scope; owns no State, effect or playback capability
+
 HOW DO I ORGANIZE WHAT I AM ABOUT TO LISTEN TO?
     screens/shared/vexstream
     -> VexStreamLibraryOrganization
@@ -42,6 +49,9 @@ WHERE CAN MEDIA COME FROM?
 WHAT IS PLAYBACK DOING?
     vexstream/playback
     -> one process-shared Playback Direct Family owns finite Play / Pause / Restart meaning
+    -> PlayPause is the human toggle; Play / Pause are directional intent for callers that may have
+       formed the request against older perception (Vex); already-satisfied intent authors no Act
+    -> all three share one Control class and therefore one Latest relationship
     -> shared Player Store supplies outside playback truth
     -> finite Effects realize through the bounded Player request connection
     -> Seek remains a typed mediaId + position request
@@ -65,6 +75,7 @@ WHAT CAN I DO WITH THE CURRENT QUEUE?
 IS REPEAT ACTIVE FOR THIS PLAYBACK CONTEXT?
     vexstream/repeat
     -> one process-shared Repeat Direct Family owns finite Toggle meaning
+    -> Enable / Disable are directional intent sharing Toggle's one Latest relationship
     -> shared Player Store supplies outside repeat truth
     -> finite Effect realizes through the bounded Player request connection
 
@@ -97,6 +108,11 @@ data/vexstream/
     catalog/library/source/offline/pairing truth and repositories
     verified private staging -> durable Android MediaStore publication
     README.md preserves producer/consumer, storage and security boundaries
+
+vexstream/library/
+    human question: which known music matches what someone asked for?
+    one pure text-matching law + ranking/ambiguity over repository playable truth
+    shared by the Search sheet projection and non-UI callers; no State, effect or capability
 
 vexstream/playback/
     human questions: Play / Pause / Restart + where should current media continue from?

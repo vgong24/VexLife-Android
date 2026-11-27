@@ -188,38 +188,34 @@ internal class VexStreamPlaybackFamily(
             VexStreamPlaybackState.NoMedia ->
                 null
 
-            is VexStreamPlaybackState.Media -> {
-                if (
-                    !currentState.playPauseAvailable
-                ) {
-                    null
-                } else {
-                    val effect =
-                        if (
-                            currentState.playRequested
-                        ) {
-                            VexStreamPlaybackEffect.RequestPause
-                        } else {
-                            VexStreamPlaybackEffect.RequestPlay
-                        }
-
-                    admit(
-                        currentState.afterIntent(
-                            effect,
-                        ),
-                        begin =
-                            beginLatest(
+            is VexStreamPlaybackState.Media ->
+                currentState
+                    .takeIf {
+                        it.playPauseAvailable
+                    }
+                    ?.mediaEffectFor(
+                        control.command,
+                    )
+                    ?.let { effect ->
+                        admit(
+                            currentState.afterIntent(
                                 effect,
                             ),
-                    )
-                }
-            }
+                            begin =
+                                beginLatest(
+                                    effect,
+                                ),
+                        )
+                    }
 
             is VexStreamPlaybackState.Ended ->
-                VexStreamPlaybackEffect.RestartCurrent
+                currentState
                     .takeIf {
-                        currentState.restartAvailable
+                        it.restartAvailable
                     }
+                    ?.endedEffectFor(
+                        control.command,
+                    )
                     ?.let { effect ->
                         admit(
                             currentState.afterIntent(
@@ -473,6 +469,64 @@ internal fun VexStreamPlayerPartner.Signal.Playback?.toVexStreamPlaybackState():
                 playPauseAvailable =
                     playPauseAvailable,
             )
+    }
+
+/**
+ * Interpret one finite Playback command against exact current Media intent.
+ *
+ * [VexStreamPlaybackState.Media.playRequested] already includes admitted pending intent, so a
+ * directional request formed before an unacknowledged opposite request still lands truthfully.
+ */
+private fun VexStreamPlaybackState.Media.mediaEffectFor(
+    command:
+        VexStreamPlaybackControl.Command,
+):
+    VexStreamPlaybackEffect? =
+    when (
+        command
+    ) {
+        VexStreamPlaybackControl.Command.PlayPause ->
+            if (
+                playRequested
+            ) {
+                VexStreamPlaybackEffect.RequestPause
+            } else {
+                VexStreamPlaybackEffect.RequestPlay
+            }
+
+        VexStreamPlaybackControl.Command.Play ->
+            VexStreamPlaybackEffect.RequestPlay
+                .takeUnless {
+                    playRequested
+                }
+
+        VexStreamPlaybackControl.Command.Pause ->
+            VexStreamPlaybackEffect.RequestPause
+                .takeIf {
+                    playRequested
+                }
+    }
+
+/**
+ * Ended media is already not playing. PlayPause and Play both mean "start the current item again",
+ * matching the human button in this State; Pause is already satisfied.
+ */
+@Suppress("UnusedReceiverParameter")
+private fun VexStreamPlaybackState.Ended.endedEffectFor(
+    command:
+        VexStreamPlaybackControl.Command,
+):
+    VexStreamPlaybackEffect? =
+    when (
+        command
+    ) {
+        VexStreamPlaybackControl.Command.PlayPause,
+        VexStreamPlaybackControl.Command.Play,
+        ->
+            VexStreamPlaybackEffect.RestartCurrent
+
+        VexStreamPlaybackControl.Command.Pause ->
+            null
     }
 
 private fun VexStreamPlaybackState.hasPendingPlaybackIntent():

@@ -5,6 +5,7 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamLibraryLoadState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackAvailability
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
+import com.vextreme.vexlife.android.vexstream.library.vexStreamLibraryMatch
 
 /**
  * Human-selected ordering for one current VexStream library projection.
@@ -298,6 +299,12 @@ private fun VexStreamTrackState.matchesVexStreamOrganization(
         )
 }
 
+/**
+ * Human Search membership inside the organized listening set.
+ *
+ * Blank Search shows the whole organized set. Otherwise membership is the one VexStream library
+ * matching law, shared with non-UI callers through [vexStreamLibraryMatch].
+ */
 private fun VexStreamTrackState.matchesVexStreamSearch(
     query: String,
 ): Boolean {
@@ -307,18 +314,9 @@ private fun VexStreamTrackState.matchesVexStreamSearch(
         return true
     }
 
-    return sequenceOf(
-        track.title,
-        track.artist,
-        track.album,
-        track.genre,
-        track.year,
-    ).any {
-        it.contains(
-            normalized,
-            ignoreCase = true,
-        )
-    }
+    return vexStreamLibraryMatch(
+        normalized,
+    ) != null
 }
 
 private fun Set<String>.toggledIgnoreCase(
