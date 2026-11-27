@@ -80,13 +80,15 @@ internal fun VexStreamTrackCard(
     }
     val context =
         LocalContext.current
+    val contextFilesDir: java.io.File? =
+        context.filesDir
     val artworkModel =
         remember(
             state,
-            context.filesDir,
+            contextFilesDir,
         ) {
             state.vexStreamArtworkModel(
-                context.filesDir,
+                contextFilesDir,
             )
         }
 

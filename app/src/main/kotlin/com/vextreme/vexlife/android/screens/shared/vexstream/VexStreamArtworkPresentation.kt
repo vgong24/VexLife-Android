@@ -9,18 +9,25 @@ import java.io.File
  *
  * A verified downloaded track prefers its durable app-owned companion file. Remote HTTPS artwork
  * remains the fallback while reachable. Missing artwork remains an ordinary placeholder condition.
+ *
+ * [contextFilesDir] is nullable because presentation may execute in a render/inspection environment
+ * that cannot expose app-private filesystem custody. Absence of that outside source means only that
+ * durable local artwork cannot be consulted; it does not make the track or its presentation invalid.
  */
 internal fun VexStreamTrackState.vexStreamArtworkModel(
-    contextFilesDir: File,
+    contextFilesDir: File?,
 ): Any? {
     val localArtwork =
-        VexStreamArtworkStore
-            .production(
-                contextFilesDir,
-            )
-            .fileFor(
-                track,
-            )
+        contextFilesDir
+            ?.let { filesDir ->
+                VexStreamArtworkStore
+                    .production(
+                        filesDir,
+                    )
+                    .fileFor(
+                        track,
+                    )
+            }
 
     return localArtwork
         ?: track.artworkUrl
