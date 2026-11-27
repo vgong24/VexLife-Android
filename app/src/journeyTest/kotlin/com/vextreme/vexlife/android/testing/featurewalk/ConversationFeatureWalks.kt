@@ -41,9 +41,14 @@ internal object ConversationFeatureWalks {
                         hold =
                             VexFeatureWalkHold(
                                 reason =
-                                    "Accepted Conversation product source has no registered installed-app doorway.",
+                                    "The installed doorway is registered (Home -> VexFamilyConversationScreen in " +
+                                        "AppScreens, reading Connected Services Family truth), but no lived private " +
+                                        "route, bounded Home membership or bound Journey has proved it in an " +
+                                        "installed session.",
                                 releasePredicate =
-                                    "A production Screen and ordinary app navigation reach the Family room.",
+                                    "A fresh installed app process reaches the Family room from Home over a proven " +
+                                        "private route with bounded Home membership, and a bound Conversation " +
+                                        "Journey observes the canonical room.",
                             ),
                     ),
                     VexFeatureWalkCheckpoint(
@@ -75,7 +80,10 @@ internal object ConversationFeatureWalks {
                         hold =
                             VexFeatureWalkHold(
                                 reason =
-                                    "The isolated room renderer is proved, but no installed doorway can execute the same-session round trip.",
+                                    "The isolated room renderer and the installed Send source exist, but the round " +
+                                        "trip has not been observed in one installed session: Conversation Journey " +
+                                        "integration is held because the canonical test graph cannot yet inject " +
+                                        "Conversation without overlap.",
                                 releasePredicate =
                                     "A bound Conversation Journey reaches the room and observes the round trip in one installed session.",
                             ),
