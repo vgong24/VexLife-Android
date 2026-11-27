@@ -268,3 +268,19 @@ private fun VexNowStripRow(
 }
 
 // [VXG RealForever][SHELL][NOW-STRIP]
+
+/** Ambient light input from the same feature-owned glances the Now strip reads. */
+@Composable
+internal fun rememberVexAmbientLiveness(): com.vextreme.vexlife.android.ui.look.VexAmbientLiveness {
+    val music =
+        rememberVexStreamNowPlaying()
+    val navigation =
+        rememberVexNavigationGlance()
+
+    return com.vextreme.vexlife.android.ui.look.VexAmbientLiveness(
+        musicPlaying =
+            music?.nowPlaying?.let { it.playRequested && !it.ended } == true,
+        navigating =
+            navigation != null,
+    )
+}

@@ -26,6 +26,8 @@ import com.vextreme.vexlife.android.elements.UIElement
 import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.ui.look.VexAmbientLiveness
+import com.vextreme.vexlife.android.ui.look.VexLookPreference
 import com.vextreme.vexlife.android.screens.AppScreenBlueprint
 import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.shell.AppFrame
@@ -152,6 +154,9 @@ internal fun VexPreviewHost(
     previewSetup: VexPreviewSetup.() -> Unit = {},
     // Fixture Now strip for screenshot cases; null keeps the live (inspection-safe) strip host.
     nowStrip: (@Composable (VexRuntime) -> Unit)? = null,
+    // Fixture Look and ambient liveness for screenshot cases.
+    look: VexLookPreference = VexLookPreference(),
+    ambientLiveness: VexAmbientLiveness = VexAmbientLiveness(),
     content: @Composable (VexPreviewContext) -> Unit,
 ) {
     val themePresentation =
@@ -198,7 +203,7 @@ internal fun VexPreviewHost(
         )
     }
 
-    VexLifeTheme(presentation = themePresentation) {
+    VexLifeTheme(presentation = themePresentation, look = look) {
         val currentScreenBlueprint =
             AppScreens.require(
                 context.runtime.currentScreen.screenId,
@@ -209,6 +214,7 @@ internal fun VexPreviewHost(
                 runtime = context.runtime,
                 toolbarActions =
                     currentScreenBlueprint.toolbarActions,
+                ambientLiveness = ambientLiveness,
             ) {
                 content(context)
             }
@@ -222,6 +228,7 @@ internal fun VexPreviewHost(
                         context.runtime,
                     )
                 },
+                ambientLiveness = ambientLiveness,
             ) {
                 content(context)
             }

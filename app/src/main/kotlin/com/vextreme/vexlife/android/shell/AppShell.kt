@@ -233,8 +233,9 @@ fun VexAppToolBar(
 
     Surface(
         modifier = Modifier.height(VexLayoutTokens.ToolbarHeight),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        // Slightly translucent so the ambient light reads through the chrome.
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.74f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
     ) {
         Row(
             modifier = Modifier
@@ -321,7 +322,7 @@ fun PrimaryBottomNavigation(
 ) {
     NavigationBar(
         modifier = Modifier.height(VexLayoutTokens.BottomBarHeight),
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
         windowInsets = WindowInsets(0, 0, 0, 0),
     ) {
         PrimaryNavigationItem(AppShell.Elements.Home, HomeScreen, currentScreen, runtime)

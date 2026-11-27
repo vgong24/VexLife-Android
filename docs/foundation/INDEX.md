@@ -127,6 +127,27 @@ Parameter.Mode(mode)
 -> VexLogger chronology
 ~~~
 
+VexLook is ThemeMode's second rider on the same circuit (look = palette, face, shape and motion;
+ThemeMode still owns light/dark):
+
+~~~text
+Parameter.Preference(VexLookPreference(choice, motion, ambient))
+-> Control.Choose(the same Parameter.Preference)
+-> equal to current State -> stay (no Act)
+-> otherwise admit immediately + beginLatest(Effect.Save(the same Parameter.Preference))
+-> Act.Save(VexLookStore, the exact accepted Effect.Save) under VexExecution custody
+-> VexLookStore.save(preference) -> Boolean commit fact -> VexMethod.Result
+
+VexLookPreference.choice -> VexLookSpec (generated OKLCH seeds, display face, corner, ambient)
+-> VexLifeTheme ColorScheme / Typography / Shapes + LocalVexLook (read-only)
+-> VexAmbientField (behind AppFrame; liveness from VexStream Now Playing + Navigation glance)
+~~~
+
+The Look store observation and Choose share one selection fence, so a stored-preference
+observation can never revert an unsettled choice. Every generated scheme is contrast-tested
+(`VexLookTest`) and every Look has a screenshot golden (`VexLookVisualGoldenTest`). Fonts are
+OFL static instances; licences live in `docs/licenses/fonts/`.
+
 The Family-owned Parameter is carried through the exact accepted Effect rather than reconstructed.
 The Method carries that Effect object, and Act.Accepted.launch(...) verifies it before the accepted
 boundary's live Family owner, Act-authored Approach, and Family-authored RelationshipId enter the
