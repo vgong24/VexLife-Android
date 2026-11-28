@@ -44,7 +44,7 @@ import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueExperi
 import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueuePlayConnection
 import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueOccurrences
 
-private const val VEXSTREAM_CONTEXT_DOCK_PAGE_REF =
+internal const val VEXSTREAM_CONTEXT_DOCK_PAGE_REF =
     "vexstream.now-playing"
 
 /**
@@ -79,13 +79,17 @@ internal fun rememberVexStreamContextDockPage(
             VexContextDockPageRef(
                 VEXSTREAM_CONTEXT_DOCK_PAGE_REF,
             ),
-    ) { expanded ->
+        label =
+            stringResource(
+                R.string.deck_page_music,
+            ),
+    ) { reveal ->
         VexStreamContextDockContent(
             runtime = runtime,
             controller = controller,
             playbackExperience =
                 playbackExperience,
-            expanded = expanded,
+            expanded = reveal.isExpanded,
         )
     }
 }

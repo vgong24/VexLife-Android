@@ -34,7 +34,7 @@ import com.vextreme.vexlife.android.vexstream.VexStreamNowPlaying
 import java.util.Locale
 
 /*
- * Shared presentation vocabulary for "Now" surfaces: the app-shell Now strip, Home, and the Talk to
+ * Shared presentation vocabulary for "Now" surfaces: the convergence deck, the Home stage, and the Talk to
  * Vex context lens.
  *
  * Everything here formats an already-owned glance. Nothing here reads a Store, owns State or
@@ -348,7 +348,9 @@ internal fun VexConversationGlance.latestLine(): String? {
 @Composable
 internal fun VexPresenceOrb(
     connected: Boolean = false,
+    size: Dp = 56.dp,
 ) {
+    val scale = size.value / 56f
     val colors =
         MaterialTheme.colorScheme
     val strength =
@@ -359,13 +361,13 @@ internal fun VexPresenceOrb(
         )
 
     Box(
-        modifier = Modifier.size(56.dp),
+        modifier = Modifier.size(size),
         contentAlignment = Alignment.Center,
     ) {
         // Halo: the orb's light, breathing.
         Box(
             modifier = Modifier
-                .size((48 + 8 * breath).dp)
+                .size(((48 + 8 * breath) * scale).dp)
                 .background(
                     brush = Brush.radialGradient(
                         listOf(
@@ -378,7 +380,7 @@ internal fun VexPresenceOrb(
         )
         Box(
             modifier = Modifier
-                .size(44.dp)
+                .size((44 * scale).dp)
                 .background(
                     brush = Brush.linearGradient(
                         listOf(
@@ -399,16 +401,16 @@ internal fun VexPresenceOrb(
                 modifier =
                     if (connected) {
                         Modifier
-                            .size(13.dp)
+                            .size((13 * scale).dp)
                             .background(
                                 color = colors.onPrimaryContainer,
                                 shape = CircleShape,
                             )
                     } else {
                         Modifier
-                            .size(13.dp)
+                            .size((13 * scale).dp)
                             .border(
-                                width = 2.dp,
+                                width = (2 * scale).dp,
                                 color = colors.onPrimaryContainer.copy(alpha = 0.8f),
                                 shape = CircleShape,
                             )

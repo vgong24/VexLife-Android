@@ -8,7 +8,7 @@ import androidx.compose.runtime.remember
 /**
  * What a compact surface outside VexMaps may show about the one current journey.
  *
- * Human question: "Where am I going and what's next?" — asked from Home, the app-shell Now strip,
+ * Human question: "Where am I going and what's next?" — asked from the Home stage, the app-shell convergence deck,
  * or (later) Vex context. Navigation truth stays with [VexNavigationSession]; this is a read-only
  * projection of it.
  *
@@ -28,6 +28,9 @@ internal data class VexNavigationGlance(
         Int?,
     val plannedDurationSeconds:
         Int?,
+    /** Maneuvers still ahead, nearest first, measured from the current route-matched position. */
+    val upcoming:
+        List<VexNavigationGlanceStep> = emptyList(),
 ) {
     init {
         require(
@@ -38,6 +41,15 @@ internal data class VexNavigationGlance(
         }
     }
 }
+
+internal data class VexNavigationGlanceStep(
+    val instruction:
+        String,
+    val distanceFromHereMeters:
+        Int,
+)
+
+internal const val VEXNAVIGATION_GLANCE_UPCOMING_LIMIT = 8
 
 /** Pure projection; null while no journey is prepared or active. */
 internal fun VexNavigationSessionState.toVexNavigationGlance(): VexNavigationGlance? {
@@ -75,6 +87,31 @@ internal fun VexNavigationSessionState.toVexNavigationGlance(): VexNavigationGla
                 ?.distanceRemainingMeters,
         plannedDurationSeconds =
             route.estimatedDurationSeconds,
+        upcoming =
+            route.route.maneuvers
+                .let { maneuvers ->
+                    val along =
+                        progress
+                            ?.distanceAlongRouteMeters
+                            ?: 0
+                    maneuvers
+                        .filter { maneuver ->
+                            maneuver.distanceFromRouteStartMeters > along ||
+                                (progress == null && maneuver.distanceFromRouteStartMeters == 0)
+                        }
+                        .take(VEXNAVIGATION_GLANCE_UPCOMING_LIMIT)
+                        .map { maneuver ->
+                            VexNavigationGlanceStep(
+                                instruction =
+                                    maneuver.instructionProjection,
+                                distanceFromHereMeters =
+                                    (maneuver.distanceFromRouteStartMeters - along)
+                                        .coerceAtLeast(0),
+                            )
+                        }
+                }
+                .takeUnless { progress?.arrived == true }
+                .orEmpty(),
     )
 }
 

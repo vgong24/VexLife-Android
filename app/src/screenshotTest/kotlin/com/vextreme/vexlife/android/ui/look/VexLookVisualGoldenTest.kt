@@ -4,18 +4,19 @@ import android.content.res.Configuration
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.android.tools.screenshot.PreviewTest
-import com.vextreme.vexlife.android.conversation.VexConversationGlance
-import com.vextreme.vexlife.android.conversation.VexConversationHomeAvailability
 import com.vextreme.vexlife.android.preview.VexPreviewHost
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreenContent
 import com.vextreme.vexlife.android.screens.primary.settings.SettingsAppearanceContent
 import com.vextreme.vexlife.android.screens.primary.settings.SettingsScreen
-import com.vextreme.vexlife.android.screens.shared.maps.VexNavigationGlance
-import com.vextreme.vexlife.android.screens.shared.maps.VexNavigationSessionPhase
 import com.vextreme.vexlife.android.screens.shared.vex.TalkToVexScreen
 import com.vextreme.vexlife.android.screens.shared.vex.TalkToVexScreenContent
-import com.vextreme.vexlife.android.vexstream.VexStreamNowPlaying
+import com.vextreme.vexlife.android.shell.VexDeckFixture
+import com.vextreme.vexlife.android.shell.fixtureDriving
+import com.vextreme.vexlife.android.shell.fixtureFamily
+import com.vextreme.vexlife.android.shell.fixtureJourneyStage
+import com.vextreme.vexlife.android.shell.fixtureNavigation
+import com.vextreme.vexlife.android.shell.fixturePlaying
 
 /*
  * Semantic visual cases: Looks.
@@ -23,35 +24,6 @@ import com.vextreme.vexlife.android.vexstream.VexStreamNowPlaying
  * The same driving scenario rendered in every Look, plus the Appearance screen itself, so a reviewer
  * can see the personality layer change while meaning and layout stay identical.
  */
-
-private val playing =
-    VexStreamNowPlaying(
-        title = "Alright",
-        artist = "Kendrick Lamar",
-        playRequested = true,
-        transitioning = false,
-        playPauseAvailable = true,
-        ended = false,
-    )
-
-private val navigating =
-    VexNavigationGlance(
-        phase = VexNavigationSessionPhase.ACTIVE,
-        destinationLabel = "Sam's place",
-        nextInstruction = "Turn left onto Main St",
-        distanceToNextManeuverMeters = 297,
-        distanceRemainingMeters = 7_240,
-        plannedDurationSeconds = 22 * 60,
-    )
-
-private val family =
-    VexConversationGlance(
-        homeAvailability = VexConversationHomeAvailability.Available,
-        latestSpeakerLabel = "Maya",
-        latestFromAuthenticatedParticipant = false,
-        latestContent = "Yep, leaving now. See you there!",
-        participantLabels = listOf("Victor", "Maya", "Vex"),
-    )
 
 private val live =
     VexAmbientLiveness(
@@ -69,13 +41,13 @@ private fun DrivingHome(
         startScreen = HomeScreen,
         look = look,
         ambientLiveness = live,
+        deck = VexDeckFixture(live = fixtureDriving),
     ) { context ->
         HomeScreenContent(
             runtime = context.runtime,
-            repositories = context.repositories,
-            nowPlaying = playing,
-            navigation = navigating,
-            family = family,
+            live = fixtureDriving,
+            journey = fixtureJourneyStage,
+            musicPaired = true,
         )
     }
 }
@@ -154,9 +126,9 @@ fun lookAuroraTalkToVexGolden() {
         ambientLiveness = live,
     ) {
         TalkToVexScreenContent(
-            nowPlaying = playing,
-            navigation = navigating,
-            family = family,
+            nowPlaying = fixturePlaying,
+            navigation = fixtureNavigation,
+            family = fixtureFamily,
         )
     }
 }

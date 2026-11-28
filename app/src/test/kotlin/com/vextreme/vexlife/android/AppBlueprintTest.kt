@@ -88,8 +88,8 @@ class AppBlueprintTest {
         assertEquals(
             listOf(
                 HomeScreen.VexSection.elementId,
-                HomeScreen.VexStreamSection.elementId,
                 HomeScreen.JourneySection.elementId,
+                HomeScreen.VexStreamSection.elementId,
                 HomeScreen.FamilySection.elementId,
             ),
             children.map { it.elementId },
@@ -104,7 +104,6 @@ class AppBlueprintTest {
             setOf(
                 HomeScreen.ConnectVexStreamMusic.elementId,
                 HomeScreen.VexStreamMusic.elementId,
-                HomeScreen.NowPlayingToggle.elementId,
             ),
             registry.childrenOf(section(HomeScreen.VexStreamSection)).map { it.elementId }.toSet(),
         )

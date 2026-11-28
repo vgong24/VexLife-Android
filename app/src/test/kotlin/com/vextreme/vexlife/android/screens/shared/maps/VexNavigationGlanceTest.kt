@@ -96,6 +96,61 @@ class VexNavigationGlanceTest {
     }
 
     @Test
+    fun preparedRouteListsEveryManeuverFromTheStart() {
+        val session =
+            VexNavigationSession()
+        session.prepare(routeResult)
+
+        val glance =
+            requireNotNull(
+                session.current.toVexNavigationGlance(),
+            )
+
+        assertEquals(
+            listOf(
+                VexNavigationGlanceStep(
+                    instruction = "Turn left onto Main St",
+                    distanceFromHereMeters = cumulativeGeometryMeters(geometry)[1],
+                ),
+            ),
+            glance.upcoming,
+        )
+    }
+
+    @Test
+    fun upcomingTurnsAreMeasuredFromTheRouteMatchedPosition() {
+        val session =
+            VexNavigationSession()
+        session.prepare(routeResult)
+        session.start()
+        session.acceptLocation(
+            sample =
+                VexNavigationLocationSample(
+                    sampleRef = "glance.upcoming",
+                    latitude = 34.0,
+                    longitude = -117.9995,
+                    accuracyMeters = 5f,
+                    elapsedRealtimeMillis = 1_000L,
+                ),
+            nowElapsedRealtimeMillis = 1_050L,
+        )
+
+        val glance =
+            requireNotNull(
+                session.current.toVexNavigationGlance(),
+            )
+        val along =
+            requireNotNull(session.current.convergence?.progress).distanceAlongRouteMeters
+
+        assertEquals(1, glance.upcoming.size)
+        assertEquals(
+            cumulativeGeometryMeters(geometry)[1] - along,
+            glance.upcoming.single().distanceFromHereMeters,
+        )
+        assertEquals(glance.distanceToNextManeuverMeters, glance.upcoming.single().distanceFromHereMeters)
+    }
+
+    @Test
     fun stoppedSessionHasNoGlance() {
         val session =
             VexNavigationSession()

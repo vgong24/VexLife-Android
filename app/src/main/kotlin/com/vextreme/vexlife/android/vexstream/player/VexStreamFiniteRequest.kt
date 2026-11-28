@@ -12,7 +12,7 @@ import com.vextreme.vexlife.android.vexstream.queue.activateVexStreamQueue
 /**
  * One finite VexStream request from a caller that owns no long-lived MediaController.
  *
- * Callers today: the home-screen widget and the app-shell Now strip. A Vex request is the intended
+ * Callers today: the home-screen widget and the convergence deck. A Vex request is the intended
  * next caller. They all converge on the same process Playback / Queue Families as the Music screen;
  * this type names the request, never a second meaning.
  */

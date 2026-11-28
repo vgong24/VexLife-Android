@@ -219,7 +219,13 @@ VexMapsNavigationService
     Android foreground lifetime + continuous device-location delivery
 
 VexNavigationGlance
-    read-only glance of the one current journey for Home / shell Now strip / Vex context
+    read-only glance of the one current journey for the deck Journey page / Vex context
+    upcoming = maneuvers still ahead, measured from the route-matched position
+
+VexJourneyStage / VexJourneyStageMap
+    Home's Map stage: the road ahead, heading-up, following the route-matched position
+    (vexRoutePosition over route geometry; never raw GPS). Live MapLibre on device with gestures
+    off; heading-up schematic in previews, while the style loads, and offline
     plannedDurationSeconds is the planning-time estimate, never a live ETA
 
 VexMapLibreAdapter

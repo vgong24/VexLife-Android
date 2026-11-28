@@ -31,6 +31,10 @@ import com.vextreme.vexlife.android.ui.look.VexLookPreference
 import com.vextreme.vexlife.android.screens.AppScreenBlueprint
 import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.shell.AppFrame
+import com.vextreme.vexlife.android.shell.VexDeckClearance
+import com.vextreme.vexlife.android.shell.VexDeckFixture
+import com.vextreme.vexlife.android.shell.VexDeckLayer
+import com.vextreme.vexlife.android.shell.VexDeckMusicActions
 import com.vextreme.vexlife.android.ui.VexLifeRelayGraph
 import com.vextreme.vexlife.android.ui.VexLifeSession
 import com.vextreme.vexlife.android.ui.VexLifeTheme
@@ -152,8 +156,8 @@ internal fun VexPreviewHost(
     startScreen: ScreenBlueprint,
     repositoriesFactory: () -> AppRepositories = VexPreviewRepositories::empty,
     previewSetup: VexPreviewSetup.() -> Unit = {},
-    // Fixture Now strip for screenshot cases; null keeps the live (inspection-safe) strip host.
-    nowStrip: (@Composable (VexRuntime) -> Unit)? = null,
+    // Fixture convergence deck for screenshot cases; null renders no deck.
+    deck: VexDeckFixture? = null,
     // Fixture Look and ambient liveness for screenshot cases.
     look: VexLookPreference = VexLookPreference(),
     ambientLiveness: VexAmbientLiveness = VexAmbientLiveness(),
@@ -209,27 +213,27 @@ internal fun VexPreviewHost(
                 context.runtime.currentScreen.screenId,
             )
 
-        if (nowStrip == null) {
-            AppFrame(
-                runtime = context.runtime,
-                toolbarActions =
-                    currentScreenBlueprint.toolbarActions,
-                ambientLiveness = ambientLiveness,
-            ) {
-                content(context)
-            }
-        } else {
-            AppFrame(
-                runtime = context.runtime,
-                toolbarActions =
-                    currentScreenBlueprint.toolbarActions,
-                nowStrip = {
-                    nowStrip(
-                        context.runtime,
+        AppFrame(
+            runtime = context.runtime,
+            toolbarActions =
+                currentScreenBlueprint.toolbarActions,
+            deck = { modifier, onFootprintChanged ->
+                deck?.let { fixture ->
+                    VexDeckLayer(
+                        runtime = context.runtime,
+                        live = fixture.live,
+                        music = VexDeckMusicActions(),
+                        musicIdle = fixture.musicIdle,
+                        modifier = modifier,
+                        initialPage = fixture.page,
+                        initialReveal = fixture.reveal,
+                        onFootprintChanged = onFootprintChanged,
                     )
-                },
-                ambientLiveness = ambientLiveness,
-            ) {
+                }
+            },
+            ambientLiveness = ambientLiveness,
+        ) {
+            VexDeckClearance(context.runtime.currentScreen.screenId) {
                 content(context)
             }
         }

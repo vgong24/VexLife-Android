@@ -136,12 +136,13 @@ vexstream/VexStreamNowPlaying.kt
     human question: what's playing, and is it playing? (asked outside the Music screen)
     pure glance = Player Store identity/metadata + Playback Family intent; null without media
     VexStreamNowPlayingViewModel borrows process owners and owns NO MediaController
-    consumers: app-shell Now strip, Home "Now", Talk to Vex context lens
+    consumers: convergence deck Music page (peek / open / full, up next), Talk to Vex context lens
+    skip Next / Previous go through the same finite request path as play/pause
 
 vexstream/player/VexStreamFiniteRequest.kt
     one finite Playback / Queue request from a caller with no long-lived controller
     borrow one controller -> await Family currentness -> existing activation -> join
-    callers: home-screen widget, app-shell Now strip (later: a Vex request)
+    callers: home-screen widget, convergence deck (later: a Vex request)
 
 media/vexstream/
     Android MediaSession/player/network realization
