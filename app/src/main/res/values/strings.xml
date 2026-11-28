@@ -418,6 +418,23 @@
 
 
     <!-- One living surface: shell Now strip, Home "Now", Talk to Vex context lens -->
+    <string name="deck_page_music">Music</string>
+    <string name="deck_page_journey">Journey</string>
+    <string name="deck_page_family">Family</string>
+    <string name="deck_show_more">Show more</string>
+    <string name="deck_show_less">Show less</string>
+    <string name="deck_dismiss">Tuck away</string>
+    <string name="deck_restore">Bring back</string>
+    <string name="deck_music_idle_title">Nothing playing</string>
+    <string name="deck_music_idle_paired">Pick something in VexStream Music</string>
+    <string name="deck_music_idle_unpaired">Connect VexStream to play your music</string>
+    <string name="deck_music_up_next">Up next</string>
+    <string name="deck_open_music">Open VexStream Music</string>
+    <string name="deck_open_maps">Open VexMaps</string>
+    <string name="deck_open_family">Open Family Conversation</string>
+    <string name="deck_journey_idle_detail">Plan a route in VexMaps</string>
+    <string name="deck_journey_ahead">Ahead</string>
+    <string name="deck_family_you">You</string>
     <string name="now_strip_open_music">Open what\'s playing</string>
     <string name="now_strip_open_navigation">Open navigation</string>
     <string name="now_strip_toggle_playback">Play or pause</string>

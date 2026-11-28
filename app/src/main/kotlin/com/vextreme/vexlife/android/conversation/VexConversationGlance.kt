@@ -21,6 +21,9 @@ internal data class VexConversationGlance(
         String?,
     val participantLabels:
         List<String>,
+    /** The most recent lines, oldest first, so a surface can read them top to bottom. */
+    val recent:
+        List<VexConversationGlanceLine> = emptyList(),
 ) {
     companion object {
         val Unobserved =
@@ -38,6 +41,17 @@ internal data class VexConversationGlance(
             )
     }
 }
+
+internal data class VexConversationGlanceLine(
+    val speakerLabel:
+        String,
+    val content:
+        String,
+    val fromAuthenticatedParticipant:
+        Boolean,
+)
+
+internal const val VEXCONVERSATION_GLANCE_RECENT_LIMIT = 8
 
 /** Pure projection of the current Hybrid output. */
 internal fun VexConversationHybridOutputState.toVexConversationGlance(): VexConversationGlance {
@@ -68,6 +82,23 @@ internal fun VexConversationHybridOutputState.toVexConversationGlance(): VexConv
             surface.participants.map {
                 it.participant.participantRef.value
             },
+        recent =
+            surface.thread.messages
+                .sortedBy {
+                    it.sequence
+                }
+                .takeLast(VEXCONVERSATION_GLANCE_RECENT_LIMIT)
+                .map { message ->
+                    VexConversationGlanceLine(
+                        speakerLabel =
+                            message.speakerRef.value,
+                        content =
+                            message.content,
+                        fromAuthenticatedParticipant =
+                            message.speakerRef ==
+                                surface.authenticatedParticipantRef,
+                    )
+                },
     )
 }
 

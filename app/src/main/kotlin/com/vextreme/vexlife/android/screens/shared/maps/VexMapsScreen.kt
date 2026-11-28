@@ -1,5 +1,9 @@
 package com.vextreme.vexlife.android.screens.shared.maps
 
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.vextreme.vexlife.android.conversation.toVexConversationGlance
+import com.vextreme.vexlife.android.ui.VexLifeRelayGraph
 import androidx.compose.runtime.Composable
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.AppRepositories
@@ -424,12 +428,24 @@ object VexMapsScreen : AppScreenBlueprint(
     internal override fun renderContent(
         runtime: VexRuntime,
         repositories: AppRepositories,
+        relayGraph: VexLifeRelayGraph,
     ) {
+        val conversation by
+            relayGraph
+                .conversation
+                .outputStates
+                .collectAsState(
+                    initial =
+                        relayGraph.conversation.currentOutput,
+                )
+
         VexMapsMapSurface(
             runtime = runtime,
             repository = repositories.vexMaps,
             distributionRepository =
                 repositories.vexMapsDistribution,
+            family =
+                conversation.toVexConversationGlance(),
         )
     }
 }

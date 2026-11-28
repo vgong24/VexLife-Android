@@ -52,6 +52,7 @@ import com.vextreme.vexlife.android.elements.column
 import com.vextreme.vexlife.android.elements.navigateBack
 import com.vextreme.vexlife.android.elements.localEffect
 import com.vextreme.vexlife.android.elements.navigateTo
+import com.vextreme.vexlife.android.screens.shared.conversation.VexFamilyConversationScreen
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
 import com.vextreme.vexlife.android.elements.then
@@ -117,35 +118,60 @@ object AppShell {
         )
 
         /*
-         * App-wide Now strip: compact glances of independently owned current truth (what is
-         * playing, where the journey is going) shown on every Screen except the one that owns
-         * that truth. The strip composes projections; it never owns playback or navigation.
+         * The convergence deck: one shell layer over every Screen's stage (except VexMaps, whose map
+         * hosts its own dock). Pages are projections of independently owned truths (VexStream
+         * Player, VexMaps Navigation, Family Conversation); the deck owns only which page is in
+         * front and how far it is revealed.
          */
-        object NowStrip : ColumnElement("element.shell.now-strip")
+        object Deck : ColumnElement("element.shell.deck")
 
-        object NowPlayingOpen : ButtonElement(
-            elementId = "element.shell.now-strip.music.open",
-            labelRes = R.string.now_strip_open_music,
-            style = VexElementStyles.Navigation,
+        object DeckMusicOpen : ButtonElement(
+            elementId = "element.shell.deck.music.open",
+            labelRes = R.string.deck_open_music,
+            style = VexElementStyles.SecondaryAction,
             icon = ElementIcon.Music,
             intent = navigateTo(VexStreamMusicScreen),
         )
 
-        /** The listener sees current state on the strip, so this is the human PlayPause toggle. */
-        object NowPlayingToggle : ButtonElement(
-            elementId = "element.shell.now-strip.music.toggle",
+        /** The listener sees current state on the page, so this is the human PlayPause toggle. */
+        object DeckMusicToggle : ButtonElement(
+            elementId = "element.shell.deck.music.toggle",
             labelRes = R.string.now_strip_toggle_playback,
             style = VexElementStyles.ToolbarIcon,
             icon = ElementIcon.PlayPause,
             intent = localEffect(),
         )
 
-        object NavigationOpen : ButtonElement(
-            elementId = "element.shell.now-strip.navigation.open",
-            labelRes = R.string.now_strip_open_navigation,
-            style = VexElementStyles.Navigation,
+        object DeckMusicNext : ButtonElement(
+            elementId = "element.shell.deck.music.next",
+            labelRes = R.string.vexstream_music_next,
+            style = VexElementStyles.ToolbarIcon,
+            icon = ElementIcon.Next,
+            intent = localEffect(),
+        )
+
+        object DeckMusicPrevious : ButtonElement(
+            elementId = "element.shell.deck.music.previous",
+            labelRes = R.string.vexstream_music_previous,
+            style = VexElementStyles.ToolbarIcon,
+            icon = ElementIcon.Previous,
+            intent = localEffect(),
+        )
+
+        object DeckJourneyOpen : ButtonElement(
+            elementId = "element.shell.deck.journey.open",
+            labelRes = R.string.deck_open_maps,
+            style = VexElementStyles.SecondaryAction,
             icon = ElementIcon.Location,
             intent = navigateTo(VexMapsScreen),
+        )
+
+        object DeckFamilyOpen : ButtonElement(
+            elementId = "element.shell.deck.family.open",
+            labelRes = R.string.deck_open_family,
+            style = VexElementStyles.SecondaryAction,
+            icon = ElementIcon.Person,
+            intent = navigateTo(VexFamilyConversationScreen),
         )
 
         object FabCluster : StackElement("element.shell.fab-cluster")
@@ -188,10 +214,13 @@ object AppShell {
             image(Elements.BrandMark)
             button(Elements.Back)
         }
-        column(Elements.NowStrip) {
-            button(Elements.NavigationOpen)
-            button(Elements.NowPlayingOpen)
-            button(Elements.NowPlayingToggle)
+        column(Elements.Deck) {
+            button(Elements.DeckMusicPrevious)
+            button(Elements.DeckMusicToggle)
+            button(Elements.DeckMusicNext)
+            button(Elements.DeckMusicOpen)
+            button(Elements.DeckJourneyOpen)
+            button(Elements.DeckFamilyOpen)
         }
         row(Elements.PrimaryNavigation) {
             button(Elements.Home)

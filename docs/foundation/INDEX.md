@@ -623,6 +623,15 @@ nested directional Back, and native Android Back resolution. That is meaningful 
 the repository still owes the aggregate Gradle proof/clean rerun before this row should become a
 formal `[Foundation: ...]` checkpoint.
 
+### Stage + Deck layering
+
+AppFrame now lays the viewport out in layers, back to front: **Stage** (the current Screen; Home is
+the stage Screen, which shows the road while navigating and Vex at rest), the **convergence Deck**
+(one shared `VexContextDock` carrying Music · Journey · Family at Tucked / Peek / Open / Full), then
+the FAB above the resting deck. Which stage, which page and which reveal follow the pure stage law in
+`shell/VexStage.kt`, computed from owner glances; the shell owns no feature truth. Detail:
+[`app/.../shell/README.md`](../../app/src/main/kotlin/com/vextreme/vexlife/android/shell/README.md).
+
 ## Data / Repository candidate
 
 Canonical detail: [`DATA-REPOSITORY.md`](DATA-REPOSITORY.md)

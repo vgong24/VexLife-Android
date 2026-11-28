@@ -26,6 +26,8 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.preview.VexPreviewRepositories
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.shell.AppFrame
+import com.vextreme.vexlife.android.shell.VexDeckClearance
+import com.vextreme.vexlife.android.shell.VexDeckHost
 import kotlinx.coroutines.CoroutineScope
 
 /**
@@ -172,6 +174,15 @@ private fun VexLifeScaffold(
         runtime = runtime,
         toolbarActions =
             currentScreenBlueprint.toolbarActions,
+        deck = { modifier, onFootprintChanged ->
+            VexDeckHost(
+                runtime = runtime,
+                repositories = repositories,
+                relayGraph = relayGraph,
+                modifier = modifier,
+                onFootprintChanged = onFootprintChanged,
+            )
+        },
     ) {
         if (runtime.isPrimary()) {
             /*
@@ -196,12 +207,14 @@ private fun VexLifeScaffold(
                 modifier = Modifier.fillMaxSize(),
                 key = { primaryScreens[it].screenId },
             ) { screenIndex ->
-                primaryScreens[screenIndex].renderContent(
-                    runtime = runtime,
-                    repositories = repositories,
-                    relayGraph = relayGraph,
-                    sessionScope = sessionScope,
-                )
+                VexDeckClearance(primaryScreens[screenIndex].screenId) {
+                    primaryScreens[screenIndex].renderContent(
+                        runtime = runtime,
+                        repositories = repositories,
+                        relayGraph = relayGraph,
+                        sessionScope = sessionScope,
+                    )
+                }
             }
         } else {
             /*
@@ -222,12 +235,14 @@ private fun VexLifeScaffold(
                 },
                 label = "shared-screen",
             ) { screenId ->
-                AppScreens.require(screenId).renderContent(
-                    runtime = runtime,
-                    repositories = repositories,
-                    relayGraph = relayGraph,
-                    sessionScope = sessionScope,
-                )
+                VexDeckClearance(screenId) {
+                    AppScreens.require(screenId).renderContent(
+                        runtime = runtime,
+                        repositories = repositories,
+                        relayGraph = relayGraph,
+                        sessionScope = sessionScope,
+                    )
+                }
             }
         }
     }

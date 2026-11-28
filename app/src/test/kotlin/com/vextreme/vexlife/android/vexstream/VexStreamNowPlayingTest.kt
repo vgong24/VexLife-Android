@@ -83,6 +83,47 @@ class VexStreamNowPlayingTest {
         assertFalse(glance.playPauseAvailable)
     }
 
+    @Test
+    fun upNextFollowsTheCurrentQueueIndexAndCarriesSkipAvailability() {
+        val items =
+            (0..7).map { index ->
+                VexStreamPlayerPartner.Signal.QueueItems.Item(
+                    mediaId = "media.$index",
+                    title = "Track $index",
+                    artist = "Artist $index",
+                )
+            }
+        val glance =
+            requireNotNull(
+                vexStreamNowPlaying(
+                    snapshot(
+                        queue = items,
+                        currentIndex = 1,
+                        previousAvailable = true,
+                        nextAvailable = true,
+                    ),
+                    media(playRequested = true),
+                ),
+            )
+
+        assertEquals(
+            (2..6).map { VexStreamNowPlayingTrack("Track $it", "Artist $it") },
+            glance.upNext,
+        )
+        assertTrue(glance.previousAvailable)
+        assertTrue(glance.nextAvailable)
+
+        val atEnd =
+            requireNotNull(
+                vexStreamNowPlaying(
+                    snapshot(queue = items, currentIndex = 7),
+                    media(playRequested = true),
+                ),
+            )
+        assertTrue(atEnd.upNext.isEmpty())
+        assertFalse(atEnd.nextAvailable)
+    }
+
     private fun media(
         playRequested: Boolean,
         requestPending: Boolean = false,
@@ -98,6 +139,10 @@ class VexStreamNowPlayingTest {
         hasMedia: Boolean = true,
         title: String = "Track",
         artist: String = "Artist",
+        queue: List<VexStreamPlayerPartner.Signal.QueueItems.Item> = emptyList(),
+        currentIndex: Int = 0,
+        previousAvailable: Boolean = false,
+        nextAvailable: Boolean = false,
     ) =
         VexStreamPlayerStore.Snapshot.Available(
             playback =
@@ -110,13 +155,13 @@ class VexStreamNowPlayingTest {
                 ),
             queueItems =
                 VexStreamPlayerPartner.Signal.QueueItems(
-                    items = emptyList(),
+                    items = queue,
                 ),
             queueNavigation =
                 VexStreamPlayerPartner.Signal.QueueNavigation(
-                    currentIndex = 0,
-                    previousAvailable = false,
-                    nextAvailable = false,
+                    currentIndex = currentIndex,
+                    previousAvailable = previousAvailable,
+                    nextAvailable = nextAvailable,
                     changeMediaItemsAvailable = true,
                 ),
             repeat =

@@ -93,7 +93,12 @@ internal fun vexMapsDistributionContextDockPage(
     return VexContextDockPage(
         pageRef =
             VEXMAPS_DISTRIBUTION_CONTEXT_DOCK_PAGE_REF,
-    ) { expanded ->
+        label =
+            stringResource(
+                R.string.vexmaps_distribution_title,
+            ),
+    ) { reveal ->
+        val expanded = reveal.isExpanded
         Column(
             modifier =
                 Modifier.fillMaxWidth(),

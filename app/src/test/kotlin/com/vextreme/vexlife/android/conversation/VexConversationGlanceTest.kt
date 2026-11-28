@@ -64,6 +64,26 @@ class VexConversationGlanceTest {
         assertNull(glance.latestSpeakerLabel)
     }
 
+    @Test
+    fun recentLinesAreTheLastFewInSequenceOrderAndMarkTheAuthenticatedSpeaker() {
+        val glance =
+            output(
+                authenticated = victor,
+                messages =
+                    (0L..10L).map { sequence ->
+                        message(sequence, if (sequence % 2L == 0L) maya else victor, "line $sequence")
+                    }.shuffled(java.util.Random(7)),
+            ).toVexConversationGlance()
+
+        assertEquals(
+            (3L..10L).map { "line $it" },
+            glance.recent.map(VexConversationGlanceLine::content),
+        )
+        assertEquals("Maya", glance.recent.last().speakerLabel)
+        assertFalse(glance.recent.last().fromAuthenticatedParticipant)
+        assertTrue(glance.recent[glance.recent.lastIndex - 1].fromAuthenticatedParticipant)
+    }
+
     private fun output(
         authenticated: VexConversationParticipantRef?,
         messages: List<VexConversationMessage>,

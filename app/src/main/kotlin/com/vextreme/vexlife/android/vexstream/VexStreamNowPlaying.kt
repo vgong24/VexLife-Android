@@ -16,6 +16,7 @@ import com.vextreme.vexlife.android.vexstream.player.VexStreamFiniteRequest
 import com.vextreme.vexlife.android.vexstream.player.VexStreamFiniteRequestOwners
 import com.vextreme.vexlife.android.vexstream.player.VexStreamPlayerStore
 import com.vextreme.vexlife.android.vexstream.player.requestVexStreamFiniteControl
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -25,7 +26,7 @@ import kotlinx.coroutines.launch
 /**
  * What a compact surface outside the Music screen may show about current playback.
  *
- * Human question: "What's playing, and is it playing?" — asked from Home, the app-shell Now strip,
+ * Human question: "What's playing, and is it playing?" — asked from the Home stage, the app-shell convergence deck,
  * or (later) Vex context. This is a glance, not a second player: identity and metadata come from the
  * process Player Store, play intent and pending state from the process Playback Family.
  */
@@ -36,7 +37,18 @@ internal data class VexStreamNowPlaying(
     val transitioning: Boolean,
     val playPauseAvailable: Boolean,
     val ended: Boolean,
+    /** The next few queue items after the current one, in queue order. */
+    val upNext: List<VexStreamNowPlayingTrack> = emptyList(),
+    val previousAvailable: Boolean = false,
+    val nextAvailable: Boolean = false,
 )
+
+internal data class VexStreamNowPlayingTrack(
+    val title: String,
+    val artist: String,
+)
+
+internal const val VEXSTREAM_NOW_PLAYING_UP_NEXT_LIMIT = 5
 
 /**
  * Pure projection of retained Player Store truth plus current Playback Family State.
@@ -59,6 +71,21 @@ internal fun vexStreamNowPlaying(
     }
     val media =
         available.currentMedia
+    val navigation =
+        available.queueNavigation
+    val upNext =
+        available.queueItems.items
+            .drop(
+                (navigation.currentIndex + 1)
+                    .coerceAtLeast(0),
+            )
+            .take(VEXSTREAM_NOW_PLAYING_UP_NEXT_LIMIT)
+            .map { item ->
+                VexStreamNowPlayingTrack(
+                    title = item.title,
+                    artist = item.artist,
+                )
+            }
 
     return when (
         playback
@@ -80,6 +107,12 @@ internal fun vexStreamNowPlaying(
                     playback.playPauseAvailable,
                 ended =
                     false,
+                upNext =
+                    upNext,
+                previousAvailable =
+                    navigation.previousAvailable,
+                nextAvailable =
+                    navigation.nextAvailable,
             )
 
         is VexStreamPlaybackState.Ended ->
@@ -96,6 +129,12 @@ internal fun vexStreamNowPlaying(
                     playback.restartAvailable,
                 ended =
                     true,
+                upNext =
+                    upNext,
+                previousAvailable =
+                    navigation.previousAvailable,
+                nextAvailable =
+                    navigation.nextAvailable,
             )
     }
 }
@@ -168,6 +207,24 @@ internal class VexStreamNowPlayingViewModel(
                 ),
         )
 
+    /** Human tap on a visible skip control; the Queue Family decides whether it is admissible. */
+    fun skip(
+        control: VexStreamQueueControl,
+    ) {
+        viewModelScope.launch {
+            requestVexStreamFiniteControl(
+                context =
+                    getApplication(),
+                owners =
+                    owners,
+                request =
+                    VexStreamFiniteRequest.Queue(
+                        control,
+                    ),
+            )
+        }
+    }
+
     /** Human tap on a visible toggle: the listener sees current state, so PlayPause is truthful. */
     fun togglePlayback() {
         viewModelScope.launch {
@@ -191,6 +248,10 @@ internal class VexStreamNowPlayingHandle(
         VexStreamNowPlaying?,
     val togglePlayback:
         () -> Unit,
+    val skipNext:
+        () -> Unit = {},
+    val skipPrevious:
+        () -> Unit = {},
 )
 
 /**
@@ -220,6 +281,12 @@ internal fun rememberVexStreamNowPlaying(): VexStreamNowPlayingHandle? {
                 nowPlaying,
             togglePlayback =
                 owner::togglePlayback,
+            skipNext = {
+                owner.skip(VexStreamQueueControl.Next)
+            },
+            skipPrevious = {
+                owner.skip(VexStreamQueueControl.Previous)
+            },
         )
     }
 }

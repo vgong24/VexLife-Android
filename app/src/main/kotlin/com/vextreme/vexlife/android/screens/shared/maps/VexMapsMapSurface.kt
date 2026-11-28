@@ -44,8 +44,19 @@ import com.vextreme.vexlife.android.data.maps.VexMapsStoredLocation
 import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionRepository
 import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.VexActionFab
+import com.vextreme.vexlife.android.conversation.VexConversationGlance
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDock
+import com.vextreme.vexlife.android.elements.contextdock.VexContextDockLabels
+import com.vextreme.vexlife.android.elements.contextdock.VexContextDockLevels
+import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPage
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
+import com.vextreme.vexlife.android.shell.VexDeckFamilyPage
+import com.vextreme.vexlife.android.shell.VexDeckJourneyPage
+import com.vextreme.vexlife.android.shell.VexDeckPage
+import com.vextreme.vexlife.android.shell.VexLiveSet
+import com.vextreme.vexlife.android.shell.VexStage
+import com.vextreme.vexlife.android.shell.vexStagePlan
+import com.vextreme.vexlife.android.vexstream.rememberVexStreamNowPlaying
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.ui.currentVexThemePresentation
@@ -91,6 +102,8 @@ internal fun VexMapsMapSurface(
     repository: VexMapsRepository,
     distributionRepository:
         VexMapsDistributionRepository,
+    family: VexConversationGlance =
+        VexConversationGlance.Unobserved,
 ) {
     val context = LocalContext.current
     val themePresentation =
@@ -1314,13 +1327,84 @@ internal fun VexMapsMapSurface(
                     .clearDeliveryRoute()
             },
         )
+    /*
+     * The same convergence pages the shell deck carries, so the map stage reads as
+     * [map][Music · Journey · Family · Distribution] with one handle. Each page stays a projection
+     * of its owner; the dock only chooses which is in front and how far it is revealed.
+     */
+    val navigationGlance =
+        rememberVexNavigationGlance()
+    val nowPlaying =
+        rememberVexStreamNowPlaying()
+            ?.nowPlaying
+    val mapsLive =
+        VexLiveSet(
+            navigation = navigationGlance,
+            nowPlaying = nowPlaying,
+            family = family,
+        )
+    val journeyDockPage =
+        VexContextDockPage(
+            pageRef = VexDeckPage.Journey.pageRef,
+            label = stringResource(R.string.deck_page_journey),
+            live = mapsLive.navigating,
+        ) { reveal ->
+            VexDeckJourneyPage(
+                runtime = runtime,
+                reveal = reveal,
+                navigation = navigationGlance,
+                openable = false,
+            )
+        }
+    val familyDockPage =
+        VexContextDockPage(
+            pageRef = VexDeckPage.Family.pageRef,
+            label = stringResource(R.string.deck_page_family),
+        ) { reveal ->
+            VexDeckFamilyPage(
+                runtime = runtime,
+                reveal = reveal,
+                family = family,
+            )
+        }
     val contextDockPages =
         buildList {
-            vexStreamDockPage?.let(::add)
+            vexStreamDockPage
+                ?.let { page ->
+                    VexContextDockPage(
+                        pageRef = page.pageRef,
+                        label = page.label,
+                        live = mapsLive.listening,
+                        content = page.content,
+                    )
+                }
+                ?.let(::add)
+            add(journeyDockPage)
+            add(familyDockPage)
             add(
                 distributionDockPage,
             )
         }
+
+    // When a journey starts, the stage law picks the front page once: what is playing, else the
+    // journey. Later human swipes stand until the situation changes again.
+    val mapsStagePlan =
+        vexStagePlan(mapsLive)
+    LaunchedEffect(mapsStagePlan?.stage) {
+        if (mapsStagePlan?.stage == VexStage.Map) {
+            preferredDockPageRef =
+                when (mapsStagePlan.preferredPage) {
+                    VexDeckPage.Music ->
+                        vexStreamDockPage
+                            ?.pageRef
+                            ?.value
+                            ?: VexDeckPage.Journey.pageRef.value
+
+                    else ->
+                        VexDeckPage.Journey.pageRef.value
+                }
+        }
+    }
     val preferredContextDockPage =
         remember(preferredDockPageRef) {
             VexContextDockPageRef(
@@ -2076,6 +2160,18 @@ internal fun VexMapsMapSurface(
          */
         VexContextDock(
             pages = contextDockPages,
+            levels =
+                VexContextDockLevels(
+                    allowTuck = true,
+                    allowFull = false,
+                ),
+            labels =
+                VexContextDockLabels(
+                    showMore = stringResource(R.string.deck_show_more),
+                    showLess = stringResource(R.string.deck_show_less),
+                    dismiss = stringResource(R.string.deck_dismiss),
+                    restore = stringResource(R.string.deck_restore),
+                ),
             preferredPageRef =
                 preferredContextDockPage,
             onSelectedPageChanged = {
